@@ -8,7 +8,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import L, { LatLngExpression } from 'leaflet';
 
 // @ts-ignore
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -175,7 +175,7 @@ export default function Settings() {
                   
                   {mapPosition && (
                     <div className="h-[300px] w-full rounded-2xl overflow-hidden border border-border shadow-inner relative z-0">
-                      <MapContainer center={mapPosition} zoom={15} style={{ height: '100%', width: '100%' }} key={`${mapPosition[0]}-${mapPosition[1]}`}>
+                      <MapContainer center={mapPosition as LatLngExpression} zoom={15} style={{ height: '100%', width: '100%' }} key={`${mapPosition[0]}-${mapPosition[1]}`}>
                         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                         <LocationMarker position={mapPosition} setPosition={setMapPosition} />
                       </MapContainer>
