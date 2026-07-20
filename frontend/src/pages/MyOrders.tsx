@@ -223,6 +223,11 @@ export default function MyOrders() {
               </button>
               <h2 className="text-3xl font-black mb-1">Orden #{selectedOrder.id}</h2>
               <p className="opacity-90 font-medium">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
+              {selectedOrder.estimated_minutes && selectedOrder.status !== 'DELIVERED' && selectedOrder.status !== 'CANCELLED' && (
+                <div className="mt-3 inline-flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full text-sm font-bold shadow-sm">
+                  <span>⏳</span> Tiempo estimado: ~{selectedOrder.estimated_minutes} min
+                </div>
+              )}
             </div>
 
             <div className="overflow-y-auto p-6 space-y-8 flex-1 bg-gray-50/50">
@@ -264,6 +269,11 @@ export default function MyOrders() {
                           <div>
                             <h4 className={`font-black text-lg ${isActive ? 'text-orange-600' : 'text-gray-900'}`}>{item.title}</h4>
                             <p className="text-gray-500 text-sm mt-0.5">{item.desc}</p>
+                            {item.status === 'DISPATCHED' && selectedOrder.estimated_minutes && (
+                              <p className="text-xs font-bold bg-orange-100 text-orange-800 inline-block px-2 py-1 mt-2 rounded-md">
+                                Tiempo de viaje: ~{selectedOrder.estimated_minutes} min
+                              </p>
+                            )}
                           </div>
                         </div>
                       );

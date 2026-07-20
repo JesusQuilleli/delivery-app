@@ -12,9 +12,14 @@ export default function OrderHistory() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+
+  const [showMonthSales, setShowMonthSales] = useState(false);
+  const [showTotalSales, setShowTotalSales] = useState(false);
+  const [showTotalOrders, setShowTotalOrders] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
@@ -45,7 +50,17 @@ export default function OrderHistory() {
       navigate('/admin-login');
       return;
     }
+    const fetchAnalytics = async () => {
+      try {
+        const res = await api.get(`/stores/${slug}/analytics`);
+        setAnalytics(res.data);
+      } catch (error) {
+        console.error("Error fetching analytics", error);
+      }
+    };
+
     fetchHistory();
+    fetchAnalytics();
   }, [slug, navigate]);
 
   const deleteOrder = async (id: number) => {
@@ -65,6 +80,96 @@ export default function OrderHistory() {
 
   return (
     <AdminLayout title="Historial de Órdenes">
+
+      {/* Selector de Métricas (Solo pantalla) */}
+      <div className="mb-4 flex flex-wrap gap-2 print:hidden items-center text-sm font-bold text-muted-foreground">
+        <span className="mr-2">Mostrar métricas adicionales:</span>
+        <button 
+          onClick={() => setShowMonthSales(!showMonthSales)}
+          className={`px-3 py-1.5 rounded-lg transition-colors border ${showMonthSales ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-card border-border hover:bg-muted'}`}
+        >
+          📅 Ventas del Mes
+        </button>
+        <button 
+          onClick={() => setShowTotalSales(!showTotalSales)}
+          className={`px-3 py-1.5 rounded-lg transition-colors border ${showTotalSales ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-card border-border hover:bg-muted'}`}
+        >
+          📈 Histórico Total
+        </button>
+        <button 
+          onClick={() => setShowTotalOrders(!showTotalOrders)}
+          className={`px-3 py-1.5 rounded-lg transition-colors border ${showTotalOrders ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-card border-border hover:bg-muted'}`}
+        >
+          📦 Pedidos Entregados
+        </button>
+      </div>
+
+      {/* Tarjetas de Estadísticas (KPIs) */}
+      {analytics && (
+        <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-${1 + (showMonthSales ? 1 : 0) + (showTotalSales ? 1 : 0) + (showTotalOrders ? 1 : 0)} gap-4 mb-8`}>
+          <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-none shadow-lg shadow-emerald-500/20">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-emerald-100 font-bold uppercase tracking-wider text-xs mb-1">Ventas de Hoy</p>
+                  <h3 className="text-3xl font-black">${analytics.todaySales.toFixed(2)}</h3>
+                </div>
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  <span className="text-xl">💰</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {showMonthSales && (
+            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none shadow-lg shadow-blue-500/20">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-blue-100 font-bold uppercase tracking-wider text-xs mb-1">Ventas del Mes</p>
+                    <h3 className="text-3xl font-black">${analytics.monthSales.toFixed(2)}</h3>
+                  </div>
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                    <span className="text-xl">📅</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {showTotalSales && (
+            <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-none shadow-lg shadow-purple-500/20">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-purple-100 font-bold uppercase tracking-wider text-xs mb-1">Histórico Total</p>
+                    <h3 className="text-3xl font-black">${analytics.totalSales.toFixed(2)}</h3>
+                  </div>
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                    <span className="text-xl">📈</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {showTotalOrders && (
+            <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none shadow-lg shadow-orange-500/20">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-orange-100 font-bold uppercase tracking-wider text-xs mb-1">Pedidos Entregados</p>
+                    <h3 className="text-3xl font-black">{analytics.totalOrders}</h3>
+                  </div>
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                    <span className="text-xl">📦</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
       
       {/* Filtros - Ocultos en impresión */}
       <Card className="mb-8 print:hidden border border-border shadow-sm bg-card">

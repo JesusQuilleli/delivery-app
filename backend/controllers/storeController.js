@@ -264,4 +264,58 @@ const updateStoreSettings = async (req, res) => {
   }
 };
 
-module.exports = { getStoreProducts, getStoreOrders, getStoreHistory, getStoreProductDetails, updateStoreSettings };
+const getStoreAnalytics = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    // Definir fechas base
+    const now = new Date();
+    
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Todas las ordenes entregadas
+    const deliveredOrders = await prisma.order.findMany({
+      where: {
+        store_id: store.id,
+        status: 'DELIVERED'
+      },
+      select: {
+        total_amount: true,
+        createdAt: true
+      }
+    });
+
+    let todaySales = 0;
+    let monthSales = 0;
+    let totalSales = 0;
+    let totalOrders = deliveredOrders.length;
+
+    for (const order of deliveredOrders) {
+      totalSales += order.total_amount;
+      
+      const orderDate = new Date(order.createdAt);
+      if (orderDate >= startOfMonth) {
+        monthSales += order.total_amount;
+      }
+      if (orderDate >= startOfToday) {
+        todaySales += order.total_amount;
+      }
+    }
+
+    res.json({
+      todaySales,
+      monthSales,
+      totalSales,
+      totalOrders,
+      currency: store.currency
+    });
+  } catch (error) {
+    console.error('Error cargando analytics:', error);
+    res.status(500).json({ error: 'Error interno cargando analytics' });
+  }
+};
+
+module.exports = { getStoreProducts, getStoreOrders, getStoreHistory, getStoreProductDetails, updateStoreSettings, getStoreAnalytics };

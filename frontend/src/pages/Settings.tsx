@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api';
 import AdminLayout from '../components/AdminLayout';
@@ -8,7 +8,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import L, { LatLngExpression } from 'leaflet';
+import L, { type LatLngExpression } from 'leaflet';
 
 // @ts-ignore
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -16,9 +16,9 @@ import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
 const DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-    iconAnchor: [12, 41]
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconAnchor: [12, 41]
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
@@ -39,7 +39,7 @@ export default function Settings() {
   const { slug } = useParams<{ slug: string }>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   const [storeName, setStoreName] = useState('');
   const [mapPosition, setMapPosition] = useState<[number, number] | null>(null);
 
@@ -76,7 +76,7 @@ export default function Settings() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload: any = { 
+      const payload: any = {
         name: storeName,
         currency,
         usd_rate: usdRate,
@@ -115,7 +115,7 @@ export default function Settings() {
   return (
     <AdminLayout title="Configuración">
       <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
-        
+
         <Card className="border-border shadow-sm">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2">
@@ -126,16 +126,16 @@ export default function Settings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            
+
             {loading ? (
               <div className="py-10 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>
             ) : (
               <>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Nombre del Local</label>
-                  <Input 
-                    value={storeName} 
-                    onChange={e => setStoreName(e.target.value)} 
+                  <Input
+                    value={storeName}
+                    onChange={e => setStoreName(e.target.value)}
                     className="h-12 bg-background border-border font-medium"
                   />
                 </div>
@@ -147,7 +147,7 @@ export default function Settings() {
                   <div className="flex flex-col md:flex-row gap-4 mb-4">
                     <div className="flex-1 space-y-2">
                       <label className="text-xs font-bold text-muted-foreground uppercase">Latitud</label>
-                      <Input 
+                      <Input
                         type="number"
                         step="any"
                         value={mapPosition ? mapPosition[0] : ''}
@@ -160,7 +160,7 @@ export default function Settings() {
                     </div>
                     <div className="flex-1 space-y-2">
                       <label className="text-xs font-bold text-muted-foreground uppercase">Longitud</label>
-                      <Input 
+                      <Input
                         type="number"
                         step="any"
                         value={mapPosition ? mapPosition[1] : ''}
@@ -172,7 +172,7 @@ export default function Settings() {
                       />
                     </div>
                   </div>
-                  
+
                   {mapPosition && (
                     <div className="h-[300px] w-full rounded-2xl overflow-hidden border border-border shadow-inner relative z-0">
                       <MapContainer center={mapPosition as LatLngExpression} zoom={15} style={{ height: '100%', width: '100%' }} key={`${mapPosition[0]}-${mapPosition[1]}`}>
@@ -207,8 +207,8 @@ export default function Settings() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Moneda Base de la Tienda</label>
-              <select 
-                value={currency} 
+              <select
+                value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
                 className="flex h-12 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -224,22 +224,22 @@ export default function Settings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-muted-foreground">Tasa Dólar (USD)</label>
-                  <Input 
+                  <Input
                     type="number" step="any"
-                    value={usdRate} 
-                    onChange={e => setUsdRate(parseFloat(e.target.value))} 
+                    value={usdRate}
+                    onChange={e => setUsdRate(parseFloat(e.target.value))}
                     className="h-12 bg-background"
                   />
                   <p className="text-[11px] text-muted-foreground">¿A cuántos USD equivale 1 {currency}?</p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-muted-foreground">Tasa Bolívares (VES)</label>
                   <div className="flex gap-2">
-                    <Input 
+                    <Input
                       type="number" step="any"
-                      value={vesRate} 
-                      onChange={e => setVesRate(parseFloat(e.target.value))} 
+                      value={vesRate}
+                      onChange={e => setVesRate(parseFloat(e.target.value))}
                       className="h-12 bg-background flex-1"
                     />
                     <Button onClick={syncBCV} disabled={syncing} variant="outline" className="h-12 text-primary border-primary/20 hover:bg-primary/10">
@@ -252,10 +252,10 @@ export default function Settings() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-muted-foreground">Tasa Pesos (COP)</label>
-                  <Input 
+                  <Input
                     type="number" step="any"
-                    value={copRate} 
-                    onChange={e => setCopRate(parseFloat(e.target.value))} 
+                    value={copRate}
+                    onChange={e => setCopRate(parseFloat(e.target.value))}
                     className="h-12 bg-background"
                   />
                   <p className="text-[11px] text-muted-foreground">¿A cuántos COP equivale 1 {currency}?</p>

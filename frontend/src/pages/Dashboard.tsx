@@ -56,8 +56,7 @@ export default function Dashboard() {
   const columns = [
     { title: 'Nuevas Órdenes', status: 'PENDING', headerClass: 'bg-orange-50/50 text-orange-950 border-orange-100', badgeClass: 'bg-orange-100 text-orange-700' },
     { title: 'Preparando', status: 'ACCEPTED', headerClass: 'bg-blue-50/50 text-blue-950 border-blue-100', badgeClass: 'bg-blue-100 text-blue-700' },
-    { title: 'En Camino', status: 'DISPATCHED', headerClass: 'bg-purple-50/50 text-purple-950 border-purple-100', badgeClass: 'bg-purple-100 text-purple-700' },
-    { title: 'Entregado', status: 'DELIVERED', headerClass: 'bg-emerald-50/50 text-emerald-950 border-emerald-100', badgeClass: 'bg-emerald-100 text-emerald-700' }
+    { title: 'En Camino', status: 'DISPATCHED', headerClass: 'bg-purple-50/50 text-purple-950 border-purple-100', badgeClass: 'bg-purple-100 text-purple-700' }
   ];
 
   useEffect(() => {
@@ -200,7 +199,7 @@ export default function Dashboard() {
 
       {/* Tabs y Tablas (Reemplazando Kanban) */}
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setCurrentPage(1); }} className="w-full mt-4">
-        <TabsList className="grid w-full grid-cols-4 h-16 md:h-14 bg-muted/40 rounded-xl p-1.5 gap-1 shadow-inner overflow-x-auto">
+        <TabsList className="grid w-full grid-cols-3 h-16 md:h-14 bg-muted/40 rounded-xl p-1.5 gap-1 shadow-inner overflow-x-auto">
           {columns.map(col => {
             const count = orders.filter(o => o.status === col.status).length;
             return (

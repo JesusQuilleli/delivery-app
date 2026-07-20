@@ -1,6 +1,6 @@
-import React, { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Store, Package, History, Settings, LogOut, LayoutDashboard } from 'lucide-react';
+import { Package, History, Settings, LogOut, LayoutDashboard, Store } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface AdminLayoutProps {
@@ -35,13 +35,15 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 
         <div className="relative z-10 flex items-center gap-4 w-full lg:w-auto">
           <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary shrink-0">
-            <Store size={24} />
+            <Store size={24} className="fill-primary/20" />
           </div>
           <div>
             <h1 className="text-2xl font-black flex items-center gap-2 tracking-tight font-display">
               {title}
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5 tracking-wider uppercase font-semibold">Sucursal: {slug}</p>
+            <p className="text-sm text-muted-foreground mt-0.5 tracking-wider uppercase font-semibold">
+              <span className="text-primary font-bold">{slug.replace(/-/g, ' ')}</span> — Panel Administrativo
+            </p>
           </div>
         </div>
 
@@ -49,23 +51,23 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
           {navItems.map(item => {
             const isActive = location.pathname === item.path || (item.path === `/admin/${slug}` && location.pathname === `/admin/${slug}/`);
             return (
-              <Button 
+              <Button
                 key={item.name}
-                variant={isActive ? "default" : "outline"} 
-                className={`font-bold gap-2 text-sm h-10 ${!isActive ? 'border-primary/20 text-foreground hover:bg-primary/5' : ''}`} 
+                variant={isActive ? "default" : "outline"}
+                className={`font-bold gap-2 text-sm h-10 ${!isActive ? 'border-primary/20 text-foreground hover:bg-primary/5' : ''}`}
                 onClick={() => navigate(item.path)}
               >
                 <item.icon size={16} /> <span className="hidden sm:inline">{item.name}</span>
               </Button>
             );
           })}
-          
+
           <Button variant="destructive" onClick={logout} className="gap-2 h-10 font-bold shadow-sm ml-2">
             <LogOut size={16} /> <span className="hidden sm:inline">Salir</span>
           </Button>
         </div>
       </header>
-      
+
       <main className="flex-1">
         {children}
       </main>

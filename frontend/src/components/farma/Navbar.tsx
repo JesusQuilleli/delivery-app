@@ -1,4 +1,4 @@
-import { Plus, MessageCircle, ShoppingBag, User, LogOut } from "lucide-react";
+import { ShoppingBag, User, LogOut, Zap, Plus } from "lucide-react";
 import { useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "@/context/AuthContext";
@@ -19,12 +19,17 @@ export function Navbar() {
     <header className="sticky top-0 z-40 backdrop-blur-md bg-background/75 border-b border-border/60">
       <div className="mx-auto max-w-7xl px-5 lg:px-8 h-16 flex items-center justify-between">
         <a href="#inicio" className="flex items-center gap-2">
-          <span className="grid place-items-center w-9 h-9 rounded-xl bg-primary text-primary-foreground">
-            <Plus className="w-5 h-5" strokeWidth={2.5} />
+          <span className="grid place-items-center w-9 h-9 rounded-xl bg-primary text-primary-foreground shadow-sm">
+            <Plus className="w-5 h-5 fill-primary-foreground/50" strokeWidth={2.5} />
           </span>
-          <span className="font-display font-extrabold text-lg tracking-tight">
-            Farma <span className="text-primary">Ayacucho</span>
-          </span>
+          <div className="flex flex-col">
+            <span className="font-display font-extrabold text-lg tracking-tight leading-none">
+              Farma <span className="text-primary">Ayacucho</span>
+            </span>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider leading-none mt-1">
+              Entregas al instante
+            </span>
+          </div>
         </a>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
           {links.map((l) => (
@@ -33,7 +38,7 @@ export function Navbar() {
             </a>
           ))}
         </nav>
-        
+
         <div className="flex items-center gap-3">
           {token && user ? (
             <>

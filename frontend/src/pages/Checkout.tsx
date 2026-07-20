@@ -76,6 +76,7 @@ export default function Checkout() {
     return latitude && longitude ? [latitude, longitude] : defaultPosition;
   });
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [cashCurrency, setCashCurrency] = useState('USD');
   const [paymentReference, setPaymentReference] = useState('');
   const [orderStatus, setOrderStatus] = useState<string>('PENDING');
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
@@ -279,7 +280,7 @@ export default function Checkout() {
         longitude: longitude,
         total_amount: total,
         payment_method: paymentMethod,
-        payment_reference: paymentMethod === 'TRANSFER' ? paymentReference : undefined
+        payment_reference: paymentMethod === 'TRANSFER' ? paymentReference : `Efectivo en ${cashCurrency}`
       });
       
       if (res.data.estimated_minutes) {
@@ -493,6 +494,33 @@ export default function Checkout() {
                   <span className={`font-black ${paymentMethod === 'TRANSFER' ? 'text-blue-700' : 'text-gray-600'}`}>Pago Móvil</span>
                 </div>
               </div>
+
+              {paymentMethod === 'CASH' && (
+                <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-2xl border border-emerald-200 shadow-inner space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                  <p className="text-sm font-black text-emerald-900 uppercase tracking-wider text-center">¿En qué moneda vas a pagar al recibir?</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {['USD', 'VES', 'COP'].map(curr => (
+                      <div 
+                        key={curr}
+                        onClick={() => setCashCurrency(curr)}
+                        className={`py-3 rounded-xl border-2 text-center cursor-pointer font-black transition-all ${
+                          cashCurrency === curr 
+                            ? 'bg-emerald-500 border-emerald-600 text-white shadow-md transform scale-105' 
+                            : 'bg-white border-emerald-100 text-emerald-700 hover:bg-emerald-50'
+                        }`}
+                      >
+                        {curr === 'USD' ? 'Dólares' : curr === 'VES' ? 'Bolívares' : 'Pesos'}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-white p-4 rounded-xl text-center border border-emerald-100 shadow-sm mt-4">
+                    <span className="text-gray-500 text-sm">Monto a tener listo:</span><br/>
+                    <strong className="text-2xl text-emerald-700 font-black">
+                      {cashCurrency === storeConfig?.currency ? formatPrice(total, cashCurrency) : (getConversions(total, storeConfig) as any)?.[cashCurrency]}
+                    </strong>
+                  </div>
+                </div>
+              )}
 
               {paymentMethod === 'TRANSFER' && (
                 <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl border border-gray-200 shadow-inner space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">

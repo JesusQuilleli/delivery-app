@@ -46,11 +46,34 @@ const checkPhone = async (req, res) => {
     const user = await prisma.user.findUnique({ where: { phone } });
     const is_registered = user && user.name ? true : false;
 
-    // SIMULACIÓN DE ENVÍO POR WHATSAPP EN CONSOLA
-    console.log(`\n=========================================`);
-    console.log(`📱 [WhatsApp Simulator] Mensaje a ${phone}:`);
-    console.log(`Tu código de verificación de la Farmacia es: ${code}`);
-    console.log(`=========================================\n`);
+    // ENVÍO DE WHATSAPP REAL MEDIANTE ULTRAMSG
+    try {
+      const instanceId = process.env.ULTRAMSG_INSTANCE_ID;
+      const token = process.env.ULTRAMSG_TOKEN;
+      if (instanceId && token) {
+        const url = `https://api.ultramsg.com/${instanceId}/messages/chat`;
+        
+        // Clean phone number (remove +, spaces, dashes, etc.)
+        const cleanPhone = phone.replace(/\D/g, '');
+        
+        const body = new URLSearchParams({
+          token: token,
+          to: cleanPhone,
+          body: `¡Hola! Bienvenido a *TiendaFast* ⚡\n\nTu código de verificación es: *${code}*\n\n_Válido por 10 minutos. No compartas este código con nadie._`
+        });
+
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString()
+        });
+        console.log(`📱 [WhatsApp] Mensaje enviado a ${cleanPhone}`);
+      } else {
+        console.log(`📱 [WhatsApp Simulator] Mensaje a ${phone}: Tu código es ${code}`);
+      }
+    } catch (wsErr) {
+      console.error('Error enviando WhatsApp:', wsErr);
+    }
 
     res.json({ message: 'Código generado exitosamente. Revisa la consola.', is_registered, user_name: user ? user.name : null });
   } catch (error) {
