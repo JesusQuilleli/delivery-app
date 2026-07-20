@@ -1,0 +1,267 @@
+const prisma = require('../prismaClient');
+
+const getStoreProducts = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { search, categoryId, page, limit } = req.query;
+    
+    // Buscar la tienda por slug
+    const store = await prisma.store.findUnique({
+      where: { slug },
+      include: {
+        categories: {
+          orderBy: { id: 'asc' }
+        }
+      }
+    });
+
+    if (!store) {
+      return res.status(404).json({ error: 'Tienda no encontrada' });
+    }
+
+    let whereClause = { 
+      store_id: store.id,
+      is_available: true 
+    };
+
+    if (categoryId && categoryId !== 'ALL') {
+      whereClause.category_id = Number(categoryId);
+    }
+
+    if (search) {
+      whereClause.name = {
+        contains: search,
+        mode: 'insensitive'
+      };
+    }
+
+    let products = [];
+    let totalPages = 1;
+    let currentPage = 1;
+    let totalProducts = 0;
+
+    if (page && limit) {
+      currentPage = Number(page);
+      const parsedLimit = Number(limit);
+      const skip = (currentPage - 1) * parsedLimit;
+      
+      const [count, paginatedProducts] = await prisma.$transaction([
+        prisma.product.count({ where: whereClause }),
+        prisma.product.findMany({
+          where: whereClause,
+          include: { category: true },
+          skip,
+          take: parsedLimit,
+          orderBy: { id: 'desc' }
+        })
+      ]);
+      
+      products = paginatedProducts;
+      totalProducts = count;
+      totalPages = Math.ceil(count / parsedLimit);
+    } else {
+      products = await prisma.product.findMany({
+        where: whereClause,
+        include: { category: true },
+        orderBy: { id: 'desc' }
+      });
+      totalProducts = products.length;
+    }
+
+    res.json({
+      store: {
+        id: store.id,
+        name: store.name,
+        slug: store.slug,
+        latitude: store.latitude,
+        longitude: store.longitude,
+        currency: store.currency,
+        usd_rate: store.usd_rate,
+        ves_rate: store.ves_rate,
+        cop_rate: store.cop_rate
+      },
+      products,
+      categories: store.categories,
+      pagination: {
+        currentPage,
+        totalPages,
+        totalProducts
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+};
+
+const getStoreOrders = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const orders = await prisma.order.findMany({
+      where: {
+        store_id: store.id,
+        status: { in: ['PENDING', 'ACCEPTED', 'DISPATCHED'] }
+      },
+      include: {
+        items: { include: { product: true } },
+        user: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(orders);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error cargando órdenes activas' });
+  }
+};
+
+const getStoreHistory = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { from, to } = req.query;
+    
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    let dateFilter = {};
+    if (from && to) {
+      dateFilter = {
+        gte: new Date(from),
+        lte: new Date(to)
+      };
+    }
+
+    const orders = await prisma.order.findMany({
+      where: {
+        store_id: store.id,
+        status: { in: ['DELIVERED', 'CANCELLED'] },
+        ...(from && to ? { createdAt: dateFilter } : {})
+      },
+      include: {
+        items: { include: { product: true } },
+        user: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(orders);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error cargando historial de órdenes' });
+  }
+};
+
+const getStoreProductDetails = async (req, res) => {
+  try {
+    const { slug, productId } = req.params;
+    
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const product = await prisma.product.findFirst({
+      where: {
+        id: Number(productId),
+        store_id: store.id,
+        is_available: true
+      },
+      include: {
+        category: true,
+        comboItems: {
+          include: {
+            product: true
+          }
+        }
+      }
+    });
+
+    if (!product) return res.status(404).json({ error: 'Producto no encontrado' });
+
+    let relatedProducts = [];
+    if (product.category_id) {
+      relatedProducts = await prisma.product.findMany({
+        where: {
+          store_id: store.id,
+          category_id: product.category_id,
+          is_available: true,
+          id: { not: product.id }
+        },
+        take: 4,
+        include: {
+          category: true
+        }
+      });
+    } else {
+      // Si no tiene categoría, traemos otros productos al azar (o los más recientes) de la misma tienda
+      relatedProducts = await prisma.product.findMany({
+        where: {
+          store_id: store.id,
+          is_available: true,
+          id: { not: product.id }
+        },
+        take: 4,
+        include: {
+          category: true
+        }
+      });
+    }
+
+    res.json({ 
+      product, 
+      relatedProducts,
+      store: {
+        id: store.id,
+        name: store.name,
+        slug: store.slug,
+        currency: store.currency,
+        usd_rate: store.usd_rate,
+        ves_rate: store.ves_rate,
+        cop_rate: store.cop_rate
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error cargando detalles del producto' });
+  }
+};
+
+const updateStoreSettings = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { name, latitude, longitude, currency, usd_rate, ves_rate, cop_rate } = req.body;
+    const user = req.user;
+
+    // Verificar si el usuario es ADMIN
+    if (!user || user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'No autorizado para editar configuración' });
+    }
+
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) {
+      return res.status(404).json({ error: 'Tienda no encontrada' });
+    }
+
+    const updatedStore = await prisma.store.update({
+      where: { id: store.id },
+      data: {
+        name: name || undefined,
+        latitude: latitude !== undefined ? parseFloat(latitude) : undefined,
+        longitude: longitude !== undefined ? parseFloat(longitude) : undefined,
+        currency: currency || undefined,
+        usd_rate: usd_rate !== undefined ? parseFloat(usd_rate) : undefined,
+        ves_rate: ves_rate !== undefined ? parseFloat(ves_rate) : undefined,
+        cop_rate: cop_rate !== undefined ? parseFloat(cop_rate) : undefined,
+      }
+    });
+
+    res.json({ message: 'Configuración actualizada exitosamente', store: updatedStore });
+  } catch (error) {
+    console.error('Error actualizando configuración:', error);
+    res.status(500).json({ error: 'Error interno actualizando configuración' });
+  }
+};
+
+module.exports = { getStoreProducts, getStoreOrders, getStoreHistory, getStoreProductDetails, updateStoreSettings };

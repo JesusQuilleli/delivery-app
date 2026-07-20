@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@400;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 1rem;
+    --background: 0.987 0.012 70;
+    --foreground: 0.22 0.03 160;
+    --card: 1 0 0;
+    --card-foreground: 0.22 0.03 160;
+    --popover: 1 0 0;
+    --popover-foreground: 0.22 0.03 160;
+    --primary: 0.52 0.11 165;
+    --primary-foreground: 0.987 0.012 70;
+    --secondary: 0.91 0.05 50;
+    --secondary-foreground: 0.32 0.06 160;
+    --muted: 0.95 0.02 60;
+    --muted-foreground: 0.5 0.03 160;
+    --accent: 0.7 0.18 30;
+    --accent-foreground: 0.99 0 0;
+    --coral: 0.7 0.18 30;
+    --coral-foreground: 0.99 0 0;
+    --cream: 0.987 0.012 70;
+    --peach: 0.91 0.05 50;
+    --destructive: 0.6 0.22 25;
+    --destructive-foreground: 0.99 0 0;
+    --border: 0.9 0.02 60;
+    --input: 0.9 0.02 60;
+    --ring: 0.52 0.11 165;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Manrope', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Sora', sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
