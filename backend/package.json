@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "build": "prisma generate",
-    "db:push": "prisma db push",
+    "build": "npx prisma generate",
+    "db:push": "npx prisma db push",
     "db:seed": "node prisma/seed.js"
   },
   "dependencies": {
