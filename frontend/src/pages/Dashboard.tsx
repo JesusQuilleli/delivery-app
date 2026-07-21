@@ -78,7 +78,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (!storeId) return;
 
-    const socket: Socket = io('http://localhost:3000');
+    const socketURL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+    const socket: Socket = io(socketURL);
 
     socket.on('connect', () => {
       socket.emit('join_store', storeId);

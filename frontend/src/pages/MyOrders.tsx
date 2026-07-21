@@ -83,7 +83,8 @@ export default function MyOrders() {
   // Sockets para actualización en tiempo real en todo el historial
   useEffect(() => {
     if (user?.id) {
-      const socket = io('http://localhost:3000');
+      const socketURL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+      const socket = io(socketURL);
       socket.on('connect', () => socket.emit('join_client', user.id));
       socket.on('estado_actualizado', (updatedOrder) => {
         setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
