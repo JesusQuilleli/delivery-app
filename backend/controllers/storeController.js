@@ -78,7 +78,8 @@ const getStoreProducts = async (req, res) => {
         currency: store.currency,
         usd_rate: store.usd_rate,
         ves_rate: store.ves_rate,
-        cop_rate: store.cop_rate
+        cop_rate: store.cop_rate,
+        industry: store.industry
       },
       products,
       categories: store.categories,

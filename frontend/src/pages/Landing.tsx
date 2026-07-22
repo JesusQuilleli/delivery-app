@@ -1,16 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "@/api";
-import { Navbar } from "@/components/farma/Navbar";
-import { Hero } from "@/components/farma/Hero";
-import { Categories } from "@/components/farma/Categories";
-import { Delivery } from "@/components/farma/Delivery";
-import { Offers } from "@/components/farma/Offers";
-import { Combos } from "@/components/farma/Combos";
-import { About } from "@/components/farma/About";
-import { Testimonials } from "@/components/farma/Testimonials";
-import { Contact } from "@/components/farma/Contact";
-import { Footer } from "@/components/farma/Footer";
+import PharmacyTemplate from "@/components/landing/PharmacyTemplate";
+import RestaurantTemplate from "@/components/landing/RestaurantTemplate";
+import SupermarketTemplate from "@/components/landing/SupermarketTemplate";
 
 export default function Landing() {
   const { slug } = useParams<{ slug: string }>();
@@ -42,20 +35,14 @@ export default function Landing() {
     return <div className="min-h-screen bg-background flex items-center justify-center">Cargando...</div>;
   }
 
-  return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
-      <Navbar />
-      <main>
-        <Hero />
-        <Categories categories={categories} />
-        <Delivery />
-        <Offers offers={offers} store={storeConfig} />
-        <Combos combos={combos} store={storeConfig} />
-        <About />
-        <Testimonials />
-        <Contact />
-      </main>
-      <Footer />
-    </div>
-  );
+  if (storeConfig?.industry === 'RESTAURANT') {
+    return <RestaurantTemplate store={storeConfig} categories={categories} offers={offers} combos={combos} />;
+  }
+
+  if (storeConfig?.industry === 'SUPERMARKET') {
+    return <SupermarketTemplate store={storeConfig} categories={categories} offers={offers} combos={combos} />;
+  }
+
+  // Default to Pharmacy
+  return <PharmacyTemplate store={storeConfig} categories={categories} offers={offers} combos={combos} />;
 }

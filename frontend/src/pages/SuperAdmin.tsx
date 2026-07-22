@@ -21,6 +21,7 @@ export default function SuperAdmin() {
   const [adminUsername, setAdminUsername] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+  const [industry, setIndustry] = useState('PHARMACY');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -52,10 +53,11 @@ export default function SuperAdmin() {
         slug,
         adminUsername,
         adminPhone,
-        adminPassword
+        adminPassword,
+        industry
       });
       toast.success('Tienda creada exitosamente.');
-      setStoreName(''); setSlug(''); setAdminUsername(''); setAdminPhone(''); setAdminPassword('');
+      setStoreName(''); setSlug(''); setAdminUsername(''); setAdminPhone(''); setAdminPassword(''); setIndustry('PHARMACY');
       fetchStores();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Error al crear la tienda.');
@@ -116,6 +118,19 @@ export default function SuperAdmin() {
                     <Label className="font-bold text-gray-700">URL / Slug</Label>
                     <Input required value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="farmacia-los-andes" className="h-12 bg-gray-50" />
                     <p className="text-xs text-gray-400">tiendafast.com/{slug}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="font-bold text-gray-700">Tipo de Negocio</Label>
+                    <select 
+                      value={industry}
+                      onChange={(e) => setIndustry(e.target.value)}
+                      className="w-full h-12 rounded-md border border-input bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="PHARMACY">Farmacia</option>
+                      <option value="RESTAURANT">Restaurante / Comida</option>
+                      <option value="SUPERMARKET">Supermercado / Bodegón</option>
+                    </select>
                   </div>
 
                   <hr className="my-4" />

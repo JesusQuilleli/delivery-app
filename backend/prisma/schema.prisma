@@ -18,6 +18,7 @@ model Store {
   usd_rate   Float      @default(1.0)
   ves_rate   Float      @default(36.5)
   cop_rate   Float      @default(4000.0)
+  industry   String     @default("PHARMACY")
   categories Category[]
   orders     Order[]
   products   Product[]
