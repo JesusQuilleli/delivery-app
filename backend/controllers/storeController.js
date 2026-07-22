@@ -363,4 +363,71 @@ const getStoreCustomers = async (req, res) => {
   }
 };
 
-module.exports = { getStoreProducts, getStoreOrders, getStoreHistory, getStoreProductDetails, updateStoreSettings, getStoreAnalytics, getStoreCustomers };
+const updateStoreCustomer = async (req, res) => {
+  try {
+    const { slug, id } = req.params;
+    const { name, email, phone } = req.body;
+    
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const user = await prisma.user.findFirst({
+      where: {
+        id: Number(id),
+        store_id: store.id
+      }
+    });
+
+    if (!user) return res.status(404).json({ error: 'Cliente no encontrado' });
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        name: name || null,
+        email: email || null,
+        phone: phone || null
+      }
+    });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Error actualizando cliente:', error);
+    res.status(500).json({ error: 'Error al actualizar el cliente' });
+  }
+};
+
+const deleteStoreCustomer = async (req, res) => {
+  try {
+    const { slug, id } = req.params;
+    
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const user = await prisma.user.findFirst({
+      where: {
+        id: Number(id),
+        store_id: store.id
+      },
+      include: {
+        orders: true
+      }
+    });
+
+    if (!user) return res.status(404).json({ error: 'Cliente no encontrado' });
+
+    if (user.orders.length > 0) {
+      return res.status(400).json({ error: 'No se puede eliminar un cliente que ya tiene pedidos registrados. Puedes editar su información en su lugar.' });
+    }
+
+    await prisma.user.delete({
+      where: { id: user.id }
+    });
+
+    res.json({ message: 'Cliente eliminado exitosamente' });
+  } catch (error) {
+    console.error('Error eliminando cliente:', error);
+    res.status(500).json({ error: 'Error al eliminar el cliente' });
+  }
+};
+
+module.exports = { getStoreProducts, getStoreOrders, getStoreHistory, getStoreProductDetails, updateStoreSettings, getStoreAnalytics, getStoreCustomers, updateStoreCustomer, deleteStoreCustomer };
