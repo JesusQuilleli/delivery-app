@@ -331,20 +331,30 @@ const getStoreCustomers = async (req, res) => {
       },
       include: {
         orders: {
-          select: { id: true }
+          select: { id: true, createdAt: true }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { id: 'desc' }
     });
 
-    const formattedCustomers = customers.map(c => ({
-      id: c.id,
-      name: c.name,
-      email: c.email,
-      phone: c.phone,
-      createdAt: c.createdAt,
-      total_orders: c.orders.length
-    }));
+    const formattedCustomers = customers.map(c => {
+      // Intentar obtener la fecha del primer pedido como fecha de "registro" aproximada
+      let firstOrderDate = new Date();
+      if (c.orders && c.orders.length > 0) {
+        firstOrderDate = c.orders.reduce((oldest, current) => 
+          (oldest.createdAt < current.createdAt) ? oldest : current
+        ).createdAt;
+      }
+
+      return {
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        createdAt: firstOrderDate,
+        total_orders: c.orders.length
+      };
+    });
 
     res.json(formattedCustomers);
   } catch (error) {
