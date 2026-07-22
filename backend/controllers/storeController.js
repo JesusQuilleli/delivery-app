@@ -318,4 +318,39 @@ const getStoreAnalytics = async (req, res) => {
   }
 };
 
-module.exports = { getStoreProducts, getStoreOrders, getStoreHistory, getStoreProductDetails, updateStoreSettings, getStoreAnalytics };
+const getStoreCustomers = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const customers = await prisma.user.findMany({
+      where: {
+        store_id: store.id,
+        role: 'CLIENT'
+      },
+      include: {
+        orders: {
+          select: { id: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const formattedCustomers = customers.map(c => ({
+      id: c.id,
+      name: c.name,
+      email: c.email,
+      phone: c.phone,
+      createdAt: c.createdAt,
+      total_orders: c.orders.length
+    }));
+
+    res.json(formattedCustomers);
+  } catch (error) {
+    console.error('Error obteniendo clientes:', error);
+    res.status(500).json({ error: 'Error al obtener lista de clientes' });
+  }
+};
+
+module.exports = { getStoreProducts, getStoreOrders, getStoreHistory, getStoreProductDetails, updateStoreSettings, getStoreAnalytics, getStoreCustomers };
