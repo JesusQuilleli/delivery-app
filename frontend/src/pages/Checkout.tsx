@@ -55,7 +55,12 @@ export default function Checkout() {
   const { token, login, user } = useContext(AuthContext);
 
   const [step, setStep] = useState(token ? 3 : 1);
-  const [phone, setPhone] = useState('');
+  const [countryCode, setCountryCode] = useState('+58');
+  const [rawPhone, setRawPhone] = useState('');
+  
+  const cleanRaw = rawPhone.replace(/\D/g, '');
+  const phone = `${countryCode}${cleanRaw.startsWith('0') && countryCode === '+58' ? cleanRaw.substring(1) : cleanRaw}`;
+  
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
   const [isRegistered, setIsRegistered] = useState(false);
@@ -327,14 +332,31 @@ export default function Checkout() {
               <CardDescription className="text-base mt-2">Inicia sesión de forma segura y sin contraseñas.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-4">
-              <Input 
-                type="tel" 
-                placeholder="Ej: 04120000000" 
-                value={phone} 
-                onChange={(e) => setPhone(e.target.value)}
-                className="h-16 text-xl text-center font-bold tracking-wider rounded-2xl bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-all shadow-inner"
-              />
-              <Button onClick={requestOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-xl shadow-blue-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={!phone || loading}>
+              <div className="flex gap-2">
+                <select
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  className="h-16 px-2 text-lg font-bold rounded-2xl bg-gray-50 border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition-all shadow-inner outline-none cursor-pointer"
+                >
+                  <option value="+58">🇻🇪 +58</option>
+                  <option value="+57">🇨🇴 +57</option>
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+34">🇪🇸 +34</option>
+                  <option value="+56">🇨🇱 +56</option>
+                  <option value="+54">🇦🇷 +54</option>
+                  <option value="+51">🇵🇪 +51</option>
+                  <option value="+593">🇪🇨 +593</option>
+                  <option value="+507">🇵🇦 +507</option>
+                </select>
+                <Input 
+                  type="tel" 
+                  placeholder="Ej: 4120000000" 
+                  value={rawPhone} 
+                  onChange={(e) => setRawPhone(e.target.value)}
+                  className="flex-1 h-16 text-xl text-left pl-4 font-bold tracking-wider rounded-2xl bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-all shadow-inner"
+                />
+              </div>
+              <Button onClick={requestOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-xl shadow-blue-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={!rawPhone || loading}>
                 {loading ? 'Cargando...' : 'Recibir Código Seguro'} <ChevronRight className="ml-2" />
               </Button>
             </CardContent>
