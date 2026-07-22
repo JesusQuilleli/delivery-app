@@ -5,7 +5,7 @@ import { AuthContext } from '../context/AuthContext';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, Clock, MapPin, Package, X, Store, CreditCard, Star, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Package, X, Store, CreditCard, Star, XCircle, ChevronLeft, ChevronRight, Phone } from 'lucide-react';
 
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
@@ -272,7 +272,21 @@ export default function MyOrders() {
                           <div>
                             <h4 className={`font-black text-lg ${isActive ? 'text-orange-600' : 'text-gray-900'}`}>{item.title}</h4>
                             <p className="text-gray-500 text-sm mt-0.5">{item.desc}</p>
-                            {item.status === 'DISPATCHED' && selectedOrder.estimated_minutes && (
+                            
+                            {isActive && item.status === 'DISPATCHED' && selectedOrder.driver && (
+                              <div className="mt-3 p-3 bg-purple-50 rounded-xl border border-purple-100 inline-block animate-in slide-in-from-left-2">
+                                <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Tu motorizado</p>
+                                <p className="font-black text-purple-900 text-base">{selectedOrder.driver.name}</p>
+                                {selectedOrder.driver.vehicle_plate && (
+                                  <p className="text-xs text-purple-700 font-medium">Placa: {selectedOrder.driver.vehicle_plate}</p>
+                                )}
+                                <a href={`tel:${selectedOrder.driver.phone}`} className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold bg-white text-purple-700 px-3 py-1.5 rounded-lg border border-purple-200 shadow-sm hover:bg-purple-100 transition-colors">
+                                  <Phone size={12} /> Contactar
+                                </a>
+                              </div>
+                            )}
+                            
+                            {item.status === 'DISPATCHED' && selectedOrder.estimated_minutes && !selectedOrder.driver && (
                               <p className="text-xs font-bold bg-orange-100 text-orange-800 inline-block px-2 py-1 mt-2 rounded-md">
                                 Tiempo de viaje: ~{selectedOrder.estimated_minutes} min
                               </p>

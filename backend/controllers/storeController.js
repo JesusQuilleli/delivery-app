@@ -432,4 +432,111 @@ const deleteStoreCustomer = async (req, res) => {
   }
 };
 
-module.exports = { getStoreProducts, getStoreOrders, getStoreHistory, getStoreProductDetails, updateStoreSettings, getStoreAnalytics, getStoreCustomers, updateStoreCustomer, deleteStoreCustomer };
+const getStoreDrivers = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const drivers = await prisma.driver.findMany({
+      where: { store_id: store.id },
+      orderBy: { id: 'desc' }
+    });
+
+    res.json({ drivers });
+  } catch (error) {
+    console.error('Error fetching drivers:', error);
+    res.status(500).json({ error: 'Error al cargar motorizados' });
+  }
+};
+
+const createStoreDriver = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { name, phone, vehicle_plate } = req.body;
+    
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const newDriver = await prisma.driver.create({
+      data: {
+        store_id: store.id,
+        name,
+        phone,
+        vehicle_plate,
+        is_active: true
+      }
+    });
+
+    res.json({ driver: newDriver });
+  } catch (error) {
+    console.error('Error creating driver:', error);
+    res.status(500).json({ error: 'Error al crear motorizado' });
+  }
+};
+
+const updateStoreDriver = async (req, res) => {
+  try {
+    const { slug, id } = req.params;
+    const { name, phone, vehicle_plate, is_active } = req.body;
+
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const driver = await prisma.driver.findFirst({
+      where: { id: Number(id), store_id: store.id }
+    });
+
+    if (!driver) return res.status(404).json({ error: 'Motorizado no encontrado' });
+
+    const updatedDriver = await prisma.driver.update({
+      where: { id: driver.id },
+      data: { name, phone, vehicle_plate, is_active }
+    });
+
+    res.json({ driver: updatedDriver });
+  } catch (error) {
+    console.error('Error updating driver:', error);
+    res.status(500).json({ error: 'Error al actualizar motorizado' });
+  }
+};
+
+const deleteStoreDriver = async (req, res) => {
+  try {
+    const { slug, id } = req.params;
+    
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const driver = await prisma.driver.findFirst({
+      where: { id: Number(id), store_id: store.id }
+    });
+
+    if (!driver) return res.status(404).json({ error: 'Motorizado no encontrado' });
+
+    // En lugar de borrar físicamente, podríamos desactivarlo si tiene órdenes, o podemos borrar si no tiene.
+    // Vamos a borrarlo físicamente.
+    await prisma.driver.delete({ where: { id: driver.id } });
+
+    res.json({ message: 'Motorizado eliminado' });
+  } catch (error) {
+    console.error('Error deleting driver:', error);
+    res.status(500).json({ error: 'Error al eliminar motorizado (puede que tenga pedidos asignados)' });
+  }
+};
+
+module.exports = { 
+  getStoreProducts, 
+  getStoreOrders, 
+  getStoreHistory, 
+  getStoreProductDetails, 
+  updateStoreSettings, 
+  getStoreAnalytics, 
+  getStoreCustomers, 
+  updateStoreCustomer, 
+  deleteStoreCustomer,
+  getStoreDrivers,
+  createStoreDriver,
+  updateStoreDriver,
+  deleteStoreDriver
+};

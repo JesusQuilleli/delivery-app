@@ -100,21 +100,26 @@ const placeOrder = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, cancel_reason } = req.body; // ACCEPTED, DISPATCHED, DELIVERED, CANCELLED
+    const { status, cancel_reason, driver_id } = req.body; // ACCEPTED, DISPATCHED, DELIVERED, CANCELLED
     const user = req.user; // ADMIN
     
     if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'No autorizado' });
 
     const order = await prisma.order.update({
       where: { id: Number(id) },
-      data: { status, cancel_reason: cancel_reason || undefined },
+      data: { 
+        status, 
+        cancel_reason: cancel_reason || undefined,
+        driver_id: driver_id ? Number(driver_id) : undefined
+      },
       include: {
         user: true,
         items: {
           include: {
             product: true
           }
-        }
+        },
+        driver: true
       }
     });
 

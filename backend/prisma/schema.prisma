@@ -24,6 +24,7 @@ model Store {
   orders     Order[]
   products   Product[]
   users      User[]
+  drivers    Driver[]
 }
 
 model User {
@@ -84,8 +85,10 @@ model Order {
   distance_km       Float?
   estimated_minutes Int?
   cancel_reason     String?
+  driver_id         Int?
   store             Store       @relation(fields: [store_id], references: [id])
   user              User        @relation(fields: [user_id], references: [id])
+  driver            Driver?     @relation(fields: [driver_id], references: [id])
   items             OrderItem[]
 }
 
@@ -115,4 +118,15 @@ model Category {
   image_url String?
   store     Store     @relation(fields: [store_id], references: [id])
   products  Product[]
+}
+
+model Driver {
+  id            Int      @id @default(autoincrement())
+  store_id      Int
+  name          String
+  phone         String
+  vehicle_plate String?
+  is_active     Boolean  @default(true)
+  store         Store    @relation(fields: [store_id], references: [id])
+  orders        Order[]
 }

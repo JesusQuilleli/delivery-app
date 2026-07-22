@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Package, History, Settings, LogOut, LayoutDashboard, Store, Users } from 'lucide-react';
+import { Package, History, Settings, LogOut, LayoutDashboard, Store, Users, Bike } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface AdminLayoutProps {
@@ -21,9 +21,10 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 
   const navItems = [
     { name: 'Tablero', icon: LayoutDashboard, path: `/admin/${slug}` },
-    { name: 'Inventario', icon: Package, path: `/admin/${slug}/inventory` },
+    { name: 'Catálogo', icon: Package, path: `/admin/${slug}/inventory` },
     { name: 'Historial', icon: History, path: `/admin/${slug}/history` },
     { name: 'Clientes', icon: Users, path: `/admin/${slug}/customers` },
+    { name: 'Motorizados', icon: Bike, path: `/admin/${slug}/drivers` },
     { name: 'Configuración', icon: Settings, path: `/admin/${slug}/settings` },
   ];
 

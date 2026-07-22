@@ -10,6 +10,7 @@ import OrderHistory from './pages/OrderHistory';
 import OrderDetails from './pages/OrderDetails';
 import Inventory from './pages/Inventory';
 import Customers from './pages/Customers';
+import Drivers from './pages/Drivers';
 import MyOrders from './pages/MyOrders';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
@@ -31,6 +32,7 @@ function App() {
             <Route path="/admin/:slug/order/:orderId" element={<OrderDetails />} />
             <Route path="/admin/:slug/inventory" element={<Inventory />} />
             <Route path="/admin/:slug/customers" element={<Customers />} />
+            <Route path="/admin/:slug/drivers" element={<Drivers />} />
             <Route path="/admin/:slug/settings" element={<Settings />} />
 
             <Route path="/:slug" element={<Landing />} />

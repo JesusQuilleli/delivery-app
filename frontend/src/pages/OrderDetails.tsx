@@ -39,6 +39,12 @@ interface Order {
     phone: string;
   };
   store_id?: number;
+  driver?: {
+    id: number;
+    name: string;
+    phone: string;
+    vehicle_plate: string | null;
+  } | null;
 }
 
 const OrderRouteMap = ({ order, storeLocation }: { order: Order, storeLocation: [number, number] }) => {
@@ -86,7 +92,10 @@ export default function OrderDetails() {
   const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
   const [storeData, setStoreData] = useState<Record<string, unknown> | null>(null);
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDriverModal, setShowDriverModal] = useState(false);
+  const [selectedDriverId, setSelectedDriverId] = useState<number | ''>('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -97,6 +106,10 @@ export default function OrderDetails() {
 
         const orderRes = await api.get(`/orders/${orderId}`);
         setOrder(orderRes.data);
+
+        // Fetch drivers
+        const driversRes = await api.get(`/stores/${slug}/drivers`);
+        setDrivers(driversRes.data.drivers.filter((d: any) => d.is_active));
       } catch (error) {
         console.error("Error obteniendo detalles", error);
       } finally {
@@ -128,9 +141,9 @@ export default function OrderDetails() {
     };
   }, [storeData, orderId]);
 
-  const changeStatus = async (newStatus: string) => {
+  const changeStatus = async (newStatus: string, driverId?: number) => {
     if (!order) return;
-    const payload: { status: string; cancel_reason?: string } = { status: newStatus };
+    const payload: { status: string; cancel_reason?: string; driver_id?: number } = { status: newStatus };
 
     if (newStatus === 'CANCELLED') {
       const reason = window.prompt("¿Por qué deseas rechazar/cancelar este pedido?");
@@ -140,10 +153,21 @@ export default function OrderDetails() {
       }
     }
 
+    if (newStatus === 'DISPATCHED' && driverId) {
+      payload.driver_id = driverId;
+    }
+
     try {
       await api.put(`/orders/${order.id}/status`, payload);
       // Actualizar localmente para sentirlo instantáneo
-      setOrder({ ...order, status: newStatus, cancel_reason: payload.cancel_reason || order.cancel_reason });
+      const updatedDriver = drivers.find(d => d.id === driverId);
+      setOrder({ 
+        ...order, 
+        status: newStatus, 
+        cancel_reason: payload.cancel_reason || order.cancel_reason,
+        driver: updatedDriver || order.driver
+      });
+      setShowDriverModal(false);
     } catch (error) {
       console.error("Error actualizando pedido", error);
       toast.error("No se pudo actualizar el estado.");
@@ -231,6 +255,16 @@ export default function OrderDetails() {
                 </div>
 
                 <OrderRouteMap order={order} storeLocation={[Number(storeData.latitude), Number(storeData.longitude)]} />
+                
+                {order.driver && (
+                  <div className="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-xl">
+                    <p className="text-[11px] font-bold text-purple-400 uppercase tracking-widest mb-1">Motorizado Asignado</p>
+                    <p className="font-black text-purple-900">{order.driver.name}</p>
+                    <p className="text-sm text-purple-700 flex items-center gap-1 mt-1">
+                      <Phone size={14} /> {order.driver.phone} {order.driver.vehicle_plate ? ` • Placa: ${order.driver.vehicle_plate}` : ''}
+                    </p>
+                  </div>
+                )}
 
                 <a
                   href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Hola! Nuevo pedido para entregar.\n\n👤 *Cliente:* ${order.user.name || 'Sin nombre'}\n📞 *Teléfono:* ${order.user.phone}\n🏠 *Dirección:* ${order.delivery_address.split(' | Link GMaps:')[0]}\n\n📍 *Iniciar Navegación GPS:*\nhttps://www.google.com/maps/dir/?api=1&origin=${storeData.latitude},${storeData.longitude}&destination=${order.latitude},${order.longitude}`)}`}
@@ -240,6 +274,17 @@ export default function OrderDetails() {
                 >
                   <Truck size={22} /> Enviar Ruta al Motorizado
                 </a>
+                
+                {order.status === 'DISPATCHED' && order.driver && (
+                  <a
+                    href={`https://api.whatsapp.com/send?phone=${order.user.phone.replace('+', '')}&text=${encodeURIComponent(`¡Hola ${order.user.name || ''}! 👋 Tu pedido acaba de salir y va en camino. 🛵\n\nTu motorizado es *${order.driver.name}* (Placa: ${order.driver.vehicle_plate || 'N/A'}).\nPuedes contactarlo al: ${order.driver.phone}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white p-3.5 md:p-4 rounded-xl font-black mt-3 transition-transform hover:scale-[1.02] shadow-xl shadow-blue-500/20 text-base md:text-lg"
+                  >
+                    <Phone size={22} /> Notificar Cliente por WhatsApp
+                  </a>
+                )}
               </div>
             ) : order.delivery_address.includes('Link GMaps: http') ? (
               <a
@@ -290,7 +335,7 @@ export default function OrderDetails() {
             </div>
           )}
           {order.status === 'ACCEPTED' && (
-            <Button onClick={() => changeStatus('DISPATCHED')} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-black shadow-xl shadow-purple-500/20 h-14 md:h-16 rounded-xl text-lg md:text-xl transition-transform active:scale-95">
+            <Button onClick={() => setShowDriverModal(true)} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-black shadow-xl shadow-purple-500/20 h-14 md:h-16 rounded-xl text-lg md:text-xl transition-transform active:scale-95">
               <Truck className="mr-3" size={24} /> Despachar Motorizado
             </Button>
           )}
@@ -312,6 +357,45 @@ export default function OrderDetails() {
           )}
         </div>
       </div>
+
+      {/* Driver Selection Modal */}
+      {showDriverModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-black text-gray-900">Seleccionar Motorizado</h3>
+                <button onClick={() => setShowDriverModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <XCircle size={20} />
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mb-4 font-medium">Asigna un motorizado de tu flota para llevar este pedido.</p>
+              
+              <select 
+                value={selectedDriverId} 
+                onChange={(e) => setSelectedDriverId(Number(e.target.value))}
+                className="w-full border border-gray-200 rounded-xl p-3 bg-gray-50 font-medium mb-6 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              >
+                <option value="" disabled>-- Elige un motorizado --</option>
+                {drivers.map(d => (
+                  <option key={d.id} value={d.id}>{d.name} {d.vehicle_plate ? `(${d.vehicle_plate})` : ''}</option>
+                ))}
+              </select>
+
+              <div className="flex gap-2">
+                <Button onClick={() => changeStatus('DISPATCHED')} variant="outline" className="flex-1 font-bold">Omitir (Sin asigar)</Button>
+                <Button 
+                  onClick={() => selectedDriverId && changeStatus('DISPATCHED', Number(selectedDriverId))} 
+                  disabled={!selectedDriverId}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black"
+                >
+                  Asignar y Despachar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
