@@ -62,12 +62,13 @@ const checkPhone = async (req, res) => {
           body: `¡Hola! Bienvenido a *TiendaFast* ⚡\n\nTu código de verificación es: *${code}*\n\n_Válido por 10 minutos. No compartas este código con nadie._`
         });
 
-        await fetch(url, {
+        const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: body.toString()
         });
-        console.log(`📱 [WhatsApp] Mensaje enviado a ${cleanPhone}`);
+        const responseData = await response.text();
+        console.log(`📱 [WhatsApp] Status: ${response.status} | Respuesta API: ${responseData} | Teléfono: ${cleanPhone}`);
       } else {
         console.log(`📱 [WhatsApp Simulator] Mensaje a ${phone}: Tu código es ${code}`);
       }
