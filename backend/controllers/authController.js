@@ -93,7 +93,7 @@ const checkEmail = async (req, res) => {
       console.error('Error enviando Email:', emailErr);
     }
 
-    res.json({ message: 'Código generado exitosamente. Revisa la consola.', is_registered, user_name: user ? user.name : null });
+    res.json({ message: 'Código generado exitosamente. Revisa la consola.', is_registered, user_name: user ? user.name : null, user_phone: user ? user.phone : null });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al generar código OTP' });
@@ -102,7 +102,7 @@ const checkEmail = async (req, res) => {
 
 const verifyOtp = async (req, res) => {
   try {
-    const { email, code, store_id, name } = req.body;
+    const { email, code, store_id, name, phone } = req.body;
 
     if (!email || !code || !store_id) {
       return res.status(400).json({ error: 'Faltan datos (email, code, store_id)' });
@@ -133,20 +133,22 @@ const verifyOtp = async (req, res) => {
         data: {
           email,
           name: name || null,
+          phone: phone || null,
           store_id: Number(store_id)
         }
       });
-    } else if (name && !user.name) {
-      user = await prisma.user.update({
-        where: { email },
-        data: { name }
-      });
-    } else if (name && user.name && name !== user.name) {
-      // Permitir actualizar el nombre si lo enviaron explícitamente y es diferente
-      user = await prisma.user.update({
-        where: { email },
-        data: { name }
-      });
+    } else {
+      // Update name and phone if provided
+      const updateData = {};
+      if (name && (!user.name || name !== user.name)) updateData.name = name;
+      if (phone && (!user.phone || phone !== user.phone)) updateData.phone = phone;
+
+      if (Object.keys(updateData).length > 0) {
+        user = await prisma.user.update({
+          where: { email },
+          data: updateData
+        });
+      }
     }
 
     // Borramos el código para que no se re-utilice

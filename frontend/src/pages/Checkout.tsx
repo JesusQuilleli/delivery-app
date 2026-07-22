@@ -58,6 +58,11 @@ export default function Checkout() {
 
   const [step, setStep] = useState(token ? 3 : 1);
   const [email, setEmail] = useState('');
+  const [countryCode, setCountryCode] = useState('+58');
+  const [rawPhone, setRawPhone] = useState('');
+  
+  const cleanRaw = rawPhone.replace(/\D/g, '');
+  const phone = `${countryCode}${cleanRaw.startsWith('0') && countryCode === '+58' ? cleanRaw.substring(1) : cleanRaw}`;
   
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
@@ -252,6 +257,16 @@ export default function Checkout() {
       const res = await api.post('/auth/check-email', { email, store_id: storeId });
       setIsRegistered(res.data.is_registered);
       if (res.data.user_name) setName(res.data.user_name);
+      if (res.data.user_phone) {
+        const p = res.data.user_phone;
+        const match = p.match(/^(\+\d{1,3})(\d+)$/);
+        if (match) {
+          setCountryCode(match[1]);
+          setRawPhone(match[2]);
+        } else {
+          setRawPhone(p);
+        }
+      }
       setStep(2);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
@@ -275,7 +290,7 @@ export default function Checkout() {
   const verifyOtp = async () => {
     setLoading(true);
     try {
-      const res = await api.post('/auth/verify-otp', { email, code: otp, store_id: storeId, name });
+      const res = await api.post('/auth/verify-otp', { email, code: otp, store_id: storeId, name, phone });
       login(res.data.client_token, res.data.user);
       setStep(3);
     } catch (error: unknown) {
@@ -370,9 +385,41 @@ export default function Checkout() {
                   placeholder="Ej: Juan Pérez" 
                   value={name} 
                   onChange={(e) => setName(e.target.value)}
-                  disabled={isRegistered}
-                  className={`h-14 text-lg rounded-xl transition-all ${isRegistered ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'bg-white focus:border-orange-500 focus:ring-orange-500'}`}
+                  disabled={isRegistered && !!name}
+                  className={`h-14 text-lg rounded-xl transition-all ${(isRegistered && !!name) ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'bg-white focus:border-orange-500 focus:ring-orange-500'}`}
                 />
+              </div>
+
+              <div className="mb-4 bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
+                <label className="text-sm font-bold text-orange-900 mb-2 flex items-center gap-2">
+                  <Phone size={16} /> {isRegistered && rawPhone ? 'Tu teléfono registrado' : 'Número de Teléfono (Para el delivery)'}
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    disabled={isRegistered && !!rawPhone}
+                    className={`h-14 px-2 text-lg font-bold rounded-xl border border-orange-200 transition-all ${(isRegistered && !!rawPhone) ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500 cursor-pointer outline-none'}`}
+                  >
+                    <option value="+58">🇻🇪 +58</option>
+                    <option value="+57">🇨🇴 +57</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+34">🇪🇸 +34</option>
+                    <option value="+56">🇨🇱 +56</option>
+                    <option value="+54">🇦🇷 +54</option>
+                    <option value="+51">🇵🇪 +51</option>
+                    <option value="+593">🇪🇨 +593</option>
+                    <option value="+507">🇵🇦 +507</option>
+                  </select>
+                  <Input 
+                    type="tel" 
+                    placeholder="Ej: 4120000000" 
+                    value={rawPhone} 
+                    onChange={(e) => setRawPhone(e.target.value)}
+                    disabled={isRegistered && !!rawPhone}
+                    className={`flex-1 h-14 text-lg rounded-xl transition-all ${(isRegistered && !!rawPhone) ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'bg-white focus:border-orange-500 focus:ring-orange-500'}`}
+                  />
+                </div>
               </div>
               
               <div className="mb-6">
@@ -387,7 +434,7 @@ export default function Checkout() {
                 />
               </div>
 
-              <Button onClick={verifyOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 shadow-xl shadow-orange-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={otp.length < 6 || name.length < 3 || loading}>
+              <Button onClick={verifyOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 shadow-xl shadow-orange-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={otp.length < 6 || name.length < 3 || rawPhone.length < 10 || loading}>
                 {loading ? 'Verificando...' : 'Validar y Continuar'} <ChevronRight className="ml-2" />
               </Button>
               
