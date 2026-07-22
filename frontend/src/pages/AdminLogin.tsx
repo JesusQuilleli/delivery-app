@@ -21,7 +21,14 @@ export default function AdminLogin() {
     try {
       const res = await api.post('/auth/admin-login', { username, password });
       login(res.data.client_token, res.data.user);
-      navigate(`/admin/farmacia-ayacucho`);
+      
+      if (res.data.user.role === 'SUPERADMIN') {
+        navigate('/superadmin');
+      } else if (res.data.user.store?.slug) {
+        navigate(`/admin/${res.data.user.store.slug}`);
+      } else {
+        navigate(`/admin/farmacia-ayacucho`);
+      }
     } catch (e: any) {
       toast.error(e.response?.data?.error || "Error al iniciar sesión");
     }

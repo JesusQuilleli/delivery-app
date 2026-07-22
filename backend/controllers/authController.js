@@ -24,8 +24,8 @@ const checkPhone = async (req, res) => {
       return res.status(429).json({ error: 'Por favor, espera un minuto antes de solicitar otro código.' });
     }
 
-    // Generar código OTP de 4 dígitos
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    // Generar código OTP de 6 dígitos
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expires_at = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos de validez
 
     // Borramos los códigos anteriores de este teléfono para evitar duplicidad
@@ -179,7 +179,8 @@ const adminLogin = async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { username }
+      where: { username },
+      include: { store: true }
     });
 
     if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
@@ -213,7 +214,8 @@ const adminLogin = async (req, res) => {
         name: user.name,
         username: user.username,
         role: user.role,
-        store_id: user.store_id
+        store_id: user.store_id,
+        store: user.store ? { slug: user.store.slug } : null
       }
     });
   } catch (error) {
