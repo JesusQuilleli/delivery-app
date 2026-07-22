@@ -9,6 +9,7 @@ import { Input } from '../components/ui/input';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L, { type LatLngExpression } from 'leaflet';
+import { toast } from 'sonner';
 
 // @ts-ignore
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -88,10 +89,10 @@ export default function Settings() {
         payload.longitude = mapPosition[1];
       }
       await api.put(`/stores/${slug}/settings`, payload);
-      alert('Configuración guardada exitosamente');
+      toast.success('Configuración guardada exitosamente');
     } catch (error) {
       console.error("Error guardando", error);
-      alert('Hubo un error al guardar la configuración');
+      toast.error('Hubo un error al guardar la configuración');
     }
     setSaving(false);
   };
@@ -103,11 +104,11 @@ export default function Settings() {
       const data = await response.json();
       if (data && data.promedio) {
         setVesRate(data.promedio);
-        alert(`Tasa BCV sincronizada: ${data.promedio} Bs.`);
+        toast.success(`Tasa BCV sincronizada: ${data.promedio} Bs.`);
       }
     } catch (err) {
       console.error(err);
-      alert('Error sincronizando la tasa del BCV');
+      toast.error('Error sincronizando la tasa del BCV');
     }
     setSyncing(false);
   };

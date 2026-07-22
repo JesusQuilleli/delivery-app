@@ -9,7 +9,8 @@ const {
   getCategories,
   createCategory,
   updateCategory,
-  deleteCategory
+  deleteCategory,
+  createProductsBulk
 } = require('../controllers/inventoryController');
 const { requireAdmin } = require('../middleware/authMiddleware');
 
@@ -18,6 +19,9 @@ router.get('/:slug/inventory', requireAdmin, getInventory);
 
 // Crear producto individual
 router.post('/:slug/products', requireAdmin, createProduct);
+
+// Crear productos en batch (Excel/CSV)
+router.post('/:slug/products/bulk', requireAdmin, createProductsBulk);
 
 // Crear combo
 router.post('/:slug/combos', requireAdmin, createCombo);

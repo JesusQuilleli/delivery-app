@@ -6,6 +6,9 @@ import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { ArrowLeft, Clock, MapPin, Package, X, Store, CreditCard, Star, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Textarea } from '../components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 import { formatPrice } from '../utils/currency';
 
@@ -18,6 +21,10 @@ export default function MyOrders() {
 
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState('');
+  const [isRateModalOpen, setIsRateModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -32,32 +39,32 @@ export default function MyOrders() {
 
   const handleRateOrder = async () => {
     try {
-      await api.put(`/orders/${selectedOrder.id}/rate`, { rating, review }, {
+      await api.put(`/orders/${selectedOrderId}/rate`, { rating, review }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      setOrders(orders.map(o => o.id === selectedOrderId ? { ...o, client_rating: rating, client_review: review } : o));
+      setIsRateModalOpen(false);
     } catch (error) {
-      alert("Error al enviar calificación");
+      toast.error("Error al enviar calificación");
     }
   };
 
   const handleCancelOrder = async () => {
-    const reason = window.prompt("¿Por qué deseas cancelar este pedido? Por favor, déjanos una razón:");
-    if (reason === null) return; // cancelado por el usuario
-    if (reason.trim() === "") {
-      alert("Debes proporcionar una razón para cancelar el pedido.");
+    if (!cancelReason.trim()) {
+      toast.error("Debes proporcionar una razón para cancelar el pedido.");
       return;
     }
-
     try {
-      await api.put(`/orders/${selectedOrder.id}/cancel`, { cancel_reason: reason }, {
+      await api.put(`/orders/${selectedOrder.id}/cancel`, { cancel_reason: cancelReason }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       // The socket will update it, but we can do optimistic update just in case
-      const updatedOrder = { ...selectedOrder, status: 'CANCELLED', cancel_reason: reason };
+      const updatedOrder = { ...selectedOrder, status: 'CANCELLED', cancel_reason: cancelReason };
       setSelectedOrder(updatedOrder);
       setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+      setIsCancelModalOpen(false);
     } catch (error) {
-      alert("No se pudo cancelar el pedido. Es posible que ya esté siendo preparado.");
+      toast.error("No se pudo cancelar el pedido. Es posible que ya esté siendo preparado.");
     }
   };
 

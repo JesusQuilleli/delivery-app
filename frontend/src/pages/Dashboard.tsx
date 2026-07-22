@@ -9,6 +9,7 @@ import { Badge } from '../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import AdminLayout from '../components/AdminLayout';
+import { toast } from 'sonner';
 
 interface OrderItem {
   id: number;
@@ -73,6 +74,11 @@ export default function Dashboard() {
       }
     };
     fetchStoreAndOrders();
+
+    // Solicitar permiso para notificaciones en segundo plano
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }, [slug]);
 
   useEffect(() => {
@@ -88,8 +94,22 @@ export default function Dashboard() {
     socket.on('nuevo_pedido', (order: Order) => {
       setOrders(prev => [order, ...prev]);
       setNewOrderAlert(order);
+      
+      // Reproducir sonido
       if (audioRef.current) {
         audioRef.current.play().catch(e => console.error("Autoplay bloqueado", e));
+      }
+
+      // Enviar Notificación nativa si estamos en otra pestaña
+      if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+        const notif = new Notification("¡Nuevo Pedido en TiendaFast!", {
+          body: `Pedido por $${order.total_amount.toFixed(2)} a entregar en: ${order.delivery_address.split(' |')[0]}`,
+          icon: '/favicon.ico'
+        });
+        notif.onclick = () => {
+          window.focus();
+          notif.close();
+        };
       }
     });
 
@@ -107,7 +127,7 @@ export default function Dashboard() {
       await api.put(`/orders/${orderId}/status`, { status });
     } catch (error) {
       console.error("Error actualizando pedido", error);
-      alert("Error actualizando el estado del pedido.");
+      toast.error("Error actualizando el estado del pedido.");
     }
   };
 
@@ -133,7 +153,7 @@ export default function Dashboard() {
       try {
         await api.put(`/orders/${newOrderAlert.id}/status`, { status: 'CANCELLED', cancel_reason: reason || undefined });
       } catch (e) {
-        alert("Error al rechazar el pedido");
+        toast.error("Error al rechazar el pedido");
       }
     }
     setNewOrderAlert(null);

@@ -141,6 +141,43 @@ const createProduct = async (req, res) => {
   }
 };
 
+// Crear productos masivamente
+const createProductsBulk = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { products } = req.body; // array de objetos product
+    
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ error: 'No se enviaron productos válidos' });
+    }
+
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    // Mapear los productos
+    const dataToInsert = products.map(p => ({
+      store_id: store.id,
+      name: p.name,
+      price: Number(p.price) || 0,
+      description: p.description || null,
+      stock: p.stock !== undefined && p.stock !== null && p.stock !== '' ? Number(p.stock) : null,
+      is_available: p.is_available !== undefined ? Boolean(p.is_available) : true,
+      is_combo: false,
+      category_id: p.category_id ? Number(p.category_id) : null
+    }));
+
+    const result = await prisma.product.createMany({
+      data: dataToInsert,
+      skipDuplicates: true
+    });
+
+    res.json({ message: 'Productos creados masivamente', count: result.count });
+  } catch (error) {
+    console.error('Error creando productos masivamente:', error);
+    res.status(500).json({ error: 'Error interno creando productos' });
+  }
+};
+
 // Actualizar producto (sirve para editar detalles, toggle is_available o stock)
 const updateProduct = async (req, res) => {
   try {
@@ -375,6 +412,7 @@ const deleteCategory = async (req, res) => {
 module.exports = {
   getInventory,
   createProduct,
+  createProductsBulk,
   updateProduct,
   createCombo,
   deleteProduct,

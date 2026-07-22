@@ -5,7 +5,7 @@ const { JWT_SECRET } = require('../middleware/authMiddleware');
 
 const checkPhone = async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { phone, store_id } = req.body;
     if (!phone) {
       return res.status(400).json({ error: 'El teléfono es requerido' });
     }
@@ -46,6 +46,15 @@ const checkPhone = async (req, res) => {
     const user = await prisma.user.findUnique({ where: { phone } });
     const is_registered = user && user.name ? true : false;
 
+    // Obtener nombre de la tienda
+    let storeName = 'TiendaFast';
+    if (store_id) {
+      const store = await prisma.store.findUnique({ where: { id: Number(store_id) } });
+      if (store && store.name) {
+        storeName = store.name;
+      }
+    }
+
     // ENVÍO DE WHATSAPP REAL MEDIANTE ULTRAMSG
     try {
       const instanceId = process.env.ULTRAMSG_INSTANCE_ID;
@@ -59,7 +68,7 @@ const checkPhone = async (req, res) => {
         const body = new URLSearchParams({
           token: token,
           to: cleanPhone,
-          body: `¡Hola! Bienvenido a *TiendaFast* ⚡\n\nTu código de verificación es: *${code}*\n\n_Válido por 10 minutos. No compartas este código con nadie._`
+          body: `¡Hola! Bienvenido a *${storeName}* ⚡\n\nTu código de verificación es: *${code}*\n\n_Válido por 10 minutos. No compartas este código con nadie._`
         });
 
         const response = await fetch(url, {

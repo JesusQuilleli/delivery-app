@@ -14,6 +14,8 @@ import Layout from './components/Layout';
 import Landing from './pages/Landing';
 import ProductDetails from './pages/ProductDetails';
 import Settings from './pages/Settings';
+import SuperAdmin from './pages/SuperAdmin';
+import { Toaster } from 'sonner';
 
 function App() {
   return (
@@ -21,6 +23,7 @@ function App() {
       <CartProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="/superadmin" element={<SuperAdmin />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin/:slug" element={<Dashboard />} />
             <Route path="/admin/:slug/history" element={<OrderHistory />} />
@@ -42,6 +45,7 @@ function App() {
             <Route path="/" element={<Navigate to="/farmacia-ayacucho" />} />
           </Routes>
         </BrowserRouter>
+        <Toaster position="top-center" richColors />
       </CartProvider>
     </AuthProvider>
   );

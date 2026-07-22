@@ -25,7 +25,7 @@ const requireAuth = (req, res, next) => {
 
 const requireAdmin = (req, res, next) => {
   requireAuth(req, res, () => {
-    if (req.user && req.user.role === 'ADMIN') {
+    if (req.user && (req.user.role === 'ADMIN' || req.user.role === 'SUPERADMIN')) {
       next();
     } else {
       return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de Administrador.' });
@@ -33,4 +33,14 @@ const requireAdmin = (req, res, next) => {
   });
 };
 
-module.exports = { requireAuth, requireAdmin, JWT_SECRET };
+const requireSuperAdmin = (req, res, next) => {
+  requireAuth(req, res, () => {
+    if (req.user && req.user.role === 'SUPERADMIN') {
+      next();
+    } else {
+      return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de Super Administrador.' });
+    }
+  });
+};
+
+module.exports = { requireAuth, requireAdmin, requireSuperAdmin, JWT_SECRET };

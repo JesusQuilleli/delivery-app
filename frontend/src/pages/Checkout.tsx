@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Phone, MapPin, CreditCard, ChevronRight, CheckCircle2, ShieldCheck, User as UserIcon, LocateFixed } from 'lucide-react';
+import LoadingOverlay from '../components/LoadingOverlay';
+import { toast } from 'sonner';
 
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -162,7 +164,7 @@ export default function Checkout() {
 
   const handleGPSLocation = () => {
     if (!navigator.geolocation) {
-      alert("Tu navegador o dispositivo no soporta geolocalización.");
+      toast.error("Tu navegador o dispositivo no soporta geolocalización.");
       return;
     }
 
@@ -228,10 +230,10 @@ export default function Checkout() {
         if (error.code === error.POSITION_UNAVAILABLE) errorMsg = "Ubicación no disponible (Común en PCs de escritorio sin Wi-Fi o con VPN).";
         if (error.code === error.TIMEOUT) errorMsg = "Tiempo de espera agotado.";
         
-        alert(`Error al ubicarte: ${errorMsg} \n\nDetalle técnico: ${error.message}`);
+        toast.error(`Error al ubicarte: ${errorMsg} \n\nDetalle técnico: ${error.message}`);
         setIsSearchingAddress(false);
       },
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 10000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
@@ -251,13 +253,13 @@ export default function Checkout() {
   const requestOtp = async () => {
     setLoading(true);
     try {
-      const res = await api.post('/auth/check-phone', { phone });
+      const res = await api.post('/auth/check-phone', { phone, store_id: storeId });
       setIsRegistered(res.data.is_registered);
       if (res.data.user_name) setName(res.data.user_name);
       setStep(2);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
-      alert(err.response?.data?.error || "Error al solicitar código");
+      toast.error(err.response?.data?.error || "Error al solicitar código");
     }
     setLoading(false);
   };
@@ -265,11 +267,11 @@ export default function Checkout() {
   const resendOtp = async () => {
     setLoading(true);
     try {
-      await api.post('/auth/check-phone', { phone });
-      alert("Código reenviado exitosamente a tu WhatsApp.");
+      await api.post('/auth/check-phone', { phone, store_id: storeId });
+      toast.success("Código reenviado exitosamente a tu WhatsApp.");
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
-      alert(err.response?.data?.error || "Error al reenviar código");
+      toast.error(err.response?.data?.error || "Error al reenviar código");
     }
     setLoading(false);
   };
@@ -282,7 +284,7 @@ export default function Checkout() {
       setStep(3);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
-      alert(err.response?.data?.error || "Código incorrecto");
+      toast.error(err.response?.data?.error || "Código incorrecto");
     }
     setLoading(false);
   };
@@ -314,7 +316,7 @@ export default function Checkout() {
       setStep(5);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
-      alert(err.response?.data?.error || "Error al confirmar el pedido");
+      toast.error(err.response?.data?.error || "Error al confirmar el pedido");
     }
     setLoading(false);
   };
@@ -380,14 +382,15 @@ export default function Checkout() {
               
               <div className="mb-4 bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
                 <label className="text-sm font-bold text-orange-900 mb-2 flex items-center gap-2">
-                  <UserIcon size={16} /> {isRegistered && name ? 'Confirma o edita tu nombre' : '¿Cómo te llamas?'}
+                  <UserIcon size={16} /> {isRegistered && name ? '¡Bienvenido de nuevo!' : '¿Cómo te llamas?'}
                 </label>
                 <Input 
                   type="text" 
                   placeholder="Ej: Juan Pérez" 
                   value={name} 
                   onChange={(e) => setName(e.target.value)}
-                  className="h-14 text-lg rounded-xl bg-white focus:border-orange-500 focus:ring-orange-500 transition-all"
+                  disabled={isRegistered}
+                  className={`h-14 text-lg rounded-xl transition-all ${isRegistered ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'bg-white focus:border-orange-500 focus:ring-orange-500'}`}
                 />
               </div>
               
@@ -697,6 +700,7 @@ export default function Checkout() {
         )}
         
         <div className="transition-all duration-500">
+          <LoadingOverlay isLoading={loading} />
           {renderStep()}
         </div>
       </div>

@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Printer, Trash2, Calendar, Search, Store, History, ChevronLeft, ChevronRight } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
+import { toast } from 'sonner';
 
 export default function OrderHistory() {
   const { slug } = useParams<{ slug: string }>();
@@ -68,8 +69,10 @@ export default function OrderHistory() {
       try {
         await api.delete(`/orders/${id}`);
         setOrders(orders.filter(o => o.id !== id));
+        toast.success('Orden eliminada correctamente');
       } catch (error) {
-        alert('Error eliminando la orden');
+        console.error(error);
+        toast.error('Error eliminando la orden');
       }
     }
   };

@@ -8,6 +8,7 @@ import { Button } from '../components/ui/button';
 import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { formatPrice } from '../utils/currency';
+import { toast } from 'sonner';
 
 interface OrderItem {
   id: number;
@@ -145,7 +146,7 @@ export default function OrderDetails() {
       setOrder({ ...order, status: newStatus, cancel_reason: payload.cancel_reason || order.cancel_reason });
     } catch (error) {
       console.error("Error actualizando pedido", error);
-      alert("No se pudo actualizar el estado.");
+      toast.error("No se pudo actualizar el estado.");
     }
   };
 

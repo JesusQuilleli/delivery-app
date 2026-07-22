@@ -9,6 +9,7 @@ const authRoutes = require('./routes/authRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const superadminRoutes = require('./routes/superadminRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -58,6 +59,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/superadmin', superadminRoutes);
 
 // Ruta de prueba base
 app.get('/', (req, res) => {

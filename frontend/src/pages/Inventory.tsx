@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
-import { Package, Plus, Trash2, Layers, Image as ImageIcon, Tags, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Package, Plus, Trash2, Layers, Image as ImageIcon, Tags, Pencil, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
+import Papa from 'papaparse';
 import { Button } from '../components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
@@ -10,6 +11,7 @@ import { Badge } from '../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { toast } from 'sonner';
 
 interface Category {
   id: number;
@@ -63,7 +65,7 @@ export default function Inventory() {
       return res.data.imageUrl;
     } catch (error) {
       console.error('Error uploading image', error);
-      alert('Error al subir la imagen a la nube');
+      toast.error('Error al subir la imagen a la nube');
       return null;
     } finally {
       setIsUploading(false);
@@ -144,6 +146,51 @@ export default function Inventory() {
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        const data = results.data;
+        if (data.length === 0) {
+          toast.error('El archivo está vacío');
+          return;
+        }
+        
+        const confirm = window.confirm(`Se importarán ${data.length} productos. ¿Deseas continuar?`);
+        if (!confirm) return;
+
+        try {
+          setLoading(true);
+          const formatted = data.map((item: any) => ({
+            name: item.name || item.Nombre || item.NAME || 'Sin nombre',
+            price: parseFloat(item.price || item.Precio || item.PRICE) || 0,
+            description: item.description || item.Descripcion || item.DESCRIPTION || '',
+            stock: item.stock || item.Stock || item.STOCK || null,
+            category_id: null,
+            is_available: true
+          }));
+
+          const res = await api.post(`/inventory/${slug}/products/bulk`, { products: formatted });
+          toast.success(`Éxito: ${res.data.count} productos creados masivamente.`);
+          fetchInventory();
+        } catch (err) {
+          console.error(err);
+          toast.error('Error al importar productos masivamente');
+          setLoading(false);
+        }
+      },
+      error: (error: any) => {
+        toast.error(`Error leyendo archivo CSV: ${error.message}`);
+      }
+    });
+    // Reset file input
+    e.target.value = '';
+  };
+
   useEffect(() => {
     fetchInventory();
   }, [slug, activeTab, currentPage, debouncedSearchTerm]);
@@ -167,7 +214,7 @@ export default function Inventory() {
       setProducts(products.map(p => p.id === id ? { ...p, is_available: !currentStatus } : p));
     } catch (e) {
       console.error(e);
-      alert("Error al actualizar");
+      toast.error("Error al actualizar");
     }
   };
 
@@ -176,8 +223,9 @@ export default function Inventory() {
     try {
       await api.delete(`/inventory/products/${id}`);
       setProducts(products.filter(p => p.id !== id));
+      toast.success("Producto eliminado exitosamente");
     } catch (e) {
-      alert("No se puede eliminar porque está asociado a pedidos.");
+      toast.error("No se puede eliminar porque está asociado a pedidos.");
     }
   };
 
@@ -198,15 +246,19 @@ export default function Inventory() {
       setIsAddProductOpen(false);
       // Reset
       setNewProductName(''); setNewProductPrice(''); setNewProductDesc(''); setNewProductStock(''); setNewProductImage(''); setNewProductCategoryId('');
+      toast.success("Producto creado exitosamente");
     } catch (error) {
       console.error(error);
-      alert("Error al crear producto");
+      toast.error("Error al crear producto");
     }
   };
 
   const handleAddCombo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedComboItems.length === 0) return alert("Selecciona al menos un producto para el combo");
+    if (selectedComboItems.length === 0) {
+      toast.error("Selecciona al menos un producto para el combo");
+      return;
+    }
     try {
       const payload = {
         name: newComboName,
@@ -221,9 +273,10 @@ export default function Inventory() {
       setIsAddComboOpen(false);
       // Reset
       setNewComboName(''); setNewComboPrice(''); setNewComboDesc(''); setNewComboImage(''); setSelectedComboItems([]);
+      toast.success("Combo creado exitosamente");
     } catch (error) {
       console.error(error);
-      alert("Error al crear combo");
+      toast.error("Error al crear combo");
     }
   };
 
@@ -234,9 +287,10 @@ export default function Inventory() {
       setCategories([...categories, res.data.category]);
       setNewCategoryName('');
       setNewCategoryImage('');
+      toast.success("Categoría creada exitosamente");
     } catch (error) {
       console.error(error);
-      alert("Error al crear categoría");
+      toast.error("Error al crear categoría");
     }
   };
 
@@ -254,9 +308,10 @@ export default function Inventory() {
       const res = await api.put(`/inventory/categories/${editingCategory.id}`, { name: editCategoryName, image_url: editCategoryImage });
       setCategories(categories.map(c => c.id === editingCategory.id ? res.data.category : c));
       setIsEditCategoryOpen(false);
+      toast.success("Categoría actualizada");
     } catch (error) {
       console.error(error);
-      alert("Error al actualizar categoría");
+      toast.error("Error al actualizar categoría");
     }
   };
 
@@ -266,8 +321,9 @@ export default function Inventory() {
       await api.delete(`/inventory/categories/${id}`);
       setCategories(categories.filter(c => c.id !== id));
       setProducts(products.filter(p => p.category_id !== id));
+      toast.success("Categoría eliminada exitosamente");
     } catch (e) {
-      alert("Error al eliminar categoría.");
+      toast.error("Error al eliminar categoría.");
     }
   };
 
@@ -297,9 +353,10 @@ export default function Inventory() {
       const res = await api.put(`/inventory/products/${editingProduct.id}`, payload);
       setProducts(products.map(p => p.id === editingProduct.id ? res.data.product : p));
       setIsEditProductOpen(false);
+      toast.success("Producto actualizado exitosamente");
     } catch (error) {
       console.error(error);
-      alert("Error al actualizar producto");
+      toast.error("Error al actualizar producto");
     }
   };
 
@@ -467,7 +524,21 @@ export default function Inventory() {
           </TabsContent>
 
           <TabsContent value="products" className="mt-6 space-y-4 animate-in fade-in duration-300">
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-3">
+              <input 
+                type="file" 
+                id="csv-upload" 
+                accept=".csv" 
+                style={{ display: 'none' }} 
+                onChange={handleFileUpload} 
+              />
+              <Button 
+                variant="outline" 
+                className="border-gray-200 font-bold rounded-xl h-10 px-4"
+                onClick={() => document.getElementById('csv-upload')?.click()}
+              >
+                <Upload className="mr-2" size={18}/> Importar CSV
+              </Button>
               <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 px-6">

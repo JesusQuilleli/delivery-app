@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Lock, User } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -22,7 +23,7 @@ export default function AdminLogin() {
       login(res.data.client_token, res.data.user);
       navigate(`/admin/farmacia-ayacucho`);
     } catch (e: any) {
-      alert(e.response?.data?.error || "Error al iniciar sesión");
+      toast.error(e.response?.data?.error || "Error al iniciar sesión");
     }
     setLoading(false);
   };
