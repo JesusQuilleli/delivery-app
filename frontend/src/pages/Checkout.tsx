@@ -57,11 +57,7 @@ export default function Checkout() {
   const { token, login, user } = useContext(AuthContext);
 
   const [step, setStep] = useState(token ? 3 : 1);
-  const [countryCode, setCountryCode] = useState('+58');
-  const [rawPhone, setRawPhone] = useState('');
-  
-  const cleanRaw = rawPhone.replace(/\D/g, '');
-  const phone = `${countryCode}${cleanRaw.startsWith('0') && countryCode === '+58' ? cleanRaw.substring(1) : cleanRaw}`;
+  const [email, setEmail] = useState('');
   
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
@@ -253,7 +249,7 @@ export default function Checkout() {
   const requestOtp = async () => {
     setLoading(true);
     try {
-      const res = await api.post('/auth/check-phone', { phone, store_id: storeId });
+      const res = await api.post('/auth/check-email', { email, store_id: storeId });
       setIsRegistered(res.data.is_registered);
       if (res.data.user_name) setName(res.data.user_name);
       setStep(2);
@@ -267,8 +263,8 @@ export default function Checkout() {
   const resendOtp = async () => {
     setLoading(true);
     try {
-      await api.post('/auth/check-phone', { phone, store_id: storeId });
-      toast.success("Código reenviado exitosamente a tu WhatsApp.");
+      await api.post('/auth/check-email', { email, store_id: storeId });
+      toast.success("Código reenviado exitosamente a tu correo.");
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
       toast.error(err.response?.data?.error || "Error al reenviar código");
@@ -279,7 +275,7 @@ export default function Checkout() {
   const verifyOtp = async () => {
     setLoading(true);
     try {
-      const res = await api.post('/auth/verify-otp', { phone, code: otp, store_id: storeId, name });
+      const res = await api.post('/auth/verify-otp', { email, code: otp, store_id: storeId, name });
       login(res.data.client_token, res.data.user);
       setStep(3);
     } catch (error: unknown) {
@@ -328,37 +324,22 @@ export default function Checkout() {
           <Card className="border-none shadow-2xl backdrop-blur-xl bg-white/90">
             <CardHeader className="text-center pb-2">
               <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30 transform rotate-3 hover:rotate-0 transition-transform">
-                <Phone className="text-white" size={36} />
+                <UserIcon className="text-white" size={36} />
               </div>
-              <CardTitle className="text-3xl font-black text-gray-900 tracking-tight">Tu WhatsApp</CardTitle>
+              <CardTitle className="text-3xl font-black text-gray-900 tracking-tight">Tu Correo</CardTitle>
               <CardDescription className="text-base mt-2">Inicia sesión de forma segura y sin contraseñas.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-4">
               <div className="flex gap-2">
-                <select
-                  value={countryCode}
-                  onChange={(e) => setCountryCode(e.target.value)}
-                  className="h-16 px-2 text-lg font-bold rounded-2xl bg-gray-50 border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition-all shadow-inner outline-none cursor-pointer"
-                >
-                  <option value="+58">🇻🇪 +58</option>
-                  <option value="+57">🇨🇴 +57</option>
-                  <option value="+1">🇺🇸 +1</option>
-                  <option value="+34">🇪🇸 +34</option>
-                  <option value="+56">🇨🇱 +56</option>
-                  <option value="+54">🇦🇷 +54</option>
-                  <option value="+51">🇵🇪 +51</option>
-                  <option value="+593">🇪🇨 +593</option>
-                  <option value="+507">🇵🇦 +507</option>
-                </select>
                 <Input 
-                  type="tel" 
-                  placeholder="Ej: 4120000000" 
-                  value={rawPhone} 
-                  onChange={(e) => setRawPhone(e.target.value)}
+                  type="email" 
+                  placeholder="Ej: correo@ejemplo.com" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)}
                   className="flex-1 h-16 text-xl text-left pl-4 font-bold tracking-wider rounded-2xl bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-all shadow-inner"
                 />
               </div>
-              <Button onClick={requestOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-xl shadow-blue-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={!rawPhone || loading}>
+              <Button onClick={requestOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-xl shadow-blue-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={!email || loading}>
                 {loading ? 'Cargando...' : 'Recibir Código Seguro'} <ChevronRight className="ml-2" />
               </Button>
             </CardContent>
@@ -375,7 +356,7 @@ export default function Checkout() {
                 Verificación Segura
               </CardTitle>
               <CardDescription className="text-base mt-2">
-                Hemos enviado un código a tu WhatsApp.
+                Hemos enviado un código a tu correo.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-4">

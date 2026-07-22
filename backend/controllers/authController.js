@@ -2,18 +2,19 @@ const prisma = require('../prismaClient');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
+const nodemailer = require('nodemailer');
 
-const checkPhone = async (req, res) => {
+const checkEmail = async (req, res) => {
   try {
-    const { phone, store_id } = req.body;
-    if (!phone) {
-      return res.status(400).json({ error: 'El teléfono es requerido' });
+    const { email, store_id } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'El correo electrónico es requerido' });
     }
 
     // Rate Limiting Básico: Verificar si ya hay un código muy reciente (menos de 1 minuto)
     const recentCode = await prisma.verificationCode.findFirst({
       where: {
-        phone,
+        email,
         expires_at: {
           gt: new Date(Date.now() + 9 * 60 * 1000) // Si caduca en más de 9 minutos, se creó hace menos de 1 minuto
         }
@@ -28,22 +29,22 @@ const checkPhone = async (req, res) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expires_at = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos de validez
 
-    // Borramos los códigos anteriores de este teléfono para evitar duplicidad
+    // Borramos los códigos anteriores de este correo para evitar duplicidad
     await prisma.verificationCode.deleteMany({
-      where: { phone }
+      where: { email }
     });
 
     // Guardamos el nuevo código
     await prisma.verificationCode.create({
       data: {
-        phone,
+        email,
         code,
         expires_at
       }
     });
 
     // Verificar si el usuario ya existe
-    const user = await prisma.user.findUnique({ where: { phone } });
+    const user = await prisma.user.findUnique({ where: { email } });
     const is_registered = user && user.name ? true : false;
 
     // Obtener nombre de la tienda
@@ -55,34 +56,41 @@ const checkPhone = async (req, res) => {
       }
     }
 
-    // ENVÍO DE WHATSAPP REAL MEDIANTE ULTRAMSG
+    // ENVÍO DE EMAIL MEDIANTE NODEMAILER
     try {
-      const instanceId = process.env.ULTRAMSG_INSTANCE_ID;
-      const token = process.env.ULTRAMSG_TOKEN;
-      if (instanceId && token) {
-        const url = `https://api.ultramsg.com/${instanceId}/messages/chat`;
-        
-        // Clean phone number (remove +, spaces, dashes, etc.)
-        const cleanPhone = phone.replace(/\D/g, '');
-        
-        const body = new URLSearchParams({
-          token: token,
-          to: cleanPhone,
-          body: `¡Hola! Bienvenido a *${storeName}* ⚡\n\nTu código de verificación es: *${code}*\n\n_Válido por 10 minutos. No compartas este código con nadie._`
+      const emailUser = process.env.EMAIL_USER;
+      const emailPass = process.env.EMAIL_PASS;
+      
+      if (emailUser && emailPass) {
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: emailUser,
+            pass: emailPass
+          }
         });
 
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: body.toString()
-        });
-        const responseData = await response.text();
-        console.log(`📱 [WhatsApp] Status: ${response.status} | Respuesta API: ${responseData} | Teléfono: ${cleanPhone}`);
+        const mailOptions = {
+          from: `"App Delivery" <${emailUser}>`,
+          to: email,
+          subject: `Tu código de acceso: ${code}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+              <h2>¡Hola! Bienvenido a <b>${storeName}</b> ⚡</h2>
+              <p>Tu código de verificación es:</p>
+              <h1 style="font-size: 36px; letter-spacing: 5px; color: #f97316; margin: 10px 0;">${code}</h1>
+              <p style="color: #666;"><i>Válido por 10 minutos. No compartas este código con nadie.</i></p>
+            </div>
+          `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`✉️ [Email] Código enviado a ${email}`);
       } else {
-        console.log(`📱 [WhatsApp Simulator] Mensaje a ${phone}: Tu código es ${code}`);
+        console.log(`✉️ [Email Simulator] Mensaje a ${email}: Tu código es ${code}`);
       }
-    } catch (wsErr) {
-      console.error('Error enviando WhatsApp:', wsErr);
+    } catch (emailErr) {
+      console.error('Error enviando Email:', emailErr);
     }
 
     res.json({ message: 'Código generado exitosamente. Revisa la consola.', is_registered, user_name: user ? user.name : null });
@@ -94,16 +102,16 @@ const checkPhone = async (req, res) => {
 
 const verifyOtp = async (req, res) => {
   try {
-    const { phone, code, store_id, name } = req.body;
+    const { email, code, store_id, name } = req.body;
 
-    if (!phone || !code || !store_id) {
-      return res.status(400).json({ error: 'Faltan datos (phone, code, store_id)' });
+    if (!email || !code || !store_id) {
+      return res.status(400).json({ error: 'Faltan datos (email, code, store_id)' });
     }
 
     // Validar que el código exista y no esté expirado
     const verification = await prisma.verificationCode.findFirst({
       where: {
-        phone,
+        email,
         code,
         expires_at: {
           gt: new Date() // La fecha de expiración debe ser mayor a la actual
@@ -115,40 +123,40 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ error: 'Código inválido o ha expirado' });
     }
 
-    // Buscamos si el usuario ya existe por su teléfono
+    // Buscamos si el usuario ya existe por su correo
     let user = await prisma.user.findUnique({
-      where: { phone }
+      where: { email }
     });
 
     if (!user) {
       user = await prisma.user.create({
         data: {
-          phone,
+          email,
           name: name || null,
           store_id: Number(store_id)
         }
       });
     } else if (name && !user.name) {
       user = await prisma.user.update({
-        where: { phone },
+        where: { email },
         data: { name }
       });
     } else if (name && user.name && name !== user.name) {
       // Permitir actualizar el nombre si lo enviaron explícitamente y es diferente
       user = await prisma.user.update({
-        where: { phone },
+        where: { email },
         data: { name }
       });
     }
 
     // Borramos el código para que no se re-utilice
     await prisma.verificationCode.deleteMany({
-      where: { phone }
+      where: { email }
     });
 
     // Generar JWT
     const token = jwt.sign(
-      { id: user.id, role: user.role, phone: user.phone },
+      { id: user.id, role: user.role, email: user.email },
       JWT_SECRET,
       { expiresIn: '30d' }
     );
@@ -160,7 +168,7 @@ const verifyOtp = async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
-        phone: user.phone,
+        email: user.email,
         role: user.role
       }
     });
@@ -224,4 +232,4 @@ const adminLogin = async (req, res) => {
   }
 };
 
-module.exports = { checkPhone, verifyOtp, adminLogin };
+module.exports = { checkEmail, verifyOtp, adminLogin };
