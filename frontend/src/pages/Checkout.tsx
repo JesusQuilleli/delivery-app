@@ -91,7 +91,8 @@ export default function Checkout() {
 
   useEffect(() => {
     if (step === 5 && user?.id) {
-      const socket = io('http://192.168.1.53:3000');
+      const socketURL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+      const socket = io(socketURL);
       socket.on('connect', () => socket.emit('join_client', user.id));
       socket.on('estado_actualizado', (order) => setOrderStatus(order.status));
       return () => { socket.disconnect(); };
@@ -256,6 +257,18 @@ export default function Checkout() {
     setLoading(false);
   };
 
+  const resendOtp = async () => {
+    setLoading(true);
+    try {
+      await api.post('/auth/check-phone', { phone });
+      alert("Código reenviado exitosamente a tu WhatsApp.");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      alert(err.response?.data?.error || "Error al reenviar código");
+    }
+    setLoading(false);
+  };
+
   const verifyOtp = async () => {
     setLoading(true);
     try {
@@ -371,6 +384,12 @@ export default function Checkout() {
               <Button onClick={verifyOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 shadow-xl shadow-orange-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={otp.length < 4 || name.length < 3 || loading}>
                 {loading ? 'Verificando...' : 'Validar y Continuar'} <ChevronRight className="ml-2" />
               </Button>
+              
+              <div className="text-center mt-4">
+                <Button variant="link" onClick={resendOtp} disabled={loading} className="text-orange-600 font-bold hover:text-orange-700">
+                  ¿No recibiste el código? Reenviar
+                </Button>
+              </div>
             </CardContent>
           </Card>
         );

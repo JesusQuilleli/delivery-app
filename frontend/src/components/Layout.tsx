@@ -54,9 +54,11 @@ export default function Layout() {
               <Button
                 variant="ghost"
                 onClick={() => navigate(`/${slug}/mis-pedidos`)}
-                className="font-bold text-gray-700 hidden sm:flex"
+                className="font-bold text-gray-700 p-2 sm:px-4 sm:py-2"
+                title="Mis Pedidos"
               >
-                Mis Pedidos
+                <span className="hidden sm:inline">Mis Pedidos</span>
+                <span className="sm:hidden text-xl" role="img" aria-label="Pedidos">📦</span>
               </Button>
             )}
 
