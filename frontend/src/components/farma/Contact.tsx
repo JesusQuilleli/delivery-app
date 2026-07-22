@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Phone, Clock, MessageCircle, Send, Check } from "lucide-react";
+import { MapPin, Phone, Clock, Send, Check } from "lucide-react";
 
 export function Contact() {
   const [sent, setSent] = useState(false);

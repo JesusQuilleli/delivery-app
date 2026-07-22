@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { Printer, Trash2, Calendar, Search, Store, History, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Printer, Trash2, Calendar, Search, History, ChevronLeft, ChevronRight } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { toast } from 'sonner';
 

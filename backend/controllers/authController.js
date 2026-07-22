@@ -182,8 +182,8 @@ const adminLogin = async (req, res) => {
       where: { username }
     });
 
-    if (!user || user.role !== 'ADMIN') {
-      return res.status(401).json({ error: 'Credenciales inválidas o no eres administrador' });
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
+      return res.status(401).json({ error: 'Credenciales inválidas o no tienes permisos' });
     }
 
     // Verificar contraseña encriptada (o texto plano para retrocompatibilidad temporal si falla bcrypt y la db no se migró)

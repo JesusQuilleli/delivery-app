@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { AuthContext } from '../context/AuthContext';
@@ -6,8 +6,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { ArrowLeft, Clock, MapPin, Package, X, Store, CreditCard, Star, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Textarea } from '../components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 import { formatPrice } from '../utils/currency';
@@ -21,10 +20,7 @@ export default function MyOrders() {
 
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState('');
-  const [isRateModalOpen, setIsRateModalOpen] = useState(false);
-  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+
 
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -39,30 +35,29 @@ export default function MyOrders() {
 
   const handleRateOrder = async () => {
     try {
-      await api.put(`/orders/${selectedOrderId}/rate`, { rating, review }, {
+      await api.put(`/orders/${selectedOrder.id}/rate`, { rating, review }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setOrders(orders.map(o => o.id === selectedOrderId ? { ...o, client_rating: rating, client_review: review } : o));
-      setIsRateModalOpen(false);
+      setOrders(orders.map(o => o.id === selectedOrder.id ? { ...o, client_rating: rating, client_review: review } : o));
     } catch (error) {
       toast.error("Error al enviar calificación");
     }
   };
 
   const handleCancelOrder = async () => {
-    if (!cancelReason.trim()) {
+    const reason = window.prompt("¿Por qué deseas cancelar este pedido?");
+    if (!reason || !reason.trim()) {
       toast.error("Debes proporcionar una razón para cancelar el pedido.");
       return;
     }
     try {
-      await api.put(`/orders/${selectedOrder.id}/cancel`, { cancel_reason: cancelReason }, {
+      await api.put(`/orders/${selectedOrder.id}/cancel`, { cancel_reason: reason }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       // The socket will update it, but we can do optimistic update just in case
-      const updatedOrder = { ...selectedOrder, status: 'CANCELLED', cancel_reason: cancelReason };
+      const updatedOrder = { ...selectedOrder, status: 'CANCELLED', cancel_reason: reason };
       setSelectedOrder(updatedOrder);
-      setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
-      setIsCancelModalOpen(false);
+      setOrders(prev => prev.map((o: any) => o.id === updatedOrder.id ? updatedOrder : o));
     } catch (error) {
       toast.error("No se pudo cancelar el pedido. Es posible que ya esté siendo preparado.");
     }
@@ -94,8 +89,8 @@ export default function MyOrders() {
       const socket = io(socketURL);
       socket.on('connect', () => socket.emit('join_client', user.id));
       socket.on('estado_actualizado', (updatedOrder) => {
-        setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
-        setSelectedOrder(prev => prev?.id === updatedOrder.id ? updatedOrder : prev);
+        setOrders(prev => prev.map((o: any) => o.id === updatedOrder.id ? updatedOrder : o));
+        setSelectedOrder((prev: any) => prev?.id === updatedOrder.id ? updatedOrder : prev);
       });
       return () => { socket.disconnect(); };
     }

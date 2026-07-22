@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import api from '../api';
-import { Package, Plus, Trash2, Layers, Image as ImageIcon, Tags, Pencil, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
+import { Plus, Trash2, Layers, Image as ImageIcon, Tags, Pencil, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import Papa from 'papaparse';
 import { Button } from '../components/ui/button';
@@ -35,7 +35,7 @@ interface Product {
 
 export default function Inventory() {
   const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);

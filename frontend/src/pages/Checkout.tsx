@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { CartContext } from '../context/CartContext';
@@ -69,7 +69,7 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
 
   const [addressQuery, setAddressQuery] = useState(localStorage.getItem('last_address') || '');
-  const [addressSuggestions, setAddressSuggestions] = useState<Record<string, unknown>[]>([]);
+  const [addressSuggestions, setAddressSuggestions] = useState<{ display_name: string; lat: string; lon: string }[]>([]);
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   

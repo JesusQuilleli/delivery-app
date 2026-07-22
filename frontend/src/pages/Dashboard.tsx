@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import api from '../api';
-import { Bell, MapPin, CheckCircle, Package, Store, LogOut, Clock, History, Phone, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Bell, MapPin, CheckCircle, Package, Clock, Phone, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -44,7 +44,7 @@ export default function Dashboard() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [storeId, setStoreId] = useState<number | null>(null);
-  const [storeData, setStoreData] = useState<Record<string, unknown> | null>(null);
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [newOrderAlert, setNewOrderAlert] = useState<Order | null>(null);
 
@@ -65,7 +65,6 @@ export default function Dashboard() {
       try {
         const storeRes = await api.get(`/stores/${slug}/products`);
         setStoreId(storeRes.data.store.id);
-        setStoreData(storeRes.data.store);
 
         const ordersRes = await api.get(`/stores/${slug}/orders`);
         setOrders(ordersRes.data);

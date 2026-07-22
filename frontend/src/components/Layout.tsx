@@ -25,7 +25,6 @@ export default function Layout() {
 
   const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const isCheckout = location.pathname.includes('/checkout');
-  const isCatalog = location.pathname.endsWith('/productos');
 
   const goToCheckout = () => {
     setIsCartOpen(false);
@@ -157,7 +156,7 @@ export default function Layout() {
                   <span className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tighter">{formatPrice(total, storeConfig?.currency)}</span>
                 </div>
                 <Button
-                  variant="brand"
+                  variant="default"
                   onClick={goToCheckout}
                   className="w-full h-14 sm:h-16 text-lg sm:text-xl font-black shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 rounded-2xl"
                 >

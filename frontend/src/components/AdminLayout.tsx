@@ -42,7 +42,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
               {title}
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5 tracking-wider uppercase font-semibold">
-              <span className="text-primary font-bold">{slug.replace(/-/g, ' ')}</span> — Panel Administrativo
+              <span className="text-primary font-bold">{(slug || '').replace(/-/g, ' ')}</span> — Panel Administrativo
             </p>
           </div>
         </div>
