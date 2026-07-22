@@ -22,6 +22,7 @@ export default function SuperAdmin() {
   const [adminPhone, setAdminPhone] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [industry, setIndustry] = useState('PHARMACY');
+  const [themeColor, setThemeColor] = useState('blue');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -54,10 +55,11 @@ export default function SuperAdmin() {
         adminUsername,
         adminPhone,
         adminPassword,
-        industry
+        industry,
+        theme_color: themeColor
       });
       toast.success('Tienda creada exitosamente.');
-      setStoreName(''); setSlug(''); setAdminUsername(''); setAdminPhone(''); setAdminPassword(''); setIndustry('PHARMACY');
+      setStoreName(''); setSlug(''); setAdminUsername(''); setAdminPhone(''); setAdminPassword(''); setIndustry('PHARMACY'); setThemeColor('blue');
       fetchStores();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Error al crear la tienda.');
@@ -131,6 +133,29 @@ export default function SuperAdmin() {
                       <option value="RESTAURANT">Restaurante / Comida</option>
                       <option value="SUPERMARKET">Supermercado / Bodegón</option>
                     </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="font-bold text-gray-700">Color Principal (Tema)</Label>
+                    <div className="flex gap-3 mt-2">
+                      {[
+                        { id: 'blue', label: 'Azul (Original)', hex: '#2563eb' },
+                        { id: 'red', label: 'Rojo', hex: '#dc2626' },
+                        { id: 'green', label: 'Verde', hex: '#16a34a' },
+                        { id: 'purple', label: 'Morado', hex: '#9333ea' },
+                        { id: 'orange', label: 'Naranja', hex: '#ea580c' },
+                        { id: 'coral', label: 'Coral', hex: '#f43f5e' }
+                      ].map(color => (
+                        <button
+                          key={color.id}
+                          type="button"
+                          onClick={() => setThemeColor(color.id)}
+                          className={`w-8 h-8 rounded-full border-2 transition-all ${themeColor === color.id ? 'border-gray-900 scale-110 shadow-md' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                          style={{ backgroundColor: color.hex }}
+                          title={color.label}
+                        />
+                      ))}
+                    </div>
                   </div>
 
                   <hr className="my-4" />

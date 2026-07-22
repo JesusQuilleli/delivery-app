@@ -19,6 +19,7 @@ model Store {
   ves_rate   Float      @default(36.5)
   cop_rate   Float      @default(4000.0)
   industry   String     @default("PHARMACY")
+  theme_color String    @default("blue")
   categories Category[]
   orders     Order[]
   products   Product[]

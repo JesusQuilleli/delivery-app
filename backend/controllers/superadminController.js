@@ -25,7 +25,7 @@ const getStores = async (req, res) => {
 
 const createStore = async (req, res) => {
   try {
-    const { storeName, slug, adminUsername, adminPassword, adminPhone, industry } = req.body;
+    const { storeName, slug, adminUsername, adminPassword, adminPhone, industry, theme_color } = req.body;
     
     // Check if slug exists
     const existingStore = await prisma.store.findUnique({ where: { slug } });
@@ -45,7 +45,8 @@ const createStore = async (req, res) => {
           name: storeName,
           slug,
           is_active: true,
-          industry: industry || 'PHARMACY'
+          industry: industry || 'PHARMACY',
+          theme_color: theme_color || 'blue'
         }
       });
 

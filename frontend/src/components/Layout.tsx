@@ -6,6 +6,7 @@ import { AuthContext } from '../context/AuthContext';
 import { Button } from './ui/button';
 import api from '../api';
 import { formatPrice } from '../utils/currency';
+import { ThemeProvider } from './ThemeProvider';
 
 export default function Layout() {
   const { slug } = useParams<{ slug: string }>();
@@ -33,6 +34,8 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
+      {storeConfig?.theme_color && <ThemeProvider themeColor={storeConfig.theme_color} />}
+      
       {/* Navbar Global */}
       <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">

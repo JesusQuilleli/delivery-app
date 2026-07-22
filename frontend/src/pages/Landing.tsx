@@ -4,6 +4,7 @@ import api from "@/api";
 import PharmacyTemplate from "@/components/landing/PharmacyTemplate";
 import RestaurantTemplate from "@/components/landing/RestaurantTemplate";
 import SupermarketTemplate from "@/components/landing/SupermarketTemplate";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 export default function Landing() {
   const { slug } = useParams<{ slug: string }>();
@@ -36,13 +37,28 @@ export default function Landing() {
   }
 
   if (storeConfig?.industry === 'RESTAURANT') {
-    return <RestaurantTemplate store={storeConfig} categories={categories} offers={offers} combos={combos} />;
+    return (
+      <>
+        {storeConfig?.theme_color && <ThemeProvider themeColor={storeConfig.theme_color} />}
+        <RestaurantTemplate store={storeConfig} categories={categories} offers={offers} combos={combos} />
+      </>
+    );
   }
 
   if (storeConfig?.industry === 'SUPERMARKET') {
-    return <SupermarketTemplate store={storeConfig} categories={categories} offers={offers} combos={combos} />;
+    return (
+      <>
+        {storeConfig?.theme_color && <ThemeProvider themeColor={storeConfig.theme_color} />}
+        <SupermarketTemplate store={storeConfig} categories={categories} offers={offers} combos={combos} />
+      </>
+    );
   }
 
   // Default to Pharmacy
-  return <PharmacyTemplate store={storeConfig} categories={categories} offers={offers} combos={combos} />;
+  return (
+    <>
+      {storeConfig?.theme_color && <ThemeProvider themeColor={storeConfig.theme_color} />}
+      <PharmacyTemplate store={storeConfig} categories={categories} offers={offers} combos={combos} />
+    </>
+  );
 }

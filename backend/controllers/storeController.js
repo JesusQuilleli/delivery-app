@@ -79,7 +79,8 @@ const getStoreProducts = async (req, res) => {
         usd_rate: store.usd_rate,
         ves_rate: store.ves_rate,
         cop_rate: store.cop_rate,
-        industry: store.industry
+        industry: store.industry,
+        theme_color: store.theme_color
       },
       products,
       categories: store.categories,
