@@ -17,10 +17,18 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
 // Lista blanca de orígenes permitidos (CORS restrictivo)
-const allowedOrigins = [
+// Se pueden agregar múltiples dominios separados por coma en la variable ALLOWED_ORIGINS de Render
+const defaultOrigins = [
   'https://test.shop-mg.com',
   'http://localhost:5173'
 ];
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? [...new Set([...defaultOrigins, ...process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)])]
+  : defaultOrigins;
+
+console.log('🌐 Orígenes CORS permitidos:', allowedOrigins);
+
 
 const corsOptions = {
   origin: (origin, callback) => {
