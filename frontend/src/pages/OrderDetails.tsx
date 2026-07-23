@@ -47,11 +47,11 @@ interface Order {
   } | null;
 }
 
-const OrderRouteMap = ({ order, storeLocation }: { order: Order, storeLocation: [number, number] }) => {
+const OrderRouteMap = ({ order, storeLocation }: { order: Order, storeLocation?: [number, number] }) => {
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
 
   useEffect(() => {
-    if (order.latitude && order.longitude && storeLocation[0]) {
+    if (order.latitude && order.longitude && storeLocation && storeLocation[0]) {
       const fetchRoute = async () => {
         try {
           const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${storeLocation[1]},${storeLocation[0]};${order.longitude},${order.latitude}?overview=full&geometries=geojson`);
@@ -70,17 +70,18 @@ const OrderRouteMap = ({ order, storeLocation }: { order: Order, storeLocation: 
 
   if (!order.latitude || !order.longitude) return null;
   const customerLoc: [number, number] = [order.latitude, order.longitude];
+  const centerLoc = storeLocation && storeLocation[0] ? storeLocation : customerLoc;
 
   return (
     <div className="h-[250px] sm:h-[300px] w-full rounded-xl overflow-hidden mt-4 border border-border shadow-inner relative z-0">
-      <MapContainer center={storeLocation} zoom={13} style={{ height: '100%', width: '100%' }}>
+      <MapContainer center={centerLoc} zoom={14} style={{ height: '100%', width: '100%' }}>
         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-        <Marker position={storeLocation} />
+        {storeLocation && storeLocation[0] && <Marker position={storeLocation} />}
         <Marker position={customerLoc} />
         {routeCoords.length > 0 ? (
           <Polyline positions={routeCoords} color="#3b82f6" weight={5} opacity={0.8} />
         ) : (
-          <Polyline positions={[storeLocation, customerLoc]} color="#94a3b8" dashArray="5, 10" weight={3} />
+          storeLocation && storeLocation[0] && <Polyline positions={[storeLocation, customerLoc]} color="#94a3b8" dashArray="5, 10" weight={3} />
         )}
       </MapContainer>
     </div>
@@ -203,8 +204,8 @@ export default function OrderDetails() {
             </p>
           </div>
         </div>
-        <Badge className={`px-4 py-1.5 md:py-2 font-black text-xs md:text-sm rounded-lg shadow-sm border-0 self-start md:self-auto ${order.status === 'PENDING' ? 'bg-orange-100 text-orange-700' : order.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-700' : order.status === 'DISPATCHED' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'}`}>
-          {order.status === 'PENDING' ? 'NUEVA ÓRDEN' : order.status === 'ACCEPTED' ? 'PREPARANDO' : order.status === 'DISPATCHED' ? 'EN CAMINO' : 'ENTREGADO'}
+        <Badge className={`px-4 py-1.5 md:py-2 font-black text-xs md:text-sm rounded-lg shadow-sm border-0 self-start md:self-auto ${order.status === 'AWAITING_PAYMENT' ? 'bg-orange-100 text-orange-700' : order.status === 'PENDING' ? 'bg-orange-100 text-orange-700' : order.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-700' : order.status === 'DISPATCHED' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'}`}>
+          {order.status === 'AWAITING_PAYMENT' ? 'VALIDAR PAGO' : order.status === 'PENDING' ? 'NUEVA ÓRDEN' : order.status === 'ACCEPTED' ? 'PREPARANDO' : order.status === 'DISPATCHED' ? 'EN CAMINO' : 'ENTREGADO'}
         </Badge>
       </div>
 
@@ -229,6 +230,9 @@ export default function OrderDetails() {
                 <p className={`font-black flex items-center gap-1.5 text-base md:text-lg ${order.payment_method === 'CASH' ? 'text-emerald-700' : 'text-blue-700'}`}>
                   {order.payment_method === 'CASH' ? '💵 Efectivo' : '📱 Pago Móvil'}
                 </p>
+                {order.payment_method === 'TRANSFER' && order.payment_reference && (
+                  <p className="text-sm font-bold text-blue-800 mt-1">Ref: <span className="bg-white px-2 py-0.5 rounded border border-blue-200">{order.payment_reference}</span></p>
+                )}
               </div>
               <p className="text-3xl md:text-4xl font-black tracking-tighter text-gray-900 leading-none">{formatPrice(order.total_amount, (storeData as any)?.currency)}</p>
             </div>
@@ -241,20 +245,22 @@ export default function OrderDetails() {
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1"><MapPin size={14} /> Dirección de Entrega</p>
             <p className="font-medium text-gray-800 leading-snug">{order.delivery_address.split(' | Link GMaps:')[0]}</p>
 
-            {order.latitude && order.longitude && storeData?.latitude ? (
+            {order.latitude && order.longitude ? (
               <div className="mt-5 pt-5 border-t border-gray-100">
-                <div className="flex justify-between items-center bg-gray-50 p-3 md:p-4 rounded-xl border border-gray-100">
-                  <div>
-                    <p className="text-[10px] md:text-[11px] font-bold uppercase text-gray-500 tracking-wider">Distancia Estimada</p>
-                    <p className="font-black text-lg md:text-xl text-gray-900">{order.distance_km?.toFixed(2)} km</p>
+                {order.distance_km && order.estimated_minutes && (
+                  <div className="flex justify-between items-center bg-gray-50 p-3 md:p-4 rounded-xl border border-gray-100">
+                    <div>
+                      <p className="text-[10px] md:text-[11px] font-bold uppercase text-gray-500 tracking-wider">Distancia Estimada</p>
+                      <p className="font-black text-lg md:text-xl text-gray-900">{order.distance_km.toFixed(2)} km</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] md:text-[11px] font-bold uppercase text-gray-500 text-right tracking-wider">Llegada Aprox.</p>
+                      <p className="font-black text-orange-600 text-lg md:text-xl text-right">{order.estimated_minutes} mins</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] md:text-[11px] font-bold uppercase text-gray-500 text-right tracking-wider">Llegada Aprox.</p>
-                    <p className="font-black text-orange-600 text-lg md:text-xl text-right">{order.estimated_minutes} mins</p>
-                  </div>
-                </div>
+                )}
 
-                <OrderRouteMap order={order} storeLocation={[Number(storeData.latitude), Number(storeData.longitude)]} />
+                <OrderRouteMap order={order} storeLocation={storeData?.latitude ? [Number(storeData.latitude), Number(storeData.longitude)] : undefined} />
                 
                 {order.driver && (
                   <div className="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-xl">
@@ -267,7 +273,7 @@ export default function OrderDetails() {
                 )}
 
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Hola! Nuevo pedido para entregar.\n\n👤 *Cliente:* ${order.user.name || 'Sin nombre'}\n📞 *Teléfono:* ${order.user.phone}\n🏠 *Dirección:* ${order.delivery_address.split(' | Link GMaps:')[0]}\n\n📍 *Iniciar Navegación GPS:*\nhttps://www.google.com/maps/dir/?api=1&origin=${storeData.latitude},${storeData.longitude}&destination=${order.latitude},${order.longitude}`)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Hola! Nuevo pedido para entregar.\n\n👤 *Cliente:* ${order.user.name || 'Sin nombre'}\n📞 *Teléfono:* ${order.user.phone}\n🏠 *Dirección:* ${order.delivery_address.split(' | Link GMaps:')[0]}\n\n📍 *Iniciar Navegación GPS:*\nhttps://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1da851] text-white p-3.5 md:p-4 rounded-xl font-black mt-4 transition-transform hover:scale-[1.02] shadow-xl shadow-green-500/20 text-base md:text-lg"
@@ -324,6 +330,16 @@ export default function OrderDetails() {
       {/* Botones Flotantes en Mobile (Fijos abajo) */}
       <div className="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-xl border-t border-gray-200 p-4 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-50">
         <div className="max-w-5xl mx-auto">
+          {order.status === 'AWAITING_PAYMENT' && (
+            <div className="flex gap-2">
+              <Button onClick={() => changeStatus('CANCELLED')} variant="outline" className="w-1/3 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-black h-14 md:h-16 rounded-xl text-lg transition-transform active:scale-95">
+                <XCircle className="mr-2" size={24} /> Rechazar
+              </Button>
+              <Button onClick={() => changeStatus('PENDING')} className="w-2/3 bg-blue-600 hover:bg-blue-700 text-white font-black shadow-xl shadow-blue-500/20 h-14 md:h-16 rounded-xl text-lg md:text-xl transition-transform active:scale-95">
+                <CheckCircle className="mr-3" size={24} /> Aprobar Pago
+              </Button>
+            </div>
+          )}
           {order.status === 'PENDING' && (
             <div className="flex gap-2">
               <Button onClick={() => changeStatus('CANCELLED')} variant="outline" className="w-1/3 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-black h-14 md:h-16 rounded-xl text-lg transition-transform active:scale-95">

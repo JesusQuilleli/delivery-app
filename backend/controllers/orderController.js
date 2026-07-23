@@ -59,7 +59,7 @@ const placeOrder = async (req, res) => {
         total_amount: parseFloat(total_amount),
         payment_method,
         payment_reference: payment_reference || null,
-        status: 'PENDING',
+        status: payment_method === 'TRANSFER' ? 'AWAITING_PAYMENT' : 'PENDING',
         items: {
           create: items.map(item => ({
             product: { connect: { id: Number(item.product_id) } },

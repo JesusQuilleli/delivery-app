@@ -105,7 +105,7 @@ const getStoreOrders = async (req, res) => {
     const orders = await prisma.order.findMany({
       where: {
         store_id: store.id,
-        status: { in: ['PENDING', 'ACCEPTED', 'DISPATCHED'] }
+        status: { in: ['AWAITING_PAYMENT', 'PENDING', 'ACCEPTED', 'DISPATCHED'] }
       },
       include: {
         items: { include: { product: true } },

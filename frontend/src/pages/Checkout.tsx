@@ -652,7 +652,14 @@ export default function Checkout() {
           </Card>
         );
       case 5: {
-        const timeline = [
+        const isTransfer = paymentMethod === 'TRANSFER';
+        const timeline = isTransfer ? [
+          { status: 'AWAITING_PAYMENT', title: 'Validando Pago', desc: 'Verificando transferencia.', icon: '💸' },
+          { status: 'PENDING', title: 'Pedido Recibido', desc: 'Confirmando tu orden.', icon: '📦' },
+          { status: 'ACCEPTED', title: 'Preparando', desc: 'Empacando productos.', icon: '🛍️' },
+          { status: 'DISPATCHED', title: 'En Camino', desc: 'El motorizado va hacia ti.', icon: '🛵' },
+          { status: 'DELIVERED', title: 'Entregado', desc: '¡Gracias por comprar!', icon: '✨' }
+        ] : [
           { status: 'PENDING', title: 'Pedido Recibido', desc: 'Confirmando tu orden.', icon: '📦' },
           { status: 'ACCEPTED', title: 'Preparando', desc: 'Empacando productos.', icon: '🛍️' },
           { status: 'DISPATCHED', title: 'En Camino', desc: 'El motorizado va hacia ti.', icon: '🛵' },
@@ -660,9 +667,10 @@ export default function Checkout() {
         ];
 
         let currentIndex = 0;
-        if (orderStatus === 'ACCEPTED') currentIndex = 1;
-        if (orderStatus === 'DISPATCHED') currentIndex = 2;
-        if (orderStatus === 'DELIVERED') currentIndex = 3;
+        if (orderStatus === 'PENDING' && isTransfer) currentIndex = 1;
+        if (orderStatus === 'ACCEPTED') currentIndex = isTransfer ? 2 : 1;
+        if (orderStatus === 'DISPATCHED') currentIndex = isTransfer ? 3 : 2;
+        if (orderStatus === 'DELIVERED') currentIndex = isTransfer ? 4 : 3;
 
         return (
           <Card className="border-none shadow-2xl backdrop-blur-xl bg-white/95 overflow-hidden rounded-[2rem]">
@@ -674,7 +682,9 @@ export default function Checkout() {
                   ⏳ Llegada Estimada: ~{estimatedMinutes} mins
                 </div>
               ) : (
-                <CardDescription className="text-orange-600 font-bold mt-2 animate-pulse">Actualización en tiempo real...</CardDescription>
+                <CardDescription className="text-orange-600 font-bold mt-2 animate-pulse">
+                  {orderStatus === 'AWAITING_PAYMENT' ? 'Validando tu pago móvil...' : 'Actualización en tiempo real...'}
+                </CardDescription>
               )}
             </CardHeader>
             <CardContent className="p-8 px-10">
