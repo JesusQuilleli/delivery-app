@@ -447,7 +447,7 @@ export default function Checkout() {
                 />
               </div>
 
-              <Button onClick={verifyOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 shadow-xl shadow-orange-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={otp.length < 6 || name.length < 3 || rawPhone.length < 10 || loading}>
+              <Button onClick={verifyOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 shadow-xl shadow-orange-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={otp.length < 6 || name.length < 3 || rawPhone.length < 7 || loading}>
                 {loading ? 'Verificando...' : 'Validar y Continuar'} <ChevronRight className="ml-2" />
               </Button>
               
