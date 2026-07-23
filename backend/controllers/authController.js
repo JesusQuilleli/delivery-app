@@ -2,7 +2,7 @@ const prisma = require('../prismaClient');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 const checkEmail = async (req, res) => {
   try {
@@ -56,22 +56,15 @@ const checkEmail = async (req, res) => {
       }
     }
 
-    // ENVÍO DE EMAIL MEDIANTE NODEMAILER
+    // ENVÍO DE EMAIL MEDIANTE RESEND
     try {
-      const emailUser = process.env.EMAIL_USER;
-      const emailPass = process.env.EMAIL_PASS;
+      const resendApiKey = process.env.RESEND_API_KEY;
       
-      if (emailUser && emailPass) {
-        const transporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: emailUser,
-            pass: emailPass
-          }
-        });
+      if (resendApiKey) {
+        const resend = new Resend(resendApiKey);
 
-        const mailOptions = {
-          from: `"App Delivery" <${emailUser}>`,
+        const { data, error } = await resend.emails.send({
+          from: 'App Delivery <no-reply@shop-mg.com>',
           to: email,
           subject: `Tu código de acceso: ${code}`,
           html: `
@@ -82,12 +75,15 @@ const checkEmail = async (req, res) => {
               <p style="color: #666;"><i>Válido por 10 minutos. No compartas este código con nadie.</i></p>
             </div>
           `
-        };
+        });
 
-        await transporter.sendMail(mailOptions);
-        console.log(`✉️ [Email] Código enviado a ${email}`);
+        if (error) {
+          console.error('Error de API Resend:', error);
+        } else {
+          console.log(`✉️ [Email] Código enviado a ${email} via Resend`);
+        }
       } else {
-        console.log(`✉️ [Email Simulator] Mensaje a ${email}: Tu código es ${code}`);
+        console.log(`✉️ [Email Simulator] (Falta RESEND_API_KEY) Mensaje a ${email}: Tu código es ${code}`);
       }
     } catch (emailErr) {
       console.error('Error enviando Email:', emailErr);
