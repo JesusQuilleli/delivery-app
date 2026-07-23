@@ -170,6 +170,38 @@ export default function Checkout() {
     }
 
     setIsSearchingAddress(true);
+    
+    // Función auxiliar para usar IP si todo falla
+    const useIpFallback = async (reason: string) => {
+      toast.warning(`Usando ubicación aproximada (${reason}). Por favor, ajusta el pin en el mapa manualmente.`);
+      try {
+        const ipRes = await fetch('https://ipapi.co/json/');
+        const ipData = await ipRes.json();
+        
+        if (ipData.latitude && ipData.longitude) {
+          const lat = ipData.latitude;
+          const lon = ipData.longitude;
+          
+          setLatitude(lat);
+          setLongitude(lon);
+          setMapPosition([lat, lon]);
+
+          const token = 'pk.5e4e5017eb24eea8537c98df5437797f';
+          const res = await fetch(`https://us1.locationiq.com/v1/reverse.php?key=${token}&lat=${lat}&lon=${lon}&format=json`);
+          if (res.ok) {
+            const data = await res.json();
+            const cleanName = data.display_name.replace(', Venezuela', '').trim();
+            setAddressQuery(cleanName);
+            setAddress(cleanName);
+          }
+        }
+      } catch (fallbackError) {
+        console.error("El respaldo por IP falló", fallbackError);
+      } finally {
+        setIsSearchingAddress(false);
+      }
+    };
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const lat = position.coords.latitude;
@@ -184,57 +216,38 @@ export default function Checkout() {
           const res = await fetch(`https://us1.locationiq.com/v1/reverse.php?key=${token}&lat=${lat}&lon=${lon}&format=json`);
           if (res.ok) {
             const data = await res.json();
-            const cleanName = data.display_name.replace(', Venezuela', '').trim();
+            const addressObj = data.address || {};
+            // Intentar construir una dirección más específica si está disponible
+            let specificName = data.display_name;
+            if (addressObj.road || addressObj.neighbourhood || addressObj.suburb) {
+               const parts = [addressObj.road, addressObj.neighbourhood, addressObj.suburb, addressObj.city].filter(Boolean);
+               if (parts.length > 0) {
+                 specificName = parts.join(', ');
+               }
+            }
+            const cleanName = specificName.replace(', Venezuela', '').trim();
             setAddressQuery(cleanName);
             setAddress(cleanName);
+            toast.success("¡Ubicación precisa obtenida con éxito!");
           }
         } catch (error) {
           console.error("Error reverse geocoding", error);
         }
         setIsSearchingAddress(false);
       },
-      async (error) => {
-        console.warn("Error con GPS nativo, intentando respaldo por IP...", error);
+      (error) => {
+        console.warn("Error con GPS nativo:", error);
         
-        try {
-          // Si el GPS falla (común en PC), usamos un servicio de ubicación por IP como respaldo
-          const ipRes = await fetch('https://ipapi.co/json/');
-          const ipData = await ipRes.json();
-          
-          if (ipData.latitude && ipData.longitude) {
-            const lat = ipData.latitude;
-            const lon = ipData.longitude;
-            
-            setLatitude(lat);
-            setLongitude(lon);
-            setMapPosition([lat, lon]);
-
-            // Convertimos esas coordenadas en dirección nuevamente
-            const token = 'pk.5e4e5017eb24eea8537c98df5437797f';
-            const res = await fetch(`https://us1.locationiq.com/v1/reverse.php?key=${token}&lat=${lat}&lon=${lon}&format=json`);
-            if (res.ok) {
-              const data = await res.json();
-              const cleanName = data.display_name.replace(', Venezuela', '').trim();
-              setAddressQuery(cleanName);
-              setAddress(cleanName);
-            }
-            setIsSearchingAddress(false);
-            return; // Salimos exitosamente gracias al respaldo
-          }
-        } catch (fallbackError) {
-          console.error("El respaldo por IP también falló", fallbackError);
+        if (error.code === error.PERMISSION_DENIED) {
+          toast.error("Permiso de ubicación denegado. Debes autorizar el uso de GPS en tu navegador o celular para una ubicación precisa.");
+          useIpFallback("Permiso denegado");
+        } else if (error.code === error.TIMEOUT) {
+          useIpFallback("La señal GPS tardó mucho");
+        } else {
+          useIpFallback("GPS no disponible");
         }
-
-        // Si ambos métodos fallan, mostramos el error original
-        let errorMsg = "Error desconocido.";
-        if (error.code === error.PERMISSION_DENIED) errorMsg = "Permiso denegado (Revisa si bloqueaste el acceso).";
-        if (error.code === error.POSITION_UNAVAILABLE) errorMsg = "Ubicación no disponible (Común en PCs de escritorio sin Wi-Fi o con VPN).";
-        if (error.code === error.TIMEOUT) errorMsg = "Tiempo de espera agotado.";
-        
-        toast.error(`Error al ubicarte: ${errorMsg} \n\nDetalle técnico: ${error.message}`);
-        setIsSearchingAddress(false);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 } // Aumentamos el timeout a 25 segundos para celulares lentos
     );
   };
 
