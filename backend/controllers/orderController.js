@@ -2,19 +2,18 @@ const prisma = require('../prismaClient');
 
 const placeOrder = async (req, res) => {
   try {
-    const { 
-      store_id, 
-      items, 
-      delivery_address, 
-      latitude, 
-      longitude, 
-      total_amount, 
-      payment_method, 
-      payment_reference 
+    const {
+      store_id,
+      items,
+      delivery_address,
+      latitude,
+      longitude,
+      payment_method,
+      payment_reference
     } = req.body;
 
     // 1. Validaciones básicas
-    if (!store_id || !items || items.length === 0 || !delivery_address || !total_amount || !payment_method) {
+    if (!store_id || !items || items.length === 0 || !delivery_address || !payment_method) {
       return res.status(400).json({ error: 'Faltan datos obligatorios para crear el pedido' });
     }
 
@@ -29,24 +28,61 @@ const placeOrder = async (req, res) => {
       return res.status(401).json({ error: 'Usuario no autenticado' });
     }
 
-    // 2.5 Calcular distancia y tiempo si hay coordenadas
+    // 2.5 Verificar la tienda y calcular distancia/tiempo
     const store = await prisma.store.findUnique({ where: { id: Number(store_id) } });
+    if (!store) {
+      return res.status(400).json({ error: 'Tienda no encontrada' });
+    }
+
     let distance_km = null;
     let estimated_minutes = null;
-    
-    if (store && store.latitude && store.longitude && latitude && longitude) {
+
+    if (store.latitude && store.longitude && latitude && longitude) {
       const latNum = parseFloat(latitude);
       const lonNum = parseFloat(longitude);
-      const R = 6371; // Radio de la Tierra en km
+      const R = 6371;
       const dLat = (latNum - store.latitude) * (Math.PI / 180);
       const dLon = (lonNum - store.longitude) * (Math.PI / 180);
       const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(store.latitude*(Math.PI/180))*Math.cos(latNum*(Math.PI/180))*Math.sin(dLon/2)*Math.sin(dLon/2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      distance_km = R * c * 1.4; // Factor de desvío de calles (aprox 40% más de distancia lineal)
-      estimated_minutes = Math.round((distance_km / 25) * 60) + 15; // 25km/h velocidad promedio + 15 mins prep
+      distance_km = R * c * 1.4;
+      estimated_minutes = Math.round((distance_km / 25) * 60) + 15;
     }
 
-    // 3. Crear la orden y los items en la BD usando una operación anidada
+    // 3. Validar y recalcular precios desde la base de datos (nunca confiar en el cliente)
+    const productIds = items.map(item => Number(item.product_id));
+    const products = await prisma.product.findMany({
+      where: {
+        id: { in: productIds },
+        store_id: Number(store_id),
+        is_available: true
+      }
+    });
+
+    if (products.length !== productIds.length) {
+      return res.status(400).json({ error: 'Uno o más productos no existen, no están disponibles o no pertenecen a esta tienda.' });
+    }
+
+    // Construir mapa de precio real por product_id
+    const priceMap = {};
+    for (const p of products) {
+      priceMap[p.id] = p.price;
+    }
+
+    // Calcular total real en el servidor
+    let total_amount = 0;
+    const verifiedItems = items.map(item => {
+      const realPrice = priceMap[Number(item.product_id)];
+      const qty = Number(item.quantity);
+      total_amount += realPrice * qty;
+      return {
+        product_id: Number(item.product_id),
+        quantity: qty,
+        unit_price: realPrice
+      };
+    });
+
+    // 4. Crear la orden con precios verificados
     const order = await prisma.order.create({
       data: {
         store_id: Number(store_id),
@@ -56,37 +92,35 @@ const placeOrder = async (req, res) => {
         longitude: longitude ? parseFloat(longitude) : null,
         distance_km,
         estimated_minutes,
-        total_amount: parseFloat(total_amount),
+        total_amount,
         payment_method,
         payment_reference: payment_reference || null,
         status: payment_method === 'TRANSFER' ? 'AWAITING_PAYMENT' : 'PENDING',
         items: {
-          create: items.map(item => ({
-            product: { connect: { id: Number(item.product_id) } },
-            quantity: Number(item.quantity),
-            unit_price: parseFloat(item.unit_price)
+          create: verifiedItems.map(item => ({
+            product: { connect: { id: item.product_id } },
+            quantity: item.quantity,
+            unit_price: item.unit_price
           }))
         }
       },
       include: {
         items: {
           include: {
-            product: true // Incluimos info del producto para mostrar en el Dashboard
+            product: true
           }
         },
-        user: true // Incluimos datos del cliente
+        user: true
       }
     });
 
-    // 4. Emitir el evento de WebSockets usando 'io'
+    // 5. Emitir el evento de WebSockets usando 'io'
     const io = req.app.get('io');
     const room = `store_${store_id}`;
-    
-    // Emitimos toda la data de la orden a la tienda
     io.to(room).emit('nuevo_pedido', order);
 
-    res.json({ 
-      message: 'Pedido creado exitosamente', 
+    res.json({
+      message: 'Pedido creado exitosamente',
       order_id: order.id,
       estimated_minutes: order.estimated_minutes
     });
@@ -96,6 +130,7 @@ const placeOrder = async (req, res) => {
     res.status(500).json({ error: 'Error interno al procesar el pedido' });
   }
 };
+
 
 const updateOrderStatus = async (req, res) => {
   try {

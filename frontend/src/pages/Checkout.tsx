@@ -304,7 +304,7 @@ export default function Checkout() {
     setLoading(true);
     try {
       const res = await api.post('/auth/verify-otp', { email, code: otp, store_id: storeId, name, phone });
-      login(res.data.client_token, res.data.user);
+      login(res.data.user);
       setStep(3);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
@@ -447,7 +447,7 @@ export default function Checkout() {
                 />
               </div>
 
-              <Button onClick={verifyOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 shadow-xl shadow-orange-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={otp.length < 6 || name.length < 3 || rawPhone.length < 7 || loading}>
+              <Button onClick={verifyOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 shadow-xl shadow-orange-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={otp.length < 6 || ((!isRegistered || !name) && name.length < 3) || ((!isRegistered || !rawPhone) && rawPhone.length < 7) || loading}>
                 {loading ? 'Verificando...' : 'Validar y Continuar'} <ChevronRight className="ml-2" />
               </Button>
               

@@ -20,7 +20,7 @@ export default function AdminLogin() {
     setLoading(true);
     try {
       const res = await api.post('/auth/admin-login', { username, password });
-      login(res.data.client_token, res.data.user);
+      login(res.data.user);
       
       if (res.data.user.role === 'SUPERADMIN') {
         navigate('/superadmin');

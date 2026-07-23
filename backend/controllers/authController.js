@@ -4,6 +4,21 @@ const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
 const { Resend } = require('resend');
 
+// Configuración de cookies compartida
+const COOKIE_OPTIONS_CLIENT = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'None',
+  maxAge: 30 * 24 * 60 * 60 * 1000 // 30 días
+};
+
+const COOKIE_OPTIONS_ADMIN = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'None',
+  maxAge: 24 * 60 * 60 * 1000 // 1 día
+};
+
 const checkEmail = async (req, res) => {
   try {
     const { email, store_id } = req.body;
@@ -59,11 +74,11 @@ const checkEmail = async (req, res) => {
     // ENVÍO DE EMAIL MEDIANTE RESEND
     try {
       const resendApiKey = process.env.RESEND_API_KEY;
-      
+
       if (resendApiKey) {
         const resend = new Resend(resendApiKey);
 
-        const { data, error } = await resend.emails.send({
+        const { error } = await resend.emails.send({
           from: 'App Delivery <no-reply@shop-mg.com>',
           to: email,
           subject: `Tu código de acceso: ${code}`,
@@ -89,7 +104,12 @@ const checkEmail = async (req, res) => {
       console.error('Error enviando Email:', emailErr);
     }
 
-    res.json({ message: 'Código generado exitosamente. Revisa la consola.', is_registered, user_name: user ? user.name : null, user_phone: user ? user.phone : null });
+    res.json({
+      message: 'Código generado exitosamente.',
+      is_registered,
+      user_name: user ? user.name : null,
+      user_phone: user ? user.phone : null
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al generar código OTP' });
@@ -110,7 +130,7 @@ const verifyOtp = async (req, res) => {
         email,
         code,
         expires_at: {
-          gt: new Date() // La fecha de expiración debe ser mayor a la actual
+          gt: new Date()
         }
       }
     });
@@ -134,7 +154,6 @@ const verifyOtp = async (req, res) => {
         }
       });
     } else {
-      // Update name and phone if provided
       const updateData = {};
       if (name && (!user.name || name !== user.name)) updateData.name = name;
       if (phone && (!user.phone || phone !== user.phone)) updateData.phone = phone;
@@ -154,15 +173,16 @@ const verifyOtp = async (req, res) => {
 
     // Generar JWT
     const token = jwt.sign(
-      { id: user.id, role: user.role, email: user.email },
+      { id: user.id, role: user.role, email: user.email, store_id: user.store_id },
       JWT_SECRET,
       { expiresIn: '30d' }
     );
 
-    // Devolvemos el token (lo llamamos client_token para mantener compatibilidad con el frontend actual)
+    // Enviar JWT en cookie httpOnly (no expuesto a JS del cliente)
+    res.cookie('auth_token', token, COOKIE_OPTIONS_CLIENT);
+
     res.json({
       message: 'Autenticación exitosa',
-      client_token: token,
       user: {
         id: user.id,
         name: user.name,
@@ -179,7 +199,7 @@ const verifyOtp = async (req, res) => {
 const adminLogin = async (req, res) => {
   try {
     const { username, password } = req.body;
-    
+
     if (!username || !password) {
       return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
     }
@@ -193,28 +213,31 @@ const adminLogin = async (req, res) => {
       return res.status(401).json({ error: 'Credenciales inválidas o no tienes permisos' });
     }
 
-    // Verificar contraseña encriptada (o texto plano para retrocompatibilidad temporal si falla bcrypt y la db no se migró)
+    // Verificar contraseña encriptada con bcrypt (única forma aceptada)
     let isMatch = false;
     try {
       isMatch = await bcrypt.compare(password, user.password);
-    } catch(err) {
-      // Fallback
+    } catch (err) {
+      // Si bcrypt falla (ej. hash inválido), la autenticación falla
+      isMatch = false;
     }
 
-    if (!isMatch && user.password !== password) {
-       return res.status(401).json({ error: 'Credenciales inválidas' });
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     // Generar JWT
     const token = jwt.sign(
-      { id: user.id, role: user.role, username: user.username },
+      { id: user.id, role: user.role, username: user.username, store_id: user.store_id },
       JWT_SECRET,
       { expiresIn: '1d' }
     );
 
+    // Enviar JWT en cookie httpOnly (no expuesto a JS del cliente)
+    res.cookie('auth_token', token, COOKIE_OPTIONS_ADMIN);
+
     res.json({
       message: 'Inicio de sesión exitoso',
-      client_token: token,
       user: {
         id: user.id,
         name: user.name,
@@ -230,4 +253,13 @@ const adminLogin = async (req, res) => {
   }
 };
 
-module.exports = { checkEmail, verifyOtp, adminLogin };
+const logout = (req, res) => {
+  res.clearCookie('auth_token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'None'
+  });
+  res.json({ message: 'Sesión cerrada exitosamente' });
+};
+
+module.exports = { checkEmail, verifyOtp, adminLogin, logout };

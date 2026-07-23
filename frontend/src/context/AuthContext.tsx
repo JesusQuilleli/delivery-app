@@ -1,38 +1,55 @@
 import { createContext, useState, type ReactNode } from 'react';
+import api from '../api';
 
 interface User {
   id: number;
   name: string | null;
-  phone: string;
+  phone?: string;
+  email?: string;
   role?: string;
+  store_id?: number;
+  store?: { slug: string } | null;
+  username?: string;
 }
 
 interface AuthContextType {
-  token: string | null;
+  token: boolean; // Ya no guardamos el JWT en el cliente — solo sabemos si hay sesión activa
   user: User | null;
-  login: (newToken: string, userData: User) => void;
+  login: (userData: User) => void;
   logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('client_token') || null);
+  // El token ya no se guarda en localStorage — la cookie httpOnly lo maneja el navegador
+  // Guardamos solo los datos del usuario (no sensibles) en sessionStorage para sobrevivir recargas
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = sessionStorage.getItem('user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
 
-  const login = (newToken: string, userData: User) => {
-    setToken(newToken);
+  // token es ahora un boolean que indica si hay sesión activa
+  const token = user !== null;
+
+  const login = (userData: User) => {
     setUser(userData);
-    localStorage.setItem('client_token', newToken);
-    localStorage.setItem('user', JSON.stringify(userData));
+    sessionStorage.setItem('user', JSON.stringify(userData));
   };
 
-  const logout = () => {
-    setToken(null);
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout'); // El servidor borra la cookie httpOnly
+    } catch {
+      // Si falla (ej. ya expiró), igualmente limpiamos el estado local
+    }
     setUser(null);
+    sessionStorage.removeItem('user');
+    // Limpiar también cualquier token viejo de localStorage que pudiera quedar de versiones anteriores
     localStorage.removeItem('client_token');
     localStorage.removeItem('user');
   };

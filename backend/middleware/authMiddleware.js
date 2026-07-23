@@ -1,22 +1,24 @@
 const jwt = require('jsonwebtoken');
+const prisma = require('../prismaClient');
 
-// Clave secreta (en producción debería estar en el .env)
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_delivery_app';
+// JWT_SECRET obligatorio — el servidor no debe arrancar sin él
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('❌ FATAL: JWT_SECRET no está configurado en las variables de entorno. El servidor no puede arrancar de forma segura.');
+  process.exit(1);
+}
 
 const requireAuth = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: 'No se proporcionó token de autenticación' });
-  }
+  // Leer desde cookie httpOnly (nueva forma segura)
+  const token = req.cookies?.auth_token;
 
-  const token = authHeader.split(' ')[1];
   if (!token) {
-    return res.status(401).json({ error: 'Formato de token inválido' });
+    return res.status(401).json({ error: 'No se proporcionó token de autenticación' });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // { id, role, phone, ... }
+    req.user = decoded;
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Token inválido o expirado' });
@@ -43,4 +45,40 @@ const requireSuperAdmin = (req, res, next) => {
   });
 };
 
-module.exports = { requireAuth, requireAdmin, requireSuperAdmin, JWT_SECRET };
+/**
+ * Middleware de aislamiento tienda-admin (previene IDOR).
+ * SUPERADMIN puede acceder a cualquier tienda.
+ * ADMIN solo puede acceder a la tienda a la que pertenece (req.user.store_id === store.id).
+ */
+const requireStoreAdmin = async (req, res, next) => {
+  // Primero verificar que tenga el rol adecuado
+  requireAdmin(req, res, async () => {
+    if (req.user.role === 'SUPERADMIN') {
+      return next();
+    }
+
+    const { slug } = req.params;
+    if (!slug) {
+      // Si no hay slug en la ruta, dejar pasar (rutas sin slug como /products/:id)
+      return next();
+    }
+
+    try {
+      const store = await prisma.store.findUnique({ where: { slug } });
+      if (!store) {
+        return res.status(404).json({ error: 'Tienda no encontrada' });
+      }
+
+      if (store.id !== req.user.store_id) {
+        return res.status(403).json({ error: 'Acceso denegado. No tienes permisos sobre esta tienda.' });
+      }
+
+      next();
+    } catch (err) {
+      console.error('Error en requireStoreAdmin:', err);
+      return res.status(500).json({ error: 'Error interno verificando permisos' });
+    }
+  });
+};
+
+module.exports = { requireAuth, requireAdmin, requireSuperAdmin, requireStoreAdmin, JWT_SECRET };

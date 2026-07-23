@@ -1,7 +1,8 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useContext } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Package, History, Settings, LogOut, LayoutDashboard, Store, Users, Bike } from 'lucide-react';
 import { Button } from './ui/button';
+import { AuthContext } from '../context/AuthContext';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -12,10 +13,10 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useContext(AuthContext);
 
-  const logout = () => {
-    localStorage.removeItem('client_token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await logout(); // Llama al endpoint /auth/logout que borra la cookie httpOnly
     navigate('/admin-login');
   };
 
@@ -64,7 +65,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             );
           })}
 
-          <Button variant="destructive" onClick={logout} className="gap-2 h-10 font-bold shadow-sm ml-2">
+          <Button variant="destructive" onClick={handleLogout} className="gap-2 h-10 font-bold shadow-sm ml-2">
             <LogOut size={16} /> <span className="hidden sm:inline">Salir</span>
           </Button>
         </div>

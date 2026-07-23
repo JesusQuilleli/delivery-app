@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import { AuthContext } from '../context/AuthContext';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -12,6 +13,7 @@ import { toast } from 'sonner';
 export default function OrderHistory() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [orders, setOrders] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -45,9 +47,7 @@ export default function OrderHistory() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('client_token');
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (!token || user.role !== 'ADMIN') {
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
       navigate('/admin-login');
       return;
     }
@@ -62,7 +62,7 @@ export default function OrderHistory() {
 
     fetchHistory();
     fetchAnalytics();
-  }, [slug, navigate]);
+  }, [slug, navigate, user]);
 
   const deleteOrder = async (id: number) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar permanentemente esta orden del historial?')) {

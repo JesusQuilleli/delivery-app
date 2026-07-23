@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const http = require('http');
 const { Server } = require('socket.io');
 
@@ -15,11 +16,32 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
-// Configurar Socket.io
+// Lista blanca de orígenes permitidos (CORS restrictivo)
+const allowedOrigins = [
+  'https://test.shop-mg.com',
+  'http://localhost:5173'
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Permitir peticiones sin origen (ej. Postman, scripts de backend a backend)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: Origen no permitido: ${origin}`));
+    }
+  },
+  credentials: true, // Necesario para que el navegador envíe y reciba cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+// Configurar Socket.io con los mismos orígenes permitidos
 const io = new Server(server, {
   cors: {
-    origin: '*', // Permitir peticiones del frontend
-    methods: ['GET', 'POST']
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
@@ -30,18 +52,16 @@ app.set('io', io);
 io.on('connection', (socket) => {
   console.log(`🔌 Cliente conectado: ${socket.id}`);
 
-  // El dashboard de la tienda se unirá a su propia sala
   socket.on('join_store', (store_id) => {
     const room = `store_${store_id}`;
     socket.join(room);
-    console.log(`🏢 Tienda ${store_id} se unió a la sala ${room} para escuchar pedidos`);
+    console.log(`🏢 Tienda ${store_id} se unió a la sala ${room}`);
   });
 
-  // El tracker del cliente se une a su propia sala
   socket.on('join_client', (user_id) => {
     const room = `client_${user_id}`;
     socket.join(room);
-    console.log(`👤 Cliente ${user_id} se unió a la sala ${room} para rastrear su pedido`);
+    console.log(`👤 Cliente ${user_id} se unió a la sala ${room}`);
   });
 
   socket.on('disconnect', () => {
@@ -50,8 +70,9 @@ io.on('connection', (socket) => {
 });
 
 // Middlewares
-app.use(cors()); // Permite peticiones del frontend
-app.use(express.json()); // Parsea los bodies como JSON
+app.use(cors(corsOptions));
+app.use(cookieParser()); // Parsea cookies de las peticiones
+app.use(express.json());
 
 // Rutas API REST
 app.use('/api/stores', storeRoutes);
