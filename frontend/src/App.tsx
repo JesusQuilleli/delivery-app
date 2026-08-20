@@ -18,37 +18,39 @@ import ProductDetails from './pages/ProductDetails';
 import Settings from './pages/Settings';
 import SuperAdmin from './pages/SuperAdmin';
 import { Toaster } from 'sonner';
-
+import ServerWakeUp from './components/ServerWakeUp';
 function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/superadmin" element={<SuperAdmin />} />
-            <Route path="/admin-login" element={<AdminLogin />} />
-            <Route path="/admin/:slug" element={<Dashboard />} />
-            <Route path="/admin/:slug/history" element={<OrderHistory />} />
-            <Route path="/admin/:slug/order/:orderId" element={<OrderDetails />} />
-            <Route path="/admin/:slug/inventory" element={<Inventory />} />
-            <Route path="/admin/:slug/customers" element={<Customers />} />
-            <Route path="/admin/:slug/drivers" element={<Drivers />} />
-            <Route path="/admin/:slug/settings" element={<Settings />} />
+        <ServerWakeUp>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/superadmin" element={<SuperAdmin />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/admin/:slug" element={<Dashboard />} />
+              <Route path="/admin/:slug/history" element={<OrderHistory />} />
+              <Route path="/admin/:slug/order/:orderId" element={<OrderDetails />} />
+              <Route path="/admin/:slug/inventory" element={<Inventory />} />
+              <Route path="/admin/:slug/customers" element={<Customers />} />
+              <Route path="/admin/:slug/drivers" element={<Drivers />} />
+              <Route path="/admin/:slug/settings" element={<Settings />} />
 
-            <Route path="/:slug" element={<Landing />} />
+              <Route path="/:slug" element={<Landing />} />
 
-            {/* Rutas del Cliente (Envueltas en Layout) */}
-            <Route element={<Layout />}>
-              <Route path="/:slug/productos" element={<Catalog />} />
-              <Route path="/:slug/categorias/:categoryId" element={<Catalog />} />
-              <Route path="/:slug/productos/:productId" element={<ProductDetails />} />
-              <Route path="/:slug/checkout" element={<Checkout />} />
-              <Route path="/:slug/mis-pedidos" element={<MyOrders />} />
-            </Route>
+              {/* Rutas del Cliente (Envueltas en Layout) */}
+              <Route element={<Layout />}>
+                <Route path="/:slug/productos" element={<Catalog />} />
+                <Route path="/:slug/categorias/:categoryId" element={<Catalog />} />
+                <Route path="/:slug/productos/:productId" element={<ProductDetails />} />
+                <Route path="/:slug/checkout" element={<Checkout />} />
+                <Route path="/:slug/mis-pedidos" element={<MyOrders />} />
+              </Route>
 
-            <Route path="/" element={<Navigate to="/farmacia-ayacucho" />} />
-          </Routes>
-        </BrowserRouter>
+              <Route path="/" element={<Navigate to="/farmacia-ayacucho" />} />
+            </Routes>
+          </BrowserRouter>
+        </ServerWakeUp>
         <Toaster position="top-center" richColors />
       </CartProvider>
     </AuthProvider>
