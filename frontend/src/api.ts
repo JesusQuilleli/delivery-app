@@ -15,7 +15,8 @@ api.interceptors.response.use(
 
     if (status === 401 && !path.startsWith('/admin-login')) {
       sessionStorage.removeItem('user');
-      window.location.href = '/admin-login';
+      sessionStorage.setItem('admin_return_to', path);
+      window.location.href = `/admin-login`;
     } else if (status === 403) {
       toast.error(message || 'No tienes permisos para esta acción.');
     } else if (status === 429) {

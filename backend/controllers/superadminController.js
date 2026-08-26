@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../prismaClient');
 const bcrypt = require('bcrypt');
 
 const getStores = async (req, res) => {
@@ -27,6 +26,18 @@ const createStore = async (req, res) => {
   try {
     const { storeName, slug, adminUsername, adminPassword, adminPhone, industry, theme_color } = req.body;
     
+    if (!storeName || !slug || !adminUsername || !adminPassword || !adminPhone) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios: nombre, slug, usuario, contraseña y teléfono son requeridos.' });
+    }
+
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+      return res.status(400).json({ error: 'El slug solo puede contener letras minúsculas, números y guiones.' });
+    }
+
+    if (adminPassword.length < 6) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres.' });
+    }
+
     // Check if slug exists
     const existingStore = await prisma.store.findUnique({ where: { slug } });
     if (existingStore) return res.status(400).json({ error: 'El slug o URL ya está en uso' });

@@ -212,7 +212,7 @@ export default function Dashboard() {
       clearTimeout(reconnectTimer);
       socketRef.current?.disconnect();
     };
-  }, [storeId, orders.length]);
+  }, [storeId]);
 
   useEffect(() => {
     if (!slug) return;

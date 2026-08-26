@@ -28,6 +28,7 @@ function App() {
           <Routes>
             <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['SUPERADMIN']}><SuperAdmin /></ProtectedRoute>} />
             <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/admin" element={<Navigate to="/admin-login" replace />} />
             <Route path="/admin/:slug" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Dashboard /></ProtectedRoute>} />
             <Route path="/admin/:slug/history" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><OrderHistory /></ProtectedRoute>} />
             <Route path="/admin/:slug/order/:orderId" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><OrderDetails /></ProtectedRoute>} />

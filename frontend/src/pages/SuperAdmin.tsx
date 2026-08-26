@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import api from '../api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -6,14 +6,16 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Badge } from '../components/ui/badge';
-import { Store, Plus, ShieldAlert, Power, Loader2 } from 'lucide-react';
+import { Store, Plus, ShieldAlert, Power, Loader2, LogOut, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { AuthContext } from '../context/AuthContext';
 
 export default function SuperAdmin() {
   const [stores, setStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { logout } = useContext(AuthContext);
 
   // Create form state
   const [storeName, setStoreName] = useState('');
@@ -28,6 +30,11 @@ export default function SuperAdmin() {
   useEffect(() => {
     fetchStores();
   }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/admin-login', { replace: true });
+  };
 
   const fetchStores = async () => {
     try {
@@ -90,14 +97,20 @@ export default function SuperAdmin() {
     <div className="min-h-screen bg-gray-50 p-6 md:p-12">
       <div className="max-w-6xl mx-auto space-y-8">
         
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
-            <ShieldAlert size={32} />
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
+              <ShieldAlert size={32} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black text-gray-900">Panel SuperAdmin (SaaS)</h1>
+              <p className="text-gray-500 font-medium">Gestiona todas las tiendas e inquilinos (Tenants) de la plataforma.</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-black text-gray-900">Panel SuperAdmin (SaaS)</h1>
-            <p className="text-gray-500 font-medium">Gestiona todas las tiendas e inquilinos (Tenants) de la plataforma.</p>
-          </div>
+          <Button variant="outline" onClick={handleLogout} className="gap-2 font-bold">
+            <LogOut size={16} />
+            Cerrar Sesión
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -189,7 +202,7 @@ export default function SuperAdmin() {
           <div className="lg:col-span-2">
              <Card className="shadow-lg border-0 rounded-2xl h-full">
               <CardHeader className="bg-white border-b border-gray-100 rounded-t-2xl">
-                <CardTitle className="flex items-center gap-2 text-xl"><Store className="text-blue-600" /> Tiendas Activas</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-xl"><Store className="text-blue-600" /> Tiendas ({stores.length})</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -210,7 +223,9 @@ export default function SuperAdmin() {
                         <TableRow key={store.id} className="hover:bg-gray-50/50">
                           <TableCell className="pl-6">
                             <p className="font-black text-lg">{store.name}</p>
-                            <a href={`/${store.slug}`} target="_blank" className="text-sm text-blue-500 hover:underline">/{store.slug}</a>
+                            <a href={`/${store.slug}`} target="_blank" className="text-sm text-blue-500 hover:underline flex items-center gap-1">
+                              /{store.slug} <ExternalLink size={12} />
+                            </a>
                           </TableCell>
                           <TableCell>
                             {store.users && store.users[0] ? (
@@ -234,15 +249,23 @@ export default function SuperAdmin() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right pr-6">
-                            <Button 
-                              variant={store.is_active ? "destructive" : "default"} 
-                              size="sm" 
-                              onClick={() => toggleStatus(store.id)}
-                              className="rounded-lg shadow-sm font-bold"
-                            >
-                              <Power size={14} className="mr-1" />
-                              {store.is_active ? 'Pausar' : 'Activar'}
-                            </Button>
+                            <div className="flex gap-2 justify-end">
+                              <a href={`/admin/${store.slug}`} target="_blank">
+                                <Button variant="outline" size="sm" className="rounded-lg shadow-sm font-bold gap-1">
+                                  <ExternalLink size={14} />
+                                  Admin
+                                </Button>
+                              </a>
+                              <Button 
+                                variant={store.is_active ? "destructive" : "default"} 
+                                size="sm" 
+                                onClick={() => toggleStatus(store.id)}
+                                className="rounded-lg shadow-sm font-bold"
+                              >
+                                <Power size={14} className="mr-1" />
+                                {store.is_active ? 'Pausar' : 'Activar'}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}

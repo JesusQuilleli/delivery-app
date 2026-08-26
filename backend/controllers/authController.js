@@ -274,7 +274,7 @@ const logout = (req, res) => {
   res.json({ message: 'Sesión cerrada exitosamente' });
 };
 
-const refreshToken = (req, res) => {
+const refreshToken = async (req, res) => {
   try {
     const token = req.cookies?.auth_token;
     if (!token) {
@@ -295,13 +295,20 @@ const refreshToken = (req, res) => {
       res.cookie('auth_token', newToken, cookieOptions);
     }
 
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      include: { store: { select: { slug: true } } }
+    });
+
     res.json({
       user: {
         id: decoded.id,
+        name: user?.name || null,
         role: decoded.role,
         username: decoded.username,
         email: decoded.email,
-        store_id: decoded.store_id
+        store_id: decoded.store_id,
+        store: user?.store || null
       }
     });
   } catch (error) {

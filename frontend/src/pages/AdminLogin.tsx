@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../api';
 import { AuthContext } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
@@ -14,6 +14,8 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = (location.state as { from?: string })?.from || sessionStorage.getItem('admin_return_to');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,13 +23,16 @@ export default function AdminLogin() {
     try {
       const res = await api.post('/auth/admin-login', { username, password });
       login(res.data.user);
-      
-      if (res.data.user.role === 'SUPERADMIN') {
-        navigate('/superadmin');
+      sessionStorage.removeItem('admin_return_to');
+
+      if (returnTo && (returnTo.startsWith('/admin/') || returnTo === '/superadmin')) {
+        navigate(returnTo, { replace: true });
+      } else if (res.data.user.role === 'SUPERADMIN') {
+        navigate('/superadmin', { replace: true });
       } else if (res.data.user.store?.slug) {
-        navigate(`/admin/${res.data.user.store.slug}`);
+        navigate(`/admin/${res.data.user.store.slug}`, { replace: true });
       } else {
-        navigate('/superadmin');
+        navigate('/superadmin', { replace: true });
       }
     } catch (e: any) {
       toast.error(e.response?.data?.error || "Error al iniciar sesión");
