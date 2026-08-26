@@ -1,4 +1,4 @@
-import { Wifi, WifiOff } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
 
 interface ConnectionStatusProps {
   connected: boolean;
