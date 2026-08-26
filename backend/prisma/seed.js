@@ -60,6 +60,23 @@ async function main() {
   });
   console.log(`Administrador creado: ${adminUser.username} / password123`);
 
+  // Crear usuario super administrador por defecto
+  const superAdminUser = await prisma.user.upsert({
+    where: { username: 'superadmin' },
+    update: {
+      password: hashedPassword
+    },
+    create: {
+      store_id: store.id,
+      name: 'Super Administrador',
+      email: 'superadmin@demo.com', 
+      username: 'superadmin',
+      password: hashedPassword,
+      role: 'SUPER_ADMIN',
+    }
+  });
+  console.log(`Super Administrador creado: ${superAdminUser.username} / password123`);
+
   console.log("Creando categorías y productos...");
   for (let i = 0; i < categoriesNames.length; i++) {
     const category = await prisma.category.create({
