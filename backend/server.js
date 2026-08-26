@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
 const http = require('http');
 const { Server } = require('socket.io');
 
@@ -11,6 +12,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const superadminRoutes = require('./routes/superadminRoutes');
+const { globalLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 const server = http.createServer(app);
@@ -78,9 +80,14 @@ io.on('connection', (socket) => {
 });
 
 // Middlewares
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 app.use(cors(corsOptions));
-app.use(cookieParser()); // Parsea cookies de las peticiones
-app.use(express.json());
+app.use(cookieParser());
+app.use(express.json({ limit: '1mb' }));
+app.use(globalLimiter);
 
 // Rutas API REST
 app.use('/api/stores', storeRoutes);

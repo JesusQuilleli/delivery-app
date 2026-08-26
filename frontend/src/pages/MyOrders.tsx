@@ -35,9 +35,7 @@ export default function MyOrders() {
 
   const handleRateOrder = async () => {
     try {
-      await api.put(`/orders/${selectedOrder.id}/rate`, { rating, review }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(`/orders/${selectedOrder.id}/rate`, { rating, review });
       setOrders(orders.map(o => o.id === selectedOrder.id ? { ...o, client_rating: rating, client_review: review } : o));
     } catch (error) {
       toast.error("Error al enviar calificación");
@@ -51,9 +49,7 @@ export default function MyOrders() {
       return;
     }
     try {
-      await api.put(`/orders/${selectedOrder.id}/cancel`, { cancel_reason: reason }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(`/orders/${selectedOrder.id}/cancel`, { cancel_reason: reason });
       // The socket will update it, but we can do optimistic update just in case
       const updatedOrder = { ...selectedOrder, status: 'CANCELLED', cancel_reason: reason };
       setSelectedOrder(updatedOrder);
@@ -70,9 +66,7 @@ export default function MyOrders() {
     }
     const fetchOrders = async () => {
       try {
-        const res = await api.get('/orders/my-orders', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await api.get('/orders/my-orders');
         setOrders(res.data);
       } catch (error) {
         console.error("Error al cargar pedidos:", error);

@@ -28,17 +28,19 @@ model Store {
 }
 
 model User {
-  id           Int     @id @default(autoincrement())
-  store_id     Int?
-  client_token String  @unique @default(uuid())
-  name         String?
-  phone        String? @unique
-  email        String? @unique
-  username     String? @unique
-  password     String?
-  role         String  @default("CLIENT")
-  orders       Order[]
-  store        Store?  @relation(fields: [store_id], references: [id])
+  id             Int       @id @default(autoincrement())
+  store_id       Int?
+  client_token   String    @unique @default(uuid())
+  name           String?
+  phone          String?   @unique
+  email          String?   @unique
+  username       String?   @unique
+  password       String?
+  role           String    @default("CLIENT")
+  failed_attempts Int      @default(0)
+  locked_until   DateTime?
+  orders         Order[]
+  store          Store?    @relation(fields: [store_id], references: [id])
 }
 
 model VerificationCode {
@@ -79,6 +81,7 @@ model Order {
   payment_method    String
   payment_reference String?
   status            String      @default("PENDING")
+  viewed            Boolean     @default(false)
   client_rating     Int?
   client_review     String?
   createdAt         DateTime    @default(now())

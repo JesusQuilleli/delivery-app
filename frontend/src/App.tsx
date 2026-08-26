@@ -17,6 +17,7 @@ import Landing from './pages/Landing';
 import ProductDetails from './pages/ProductDetails';
 import Settings from './pages/Settings';
 import SuperAdmin from './pages/SuperAdmin';
+import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'sonner';
 import ServerWakeUp from './components/ServerWakeUp';
 function App() {
@@ -26,19 +27,18 @@ function App() {
         <ServerWakeUp>
           <BrowserRouter>
             <Routes>
-              <Route path="/superadmin" element={<SuperAdmin />} />
+              <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['SUPERADMIN']}><SuperAdmin /></ProtectedRoute>} />
               <Route path="/admin-login" element={<AdminLogin />} />
-              <Route path="/admin/:slug" element={<Dashboard />} />
-              <Route path="/admin/:slug/history" element={<OrderHistory />} />
-              <Route path="/admin/:slug/order/:orderId" element={<OrderDetails />} />
-              <Route path="/admin/:slug/inventory" element={<Inventory />} />
-              <Route path="/admin/:slug/customers" element={<Customers />} />
-              <Route path="/admin/:slug/drivers" element={<Drivers />} />
-              <Route path="/admin/:slug/settings" element={<Settings />} />
+              <Route path="/admin/:slug" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Dashboard /></ProtectedRoute>} />
+              <Route path="/admin/:slug/history" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><OrderHistory /></ProtectedRoute>} />
+              <Route path="/admin/:slug/order/:orderId" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><OrderDetails /></ProtectedRoute>} />
+              <Route path="/admin/:slug/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Inventory /></ProtectedRoute>} />
+              <Route path="/admin/:slug/customers" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Customers /></ProtectedRoute>} />
+              <Route path="/admin/:slug/drivers" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Drivers /></ProtectedRoute>} />
+              <Route path="/admin/:slug/settings" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Settings /></ProtectedRoute>} />
 
               <Route path="/:slug" element={<Landing />} />
 
-              {/* Rutas del Cliente (Envueltas en Layout) */}
               <Route element={<Layout />}>
                 <Route path="/:slug/productos" element={<Catalog />} />
                 <Route path="/:slug/categorias/:categoryId" element={<Catalog />} />

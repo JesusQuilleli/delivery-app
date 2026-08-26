@@ -213,27 +213,39 @@ const adminLogin = async (req, res) => {
       return res.status(401).json({ error: 'Credenciales inválidas o no tienes permisos' });
     }
 
-    // Verificar contraseña encriptada con bcrypt (única forma aceptada)
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      const minutesLeft = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
+      return res.status(423).json({ error: `Cuenta bloqueada. Intenta de nuevo en ${minutesLeft} minuto(s).` });
+    }
+
     let isMatch = false;
     try {
       isMatch = await bcrypt.compare(password, user.password);
-    } catch (err) {
-      // Si bcrypt falla (ej. hash inválido), la autenticación falla
+    } catch {
       isMatch = false;
     }
 
     if (!isMatch) {
+      const attempts = user.failed_attempts + 1;
+      const updateData = { failed_attempts: attempts };
+      if (attempts >= 5) {
+        updateData.locked_until = new Date(Date.now() + 15 * 60 * 1000);
+        console.log(`🔒 Cuenta ${username} bloqueada por 15 min (${attempts} intentos fallidos)`);
+      }
+      await prisma.user.update({ where: { id: user.id }, data: updateData });
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    // Generar JWT
+    if (user.failed_attempts > 0) {
+      await prisma.user.update({ where: { id: user.id }, data: { failed_attempts: 0, locked_until: null } });
+    }
+
     const token = jwt.sign(
       { id: user.id, role: user.role, username: user.username, store_id: user.store_id },
       JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    // Enviar JWT en cookie httpOnly (no expuesto a JS del cliente)
     res.cookie('auth_token', token, COOKIE_OPTIONS_ADMIN);
 
     res.json({
@@ -262,4 +274,39 @@ const logout = (req, res) => {
   res.json({ message: 'Sesión cerrada exitosamente' });
 };
 
-module.exports = { checkEmail, verifyOtp, adminLogin, logout };
+const refreshToken = (req, res) => {
+  try {
+    const token = req.cookies?.auth_token;
+    if (!token) {
+      return res.status(401).json({ error: 'No hay sesión activa' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const now = Math.floor(Date.now() / 1000);
+    const expiresIn = decoded.exp - now;
+
+    if (expiresIn < 3600) {
+      const newPayload = { id: decoded.id, role: decoded.role, store_id: decoded.store_id };
+      if (decoded.username) newPayload.username = decoded.username;
+      if (decoded.email) newPayload.email = decoded.email;
+
+      const newToken = jwt.sign(newPayload, JWT_SECRET, { expiresIn: '1d' });
+      const cookieOptions = decoded.role === 'CLIENT' ? COOKIE_OPTIONS_CLIENT : COOKIE_OPTIONS_ADMIN;
+      res.cookie('auth_token', newToken, cookieOptions);
+    }
+
+    res.json({
+      user: {
+        id: decoded.id,
+        role: decoded.role,
+        username: decoded.username,
+        email: decoded.email,
+        store_id: decoded.store_id
+      }
+    });
+  } catch (error) {
+    return res.status(401).json({ error: 'Sesión expirada' });
+  }
+};
+
+module.exports = { checkEmail, verifyOtp, adminLogin, logout, refreshToken };

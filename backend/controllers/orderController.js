@@ -135,40 +135,56 @@ const placeOrder = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, cancel_reason, driver_id } = req.body; // ACCEPTED, DISPATCHED, DELIVERED, CANCELLED
-    const user = req.user; // ADMIN
-    
-    if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'No autorizado' });
+    const { status, cancel_reason, driver_id } = req.body;
+    const user = req.user;
+
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    const existingOrder = await prisma.order.findUnique({ where: { id: Number(id) } });
+    if (!existingOrder) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+    if (user.role !== 'SUPERADMIN' && existingOrder.store_id !== user.store_id) {
+      return res.status(403).json({ error: 'No tienes permisos sobre este pedido' });
+    }
+
+    const validTransitions = {
+      'AWAITING_PAYMENT': ['PENDING', 'CANCELLED'],
+      'PENDING': ['ACCEPTED', 'CANCELLED'],
+      'ACCEPTED': ['DISPATCHED', 'CANCELLED'],
+      'DISPATCHED': ['DELIVERED'],
+    };
+
+    const allowed = validTransitions[existingOrder.status];
+    if (allowed && !allowed.includes(status)) {
+      return res.status(409).json({ error: `No se puede cambiar de ${existingOrder.status} a ${status}. Estado actual ya fue modificado.` });
+    }
 
     const order = await prisma.order.update({
-      where: { id: Number(id) },
-      data: { 
-        status, 
+      where: { id: Number(id), status: existingOrder.status },
+      data: {
+        status,
         cancel_reason: cancel_reason || undefined,
         driver_id: driver_id ? Number(driver_id) : undefined
       },
       include: {
         user: true,
-        items: {
-          include: {
-            product: true
-          }
-        },
+        items: { include: { product: true } },
         driver: true
       }
     });
 
-    // Notificar al cliente a través de WebSockets
     const io = req.app.get('io');
-    const clientRoom = `client_${order.user_id}`;
-    io.to(clientRoom).emit('estado_actualizado', order);
-
-    // También notificar a la tienda para que el dashboard de otros admins se actualice
-    const storeRoom = `store_${order.store_id}`;
-    io.to(storeRoom).emit('pedido_actualizado', order);
+    io.to(`client_${order.user_id}`).emit('estado_actualizado', order);
+    io.to(`store_${order.store_id}`).emit('pedido_actualizado', order);
 
     res.json({ message: 'Estado actualizado', order });
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(409).json({ error: 'El pedido fue modificado por otro admin. Recargando...' });
+    }
     console.error('Error al actualizar estado:', error);
     res.status(500).json({ error: 'Error interno al actualizar estado' });
   }
@@ -177,11 +193,19 @@ const updateOrderStatus = async (req, res) => {
 const deleteOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Prisma delete
+    const user = req.user;
+
+    const existingOrder = await prisma.order.findUnique({ where: { id: Number(id) } });
+    if (!existingOrder) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+    if (user.role !== 'SUPERADMIN' && existingOrder.store_id !== user.store_id) {
+      return res.status(403).json({ error: 'No tienes permisos sobre este pedido' });
+    }
+
     await prisma.orderItem.deleteMany({ where: { order_id: Number(id) } });
     await prisma.order.delete({ where: { id: Number(id) } });
-    
+
     res.json({ message: 'Orden eliminada exitosamente' });
   } catch (error) {
     console.error('Error al eliminar orden:', error);
@@ -252,6 +276,7 @@ const rateOrder = async (req, res) => {
 const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
+    const user = req.user;
     const orderId = Number(id);
     if (isNaN(orderId)) return res.status(400).json({ error: 'ID inválido' });
 
@@ -268,6 +293,10 @@ const getOrderById = async (req, res) => {
     });
 
     if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+    if (user.role !== 'SUPERADMIN' && order.store_id !== user.store_id) {
+      return res.status(403).json({ error: 'No tienes permisos sobre este pedido' });
+    }
 
     res.json(order);
   } catch (error) {
@@ -300,11 +329,8 @@ const cancelOrderClient = async (req, res) => {
     });
 
     const io = req.app.get('io');
-    const clientRoom = `client_${order.user_id}`;
-    io.to(clientRoom).emit('estado_actualizado', order);
-
-    const storeRoom = `store_${order.store_id}`;
-    io.to(storeRoom).emit('pedido_actualizado', order);
+    io.to(`client_${order.user_id}`).emit('estado_actualizado', order);
+    io.to(`store_${order.store_id}`).emit('pedido_actualizado', order);
 
     res.json({ message: 'Pedido cancelado', order });
   } catch (error) {
@@ -313,4 +339,68 @@ const cancelOrderClient = async (req, res) => {
   }
 };
 
-module.exports = { placeOrder, updateOrderStatus, deleteOrder, getMyOrders, rateOrder, getOrderById, cancelOrderClient };
+const batchUpdateStatus = async (req, res) => {
+  try {
+    const { order_ids, status, cancel_reason } = req.body;
+    const user = req.user;
+
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    const orders = await prisma.order.findMany({
+      where: { id: { in: order_ids } }
+    });
+
+    const validForStore = user.role === 'SUPERADMIN'
+      ? orders
+      : orders.filter(o => o.store_id === user.store_id);
+
+    const validIds = validForStore.map(o => o.id);
+    const failedIds = order_ids.filter(id => !validIds.includes(id));
+
+    if (validIds.length === 0) {
+      return res.status(403).json({ error: 'No tienes permisos sobre estos pedidos', updated: 0, failed: failedIds });
+    }
+
+    const result = await prisma.order.updateMany({
+      where: { id: { in: validIds } },
+      data: {
+        status,
+        cancel_reason: cancel_reason || undefined
+      }
+    });
+
+    const io = req.app.get('io');
+    const updatedOrders = await prisma.order.findMany({
+      where: { id: { in: validIds } },
+      include: { user: true, items: { include: { product: true } }, driver: true }
+    });
+
+    for (const order of updatedOrders) {
+      io.to(`client_${order.user_id}`).emit('estado_actualizado', order);
+      io.to(`store_${order.store_id}`).emit('pedido_actualizado', order);
+    }
+
+    res.json({ message: `${result.count} pedidos actualizados`, updated: result.count, failed: failedIds });
+  } catch (error) {
+    console.error('Error en batch update:', error);
+    res.status(500).json({ error: 'Error interno al actualizar pedidos' });
+  }
+};
+
+const markOrderViewed = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.order.update({
+      where: { id: Number(id) },
+      data: { viewed: true }
+    });
+    res.json({ message: 'Pedido marcado como visto' });
+  } catch (error) {
+    console.error('Error marking order viewed:', error);
+    res.status(500).json({ error: 'Error interno' });
+  }
+};
+
+module.exports = { placeOrder, updateOrderStatus, deleteOrder, getMyOrders, rateOrder, getOrderById, cancelOrderClient, batchUpdateStatus, markOrderViewed };
