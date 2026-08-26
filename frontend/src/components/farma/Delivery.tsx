@@ -18,11 +18,11 @@ export function Delivery() {
               Tres pasos. Cero filas.
             </h2>
             <p className="mt-4 text-muted-foreground max-w-md">
-              Hicimos pedir tus medicamentos tan fácil como mandar un mensaje. Cobertura en todo el casco urbano de Ayacucho y distritos cercanos.
+              Hicimos pedir tus medicamentos tan fácil como mandar un mensaje. Cobertura en toda el área de entrega y zonas cercanas.
             </p>
             <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-background px-4 py-2 text-sm font-medium border border-border/60">
               <MapPin className="w-4 h-4 text-primary" />
-              Huamanga · Jesús Nazareno · Carmen Alto · San Juan Bautista
+              Cobertura urbana y alrededores
             </div>
           </div>
 

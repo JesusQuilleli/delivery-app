@@ -109,12 +109,13 @@ const getStoreOrders = async (req, res) => {
       },
       include: {
         items: { include: { product: true } },
-        user: true
+        user: true,
+        driver: true
       },
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json(orders);
+    res.json({ storeId: store.id, orders });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error cargando órdenes activas' });
@@ -145,7 +146,8 @@ const getStoreHistory = async (req, res) => {
       },
       include: {
         items: { include: { product: true } },
-        user: true
+        user: true,
+        driver: true
       },
       orderBy: { createdAt: 'desc' }
     });

@@ -1,42 +1,24 @@
 import { Plus, MessageCircle } from "lucide-react";
+import { useParams } from "react-router-dom";
 
 const Facebook = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
   </svg>
 );
 
 const Instagram = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
     <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
     <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
   </svg>
 );
 
-export function Footer() {
+export function Footer({ store }: { store?: any }) {
+  const { slug } = useParams<{ slug: string }>();
+  const storeName = store?.name || "Farmacia";
+
   return (
     <footer className="border-t border-border/60 bg-background">
       <div className="mx-auto max-w-7xl px-5 lg:px-8 py-12 grid md:grid-cols-4 gap-8">
@@ -46,11 +28,11 @@ export function Footer() {
               <Plus className="w-5 h-5" strokeWidth={2.5} />
             </span>
             <span className="font-display font-extrabold text-lg">
-              Farma <span className="text-primary">Ayacucho</span>
+              {storeName}
             </span>
           </div>
           <p className="mt-4 text-sm text-muted-foreground max-w-sm">
-            Tu salud, a un clic de tu puerta. Delivery de medicamentos y bienestar en Huamanga y distritos cercanos.
+            Tu salud, a un clic de tu puerta. Delivery de medicamentos y bienestar rápido y confiable.
           </p>
           <div className="mt-5 flex gap-2">
             {[Instagram, Facebook, MessageCircle].map((Icon, i) => (
@@ -72,17 +54,15 @@ export function Footer() {
         <div>
           <div className="font-semibold mb-3">Contacto</div>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>Jr. 28 de Julio 245</li>
-            <li>Huamanga — Ayacucho</li>
-            <li>+51 999 999 999</li>
-            <li>hola@farmaayacucho.pe</li>
+            <li>Consulta nuestra ubicación</li>
+            <li>Contacto vía WhatsApp</li>
           </ul>
         </div>
       </div>
       <div className="border-t border-border/60">
         <div className="mx-auto max-w-7xl px-5 lg:px-8 py-5 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-          <div>© {new Date().getFullYear()} Farma Ayacucho. Todos los derechos reservados.</div>
-          <div>Venta de medicamentos según normativa DIGEMID · Q.F. Responsable colegiado.</div>
+          <div>© {new Date().getFullYear()} {storeName}. Todos los derechos reservados.</div>
+          <div>Venta de medicamentos según normativa sanitaria · Q.F. Responsable colegiado.</div>
         </div>
       </div>
     </footer>

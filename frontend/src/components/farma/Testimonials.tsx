@@ -2,9 +2,9 @@ import { motion } from "framer-motion";
 import { Star } from "lucide-react";
 
 const items = [
-  { name: "María Quispe", role: "Vecina de Huamanga", text: "Pedí los medicamentos de mi mamá un domingo a las 10 pm y llegaron en 30 minutos. Atención impecable." },
+  { name: "María Quispe", role: "Cliente frecuente", text: "Pedí los medicamentos de mi mamá un domingo a las 10 pm y llegaron en 30 minutos. Atención impecable." },
   { name: "Carlos Huamán", role: "Papá primerizo", text: "Siempre encuentro las fórmulas de mi bebé. Me asesoran con paciencia y el delivery nunca falla." },
-  { name: "Lucía Berrocal", role: "Profesora", text: "Sus precios en vitaminas son los mejores de la ciudad y los productos son originales. Mi farmacia de confianza." },
+  { name: "Lucía Berrocal", role: "Profesora", text: "Sus precios en vitaminas son los mejores y los productos son originales. Mi farmacia de confianza." },
 ];
 
 export function Testimonials() {

@@ -8,11 +8,12 @@ import { About } from "@/components/farma/About";
 import { Testimonials } from "@/components/farma/Testimonials";
 import { Contact } from "@/components/farma/Contact";
 import { Footer } from "@/components/farma/Footer";
+import { WhatsAppFab } from "@/components/farma/WhatsAppFab";
 
 export default function PharmacyTemplate({ store, categories, offers, combos }: any) {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans">
-      <Navbar />
+      <Navbar store={store} />
       <main>
         <Hero store={store} />
         <Categories categories={categories} />
@@ -23,7 +24,8 @@ export default function PharmacyTemplate({ store, categories, offers, combos }: 
         <Testimonials />
         <Contact />
       </main>
-      <Footer />
+      <Footer store={store} />
+      <WhatsAppFab store={store} />
     </div>
   );
 }

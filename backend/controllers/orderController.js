@@ -288,7 +288,8 @@ const getOrderById = async (req, res) => {
         },
         user: {
           select: { id: true, name: true, phone: true }
-        }
+        },
+        driver: true
       },
     });
 

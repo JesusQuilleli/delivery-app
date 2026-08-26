@@ -47,7 +47,7 @@ function App() {
                 <Route path="/:slug/mis-pedidos" element={<MyOrders />} />
               </Route>
 
-              <Route path="/" element={<Navigate to="/farmacia-ayacucho" />} />
+              <Route path="/" element={<Navigate to="/demo-farmacia" />} />
             </Routes>
           </BrowserRouter>
         </ServerWakeUp>

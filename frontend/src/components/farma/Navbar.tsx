@@ -1,6 +1,6 @@
 import { ShoppingBag, User, LogOut, Plus } from "lucide-react";
 import { useContext } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "@/context/AuthContext";
 
 const links = [
@@ -11,9 +11,11 @@ const links = [
   { href: "#contacto", label: "Contacto" },
 ];
 
-export function Navbar() {
+export function Navbar({ store }: { store?: any }) {
+  const { slug } = useParams<{ slug: string }>();
   const { user, token, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const storeName = store?.name || "Farmacia";
 
   return (
     <header className="sticky top-0 z-40 backdrop-blur-md bg-background/75 border-b border-border/60">
@@ -24,7 +26,7 @@ export function Navbar() {
           </span>
           <div className="flex flex-col">
             <span className="font-display font-extrabold text-lg tracking-tight leading-none">
-              Farma <span className="text-primary">Ayacucho</span>
+              {storeName}
             </span>
             <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider leading-none mt-1">
               Entregas al instante
@@ -49,13 +51,13 @@ export function Navbar() {
                 Hola, {user.name?.split(' ')[0]}
               </div>
               <Link
-                to="/farmacia-ayacucho/mis-pedidos"
+                to={`/${slug}/mis-pedidos`}
                 className="hidden sm:inline-flex items-center gap-2 rounded-full bg-blue-100 text-blue-700 px-4 py-2 text-sm font-semibold hover:bg-blue-200 transition"
               >
                 Mis Pedidos
               </Link>
               <Link
-                to="/farmacia-ayacucho/productos"
+                to={`/${slug}/productos`}
                 className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90 transition shadow-sm"
               >
                 <ShoppingBag className="w-4 h-4" />
@@ -72,7 +74,7 @@ export function Navbar() {
           ) : (
             <>
               <Link
-                to="/farmacia-ayacucho/productos"
+                to={`/${slug}/productos`}
                 className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90 transition shadow-sm"
               >
                 <ShoppingBag className="w-4 h-4" />

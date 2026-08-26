@@ -25,13 +25,14 @@ async function main() {
   await prisma.product.deleteMany({});
   await prisma.category.deleteMany({});
 
-  // 1. Crear tienda Farmacia Ayacucho
+  // 1. Crear tienda Demo Farmacia
   const store = await prisma.store.upsert({
-    where: { slug: 'farmacia-ayacucho' },
+    where: { slug: 'demo-farmacia' },
     update: {},
     create: {
-      name: 'Farmacia Ayacucho',
-      slug: 'farmacia-ayacucho',
+      name: 'Demo Farmacia',
+      slug: 'demo-farmacia',
+      industry: 'PHARMACY',
       is_active: true,
       currency: 'USD',
       usd_rate: 1.0,
@@ -44,15 +45,15 @@ async function main() {
   // Crear usuario administrador por defecto
   const hashedPassword = await bcrypt.hash('password123', 10);
   const adminUser = await prisma.user.upsert({
-    where: { username: 'admin_ayacucho' },
+    where: { username: 'admin_demo' },
     update: {
       password: hashedPassword
     },
     create: {
       store_id: store.id,
-      name: 'Administrador Principal',
-      email: 'admin@ayacucho.com', 
-      username: 'admin_ayacucho',
+      name: 'Administrador Demo',
+      email: 'admin@demo.com', 
+      username: 'admin_demo',
       password: hashedPassword,
       role: 'ADMIN',
     }

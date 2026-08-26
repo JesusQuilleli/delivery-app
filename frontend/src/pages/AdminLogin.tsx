@@ -27,7 +27,7 @@ export default function AdminLogin() {
       } else if (res.data.user.store?.slug) {
         navigate(`/admin/${res.data.user.store.slug}`);
       } else {
-        navigate(`/admin/farmacia-ayacucho`);
+        navigate('/superadmin');
       }
     } catch (e: any) {
       toast.error(e.response?.data?.error || "Error al iniciar sesión");

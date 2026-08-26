@@ -32,11 +32,11 @@ export function Contact() {
             <div className="mt-8 space-y-4 text-sm">
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 shrink-0 mt-0.5" />
-                <div>Jr. 28 de Julio 245, Huamanga — Ayacucho</div>
+                <div>Consulta nuestra ubicación en el mapa</div>
               </div>
               <div className="flex items-start gap-3">
                 <Phone className="w-5 h-5 shrink-0 mt-0.5" />
-                <div>+51 999 999 999</div>
+                <div>Contacto vía WhatsApp o formulario</div>
               </div>
               <div className="flex items-start gap-3">
                 <Clock className="w-5 h-5 shrink-0 mt-0.5" />

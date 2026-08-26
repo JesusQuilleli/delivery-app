@@ -1,15 +1,16 @@
 import { motion } from "framer-motion";
 import { Clock, Truck, ShieldCheck, Star, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import delivery from "@/assets/delivery-moto.jpg";
 import productos from "@/assets/productos-flatlay.jpg";
 
-export function Hero() {
+export function Hero({ store }: { store?: any }) {
+  const { slug } = useParams<{ slug: string }>();
+  const storeName = store?.name || "Farmacia";
   return (
     <section id="inicio" className="relative pt-10 lg:pt-16 pb-12">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="grid grid-cols-12 gap-4 lg:gap-5">
-          {/* Main slogan */}
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -19,7 +20,7 @@ export function Hero() {
             <div>
               <span className="inline-flex items-center gap-2 rounded-full bg-secondary/70 text-secondary-foreground px-3 py-1 text-xs font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-coral animate-pulse" />
-                Delivery activo en Ayacucho
+                Delivery activo
               </span>
               <h1 className="mt-6 font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight">
                 Tu salud,{" "}
@@ -27,19 +28,19 @@ export function Hero() {
                 <br className="hidden sm:block" /> de tu puerta.
               </h1>
               <p className="mt-5 max-w-xl text-base lg:text-lg text-muted-foreground">
-                Medicamentos, cuidado personal y bienestar entregados en menos de 45 minutos.
-                Farma Ayacucho — la farmacia de confianza de tu barrio, ahora también online.
+                Medicamentos, cuidado personal y bienestar entregados rápido.
+                {storeName} — la farmacia de confianza de tu barrio, ahora también online.
               </p>
             </div>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                to="/farmacia-ayacucho/productos"
+                to={`/${slug}/productos`}
                 className="inline-flex items-center gap-2 rounded-full bg-coral text-coral-foreground px-6 py-3 font-semibold shadow-md hover:translate-y-[-1px] transition"
               >
                 Pedir ahora <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                to="/farmacia-ayacucho/productos"
+                to={`/${slug}/productos`}
                 className="inline-flex items-center gap-2 rounded-full bg-foreground/5 text-foreground px-6 py-3 font-semibold hover:bg-foreground/10 transition"
               >
                 Ver catálogo
@@ -48,7 +49,6 @@ export function Hero() {
             <div className="absolute -bottom-12 -right-12 w-56 h-56 rounded-full bg-secondary/60 blur-3xl pointer-events-none" />
           </motion.div>
 
-          {/* Delivery image */}
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -57,7 +57,7 @@ export function Hero() {
           >
             <img
               src={delivery}
-              alt="Repartidor de Farma Ayacucho"
+              alt="Repartidor de delivery"
               width={1024}
               height={1280}
               className="w-full h-full object-cover"
@@ -73,7 +73,6 @@ export function Hero() {
             </div>
           </motion.div>
 
-          {/* Stat 24/7 */}
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -87,7 +86,6 @@ export function Hero() {
             </div>
           </motion.div>
 
-          {/* Stat clients */}
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -105,7 +103,6 @@ export function Hero() {
             </div>
           </motion.div>
 
-          {/* Productos image */}
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -121,7 +118,6 @@ export function Hero() {
             />
           </motion.div>
 
-          {/* Quality */}
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -134,7 +130,7 @@ export function Hero() {
             <div>
               <div className="font-display font-bold text-xl">Productos 100% originales</div>
               <p className="text-sm text-muted-foreground mt-1">
-                Trabajamos con laboratorios certificados y cumplimos la normativa DIGEMID.
+                Trabajamos con laboratorios certificados y cumplimos la normativa sanitaria.
               </p>
             </div>
           </motion.div>
