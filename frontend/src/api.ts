@@ -11,12 +11,14 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const message = error.response?.data?.error;
-    const path = window.location.pathname;
+    const url = error.config?.url || '';
 
-    if (status === 401 && !path.startsWith('/admin-login')) {
-      sessionStorage.removeItem('user');
-      sessionStorage.setItem('admin_return_to', path);
-      window.location.href = `/admin-login`;
+    if (status === 401) {
+      // No redirigir si es la llamada de refresh o login — AuthContext maneja eso
+      if (!url.includes('/auth/refresh') && !url.includes('/auth/admin-login')) {
+        sessionStorage.removeItem('user');
+        window.location.href = '/admin-login';
+      }
     } else if (status === 403) {
       toast.error(message || 'No tienes permisos para esta acción.');
     } else if (status === 429) {

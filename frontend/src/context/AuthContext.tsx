@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import api from '../api';
 
 interface User {
@@ -31,14 +31,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
+  const userRef = useRef(user);
+  userRef.current = user;
+
   const token = user !== null;
 
-  const login = (userData: User) => {
+  const login = useCallback((userData: User) => {
     setUser(userData);
     sessionStorage.setItem('user', JSON.stringify(userData));
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await api.post('/auth/logout');
     } catch {
@@ -48,28 +51,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     sessionStorage.removeItem('user');
     localStorage.removeItem('client_token');
     localStorage.removeItem('user');
-  };
+  }, []);
 
   useEffect(() => {
     if (!user) return;
 
+    let cancelled = false;
+
     const refreshSession = async () => {
       try {
         const res = await api.post('/auth/refresh');
-        if (res.data.user) {
-          const updatedUser = { ...user, ...res.data.user };
+        if (!cancelled && res.data.user) {
+          const updatedUser = { ...userRef.current, ...res.data.user };
           setUser(updatedUser);
           sessionStorage.setItem('user', JSON.stringify(updatedUser));
         }
-      } catch {
-        setUser(null);
-        sessionStorage.removeItem('user');
+      } catch (err: any) {
+        // Solo cerrar sesión si es 401 real (token expirado/inválido)
+        // No cerrar sesión por errores de red o timeouts
+        if (!cancelled && err?.response?.status === 401) {
+          setUser(null);
+          sessionStorage.removeItem('user');
+        }
       }
     };
 
-    refreshSession();
+    // Primer refresh después de 5 segundos (dar tiempo a que la cookie se establezca)
+    const initialTimer = setTimeout(refreshSession, 5000);
+    // Luego cada 30 minutos
     const interval = setInterval(refreshSession, 30 * 60 * 1000);
-    return () => clearInterval(interval);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
   }, [user]);
 
   return (
