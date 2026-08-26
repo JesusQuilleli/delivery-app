@@ -13,6 +13,7 @@ import AdminLayout from '../components/AdminLayout';
 import RejectOrderDialog from '../components/RejectOrderDialog';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { toast } from 'sonner';
+import { formatPrice } from '../utils/currency';
 
 interface OrderItem {
   id: number;
@@ -83,6 +84,7 @@ export default function Dashboard() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [storeId, setStoreId] = useState<number | null>(null);
+  const [storeConfig, setStoreConfig] = useState<any>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [alertQueue, setAlertQueue] = useState<Order[]>([]);
   const [rejectTarget, setRejectTarget] = useState<Order | null>(null);
@@ -130,6 +132,18 @@ export default function Dashboard() {
     }
   }, [slug]);
 
+  const fetchStoreConfig = useCallback(async () => {
+    if (!slug) return;
+    try {
+      const res = await api.get(`/stores/${slug}/products?limit=1`);
+      if (res.data.store) {
+        setStoreConfig(res.data.store);
+      }
+    } catch (error) {
+      console.error("Error cargando config de tienda", error);
+    }
+  }, [slug]);
+
   const fetchDrivers = useCallback(async () => {
     if (!slug) return;
     try {
@@ -142,11 +156,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchOrders();
+    fetchStoreConfig();
     fetchDrivers();
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
-  }, [fetchOrders, fetchDrivers]);
+  }, [fetchOrders, fetchStoreConfig, fetchDrivers]);
 
   useEffect(() => {
     if (!storeId) return;
@@ -185,7 +200,7 @@ export default function Dashboard() {
 
         if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
           const notif = new Notification("¡Nuevo Pedido!", {
-            body: `$${order.total_amount.toFixed(2)} - ${order.delivery_address.split(' |')[0]}`,
+            body: `${formatPrice(order.total_amount, storeConfig?.currency)} - ${order.delivery_address.split(' |')[0]}`,
             icon: '/favicon.ico'
           });
           notif.onclick = () => { window.focus(); notif.close(); };
@@ -403,7 +418,7 @@ export default function Dashboard() {
                       {getPaymentLabel(order.payment_method)}
                     </span>
                     <span className="font-black text-xl text-foreground">
-                      ${order.total_amount.toFixed(2)}
+                      {formatPrice(order.total_amount, storeConfig?.currency)}
                     </span>
                   </div>
 
@@ -558,7 +573,7 @@ export default function Dashboard() {
                             </p>
                           </TableCell>
                           <TableCell className="align-top py-3">
-                            <span className="font-black text-base text-foreground tracking-tight block">${order.total_amount.toFixed(2)}</span>
+                            <span className="font-black text-base text-foreground tracking-tight block">{formatPrice(order.total_amount, storeConfig?.currency)}</span>
                             <span className={`text-[9px] font-black px-1.5 py-0.5 rounded inline-block mt-1 ${getPaymentColor(order.payment_method)}`}>
                               {getPaymentLabel(order.payment_method)}
                             </span>
@@ -713,7 +728,7 @@ export default function Dashboard() {
                             </Badge>
                           )}
                         </div>
-                        <span className="font-black text-xl text-foreground tracking-tight">${order.total_amount.toFixed(2)}</span>
+                        <span className="font-black text-xl text-foreground tracking-tight">{formatPrice(order.total_amount, storeConfig?.currency)}</span>
                       </div>
                     </CardContent>
                     <CardFooter className="p-3 bg-muted/30 border-t border-border">
@@ -783,7 +798,7 @@ export default function Dashboard() {
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h3 className="text-lg font-black text-foreground">Despachar Pedido</h3>
-                  <p className="text-xs text-muted-foreground font-bold">#{showDispatchModal.id} • ${showDispatchModal.total_amount.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground font-bold">#{showDispatchModal.id} • {formatPrice(showDispatchModal.total_amount, storeConfig?.currency)}</p>
                 </div>
                 <button onClick={() => setShowDispatchModal(null)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
                   <XCircle size={20} />

@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
+import { formatPrice } from '../utils/currency';
 
 interface Category {
   id: number;
@@ -45,6 +46,7 @@ export default function Inventory() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
+  const [storeConfig, setStoreConfig] = useState<any>(null);
   const ITEMS_PER_PAGE = 8;
 
   useEffect(() => {
@@ -200,6 +202,9 @@ export default function Inventory() {
     api.get(`/inventory/${slug}/categories`).then(res => setAllCategories(res.data.categories)).catch(e => console.error(e));
     api.get(`/inventory/${slug}/inventory`).then(res => {
       setAllIndividualProducts(res.data.products?.filter((p: Product) => !p.is_combo) || []);
+    }).catch(e => console.error(e));
+    api.get(`/stores/${slug}/products?limit=1`).then(res => {
+      if (res.data.store) setStoreConfig(res.data.store);
     }).catch(e => console.error(e));
   }, [slug]);
 
@@ -552,7 +557,7 @@ export default function Inventory() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label className="font-bold text-gray-700">Precio ($)</Label>
+                      <Label className="font-bold text-gray-700">Precio{storeConfig?.currency ? ` (${storeConfig.currency})` : ''}</Label>
                       <Input required type="number" step="0.01" value={newProductPrice} onChange={e => setNewProductPrice(e.target.value)} placeholder="Ej. 2.50" className="rounded-xl bg-gray-50 border-gray-200" />
                     </div>
                     <div className="space-y-1">
@@ -611,7 +616,7 @@ export default function Inventory() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label className="font-bold text-gray-700">Precio ($)</Label>
+                      <Label className="font-bold text-gray-700">Precio{storeConfig?.currency ? ` (${storeConfig.currency})` : ''}</Label>
                       <Input required type="number" step="0.01" value={editProductPrice} onChange={e => setEditProductPrice(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200" />
                     </div>
                     <div className="space-y-1">
@@ -690,7 +695,7 @@ export default function Inventory() {
                         <span className="text-xs text-gray-400 font-bold">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-black text-blue-600">${p.price.toFixed(2)}</TableCell>
+                    <TableCell className="font-black text-blue-600">{formatPrice(p.price, storeConfig?.currency)}</TableCell>
                     <TableCell className="text-center">
                       <button
                         onClick={() => toggleAvailability(p.id, p.is_available)}
@@ -749,7 +754,7 @@ export default function Inventory() {
                       <Input required value={newComboName} onChange={e => setNewComboName(e.target.value)} placeholder="Combo Familiar" className="rounded-xl bg-gray-50 border-gray-200" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="font-bold text-gray-700">Precio Total ($)</Label>
+                      <Label className="font-bold text-gray-700">Precio Total{storeConfig?.currency ? ` (${storeConfig.currency})` : ''}</Label>
                       <Input required type="number" step="0.01" value={newComboPrice} onChange={e => setNewComboPrice(e.target.value)} placeholder="Ej. 15.00" className="rounded-xl bg-gray-50 border-gray-200" />
                     </div>
                   </div>
@@ -769,7 +774,7 @@ export default function Inventory() {
                               onChange={() => toggleProductInCombo(p.id)}
                               className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-600"
                             />
-                            <span className="font-bold text-sm text-gray-700">{p.name} <span className="text-gray-400">(${p.price})</span></span>
+                            <span className="font-bold text-sm text-gray-700">{p.name} <span className="text-gray-400">({formatPrice(p.price, storeConfig?.currency)})</span></span>
                           </div>
                           {selectedComboItems.find(item => item.product_id === p.id) && (
                             <Input
@@ -844,7 +849,7 @@ export default function Inventory() {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell className="font-black text-purple-600">${c.price.toFixed(2)}</TableCell>
+                    <TableCell className="font-black text-purple-600">{formatPrice(c.price, storeConfig?.currency)}</TableCell>
                     <TableCell className="text-center">
                       <button
                         onClick={() => toggleAvailability(c.id, c.is_available)}

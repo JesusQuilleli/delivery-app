@@ -9,6 +9,7 @@ import { Badge } from '../components/ui/badge';
 import { Printer, Trash2, Calendar, Search, History, ChevronLeft, ChevronRight } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { toast } from 'sonner';
+import { formatPrice } from '../utils/currency';
 
 export default function OrderHistory() {
   const { slug } = useParams<{ slug: string }>();
@@ -19,6 +20,7 @@ export default function OrderHistory() {
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [storeConfig, setStoreConfig] = useState<any>(null);
 
   const [showMonthSales, setShowMonthSales] = useState(false);
   const [showTotalSales, setShowTotalSales] = useState(false);
@@ -62,6 +64,9 @@ export default function OrderHistory() {
 
     fetchHistory();
     fetchAnalytics();
+    api.get(`/stores/${slug}/products?limit=1`).then(res => {
+      if (res.data.store) setStoreConfig(res.data.store);
+    }).catch(e => console.error(e));
   }, [slug, navigate, user]);
 
   const deleteOrder = async (id: number) => {
@@ -115,7 +120,7 @@ export default function OrderHistory() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-emerald-100 font-bold uppercase tracking-wider text-xs mb-1">Ventas de Hoy</p>
-                  <h3 className="text-3xl font-black">${analytics.todaySales.toFixed(2)}</h3>
+                   <h3 className="text-3xl font-black">{formatPrice(analytics.todaySales, storeConfig?.currency)}</h3>
                 </div>
                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                   <span className="text-xl">💰</span>
@@ -130,7 +135,7 @@ export default function OrderHistory() {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-blue-100 font-bold uppercase tracking-wider text-xs mb-1">Ventas del Mes</p>
-                    <h3 className="text-3xl font-black">${analytics.monthSales.toFixed(2)}</h3>
+                    <h3 className="text-3xl font-black">{formatPrice(analytics.monthSales, storeConfig?.currency)}</h3>
                   </div>
                   <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                     <span className="text-xl">📅</span>
@@ -146,7 +151,7 @@ export default function OrderHistory() {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-purple-100 font-bold uppercase tracking-wider text-xs mb-1">Histórico Total</p>
-                    <h3 className="text-3xl font-black">${analytics.totalSales.toFixed(2)}</h3>
+                    <h3 className="text-3xl font-black">{formatPrice(analytics.totalSales, storeConfig?.currency)}</h3>
                   </div>
                   <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                     <span className="text-xl">📈</span>
@@ -239,7 +244,7 @@ export default function OrderHistory() {
                       <span className="font-semibold text-foreground/80">{order.payment_method === 'CASH' ? 'Efectivo' : 'Pago Móvil'}</span>
                       {order.payment_reference && <span className="block text-xs text-muted-foreground mt-0.5">Ref: {order.payment_reference}</span>}
                     </td>
-                    <td className="p-4 font-black text-primary text-base">${order.total_amount.toFixed(2)}</td>
+                    <td className="p-4 font-black text-primary text-base">{formatPrice(order.total_amount, storeConfig?.currency)}</td>
                     <td className="p-4">
                       <Badge variant="outline" className={order.status === 'DELIVERED' ? 'text-emerald-700 border-emerald-200 bg-emerald-500/10' : 'text-destructive border-destructive/20 bg-destructive/10'}>
                         {order.status === 'DELIVERED' ? 'COMPLETADO' : 'CANCELADO'}
@@ -258,7 +263,7 @@ export default function OrderHistory() {
           <div className="bg-muted/30 p-6 border-t border-border flex justify-end items-center gap-4 print:bg-white print:border-black">
             <span className="text-muted-foreground font-bold uppercase tracking-widest text-sm">Total Recaudado:</span>
             <span className="text-4xl font-black text-foreground font-display">
-              ${orders.filter(o => o.status === 'DELIVERED').reduce((acc, o) => acc + o.total_amount, 0).toFixed(2)}
+              {formatPrice(orders.filter(o => o.status === 'DELIVERED').reduce((acc, o) => acc + o.total_amount, 0), storeConfig?.currency)}
             </span>
           </div>
           

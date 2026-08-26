@@ -1,6 +1,6 @@
 export const formatPrice = (price: number, currency: string = 'USD') => {
   if (currency === 'USD') return `$${price.toFixed(2)}`;
-  if (currency === 'VES') return `Bs. ${price.toFixed(2)}`;
+  if (currency === 'VES') return `Bs. ${price.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (currency === 'COP') return `$${price.toLocaleString('es-CO')} COP`;
   return `$${price.toFixed(2)}`;
 };

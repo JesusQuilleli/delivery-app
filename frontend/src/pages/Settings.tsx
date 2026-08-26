@@ -103,8 +103,18 @@ export default function Settings() {
       const response = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
       const data = await response.json();
       if (data && data.promedio) {
-        setVesRate(data.promedio);
-        toast.success(`Tasa BCV sincronizada: ${data.promedio} Bs.`);
+        const rate = data.promedio;
+        if (currency === 'USD') {
+          setVesRate(rate);
+          toast.success(`Tasa BCV sincronizada: 1 USD = ${rate} Bs.`);
+        } else if (currency === 'VES') {
+          const inverse = 1 / rate;
+          setUsdRate(parseFloat(inverse.toFixed(6)));
+          toast.success(`Tasa BCV sincronizada: 1 VES = $${inverse.toFixed(6)}`);
+        } else if (currency === 'COP') {
+          setVesRate(rate);
+          toast.success(`Tasa BCV sincronizada: 1 COP = ${rate} Bs.`);
+        }
       }
     } catch (err) {
       console.error(err);
