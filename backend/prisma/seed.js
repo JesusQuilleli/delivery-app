@@ -72,7 +72,7 @@ async function main() {
       email: 'superadmin@demo.com', 
       username: 'superadmin',
       password: hashedPassword,
-      role: 'SUPER_ADMIN',
+      role: 'SUPERADMIN',
     }
   });
   console.log(`Super Administrador creado: ${superAdminUser.username} / password123`);
