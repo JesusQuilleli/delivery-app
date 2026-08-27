@@ -1,6 +1,12 @@
 import { createContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import api from '../api';
 
+const clearLocalSession = () => {
+  sessionStorage.removeItem('user');
+  localStorage.removeItem('client_token');
+  localStorage.removeItem('user');
+};
+
 interface User {
   id: number;
   name: string | null;
@@ -48,9 +54,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Si falla (ej. ya expiró), igualmente limpiamos el estado local
     }
     setUser(null);
-    sessionStorage.removeItem('user');
-    localStorage.removeItem('client_token');
-    localStorage.removeItem('user');
+    clearLocalSession();
+  }, []);
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setUser(null);
+      clearLocalSession();
+    };
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
   }, []);
 
   useEffect(() => {

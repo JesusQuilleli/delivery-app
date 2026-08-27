@@ -14,10 +14,10 @@ api.interceptors.response.use(
     const url = error.config?.url || '';
 
     if (status === 401) {
-      // No redirigir si es la llamada de refresh o login — AuthContext maneja eso
+      // No redirigir desde aquí: la redirección la decide cada contexto (cliente vs admin).
+      // Simplemente anunciamos que la sesión no es válida para que AuthContext limpie el estado.
       if (!url.includes('/auth/refresh') && !url.includes('/auth/admin-login')) {
-        sessionStorage.removeItem('user');
-        window.location.href = '/admin-login';
+        window.dispatchEvent(new CustomEvent('auth:session-expired'));
       }
     } else if (status === 403) {
       toast.error(message || 'No tienes permisos para esta acción.');
