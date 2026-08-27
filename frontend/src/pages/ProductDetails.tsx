@@ -18,7 +18,6 @@ interface Product {
   price: number;
   image_url: string;
   description: string | null;
-  stock: number | null;
   is_available: boolean;
   is_combo: boolean;
   category?: Category;
@@ -47,6 +46,10 @@ export default function ProductDetails() {
         setLoading(false);
       });
   }, [slug, productId]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const qty = product ? (cart.find(i => i.product_id === product.id)?.quantity || 0) : 0;
 
@@ -116,15 +119,6 @@ export default function ProductDetails() {
         
         <div className="flex items-center gap-4 mb-6">
           <p className="text-4xl font-black text-primary font-display">{formatPrice(product.price, storeConfig?.currency)}</p>
-          {product.stock !== null ? (
-            <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-              Stock: {product.stock}
-            </span>
-          ) : (
-            <span className="text-sm font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
-              Stock Ilimitado
-            </span>
-          )}
         </div>
 
         {product.description && (

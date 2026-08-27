@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { CartContext } from '../context/CartContext';
 import { Card, CardContent, CardFooter } from '../components/ui/card';
@@ -26,6 +26,7 @@ interface Product {
 
 export default function Catalog() {
   const { slug, categoryId } = useParams<{ slug: string, categoryId: string }>();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -168,7 +169,10 @@ export default function Catalog() {
                   const qty = getProductQuantity(p.id);
                 return (
                   <Card key={p.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 border-border group flex flex-col h-full bg-card">
-                    <div className="aspect-square bg-muted/30 flex items-center justify-center p-4 sm:p-6 group-hover:bg-primary/5 transition-colors relative">
+                    <div 
+                      onClick={() => navigate(`/${slug}/productos/${p.id}`)}
+                      className="aspect-square bg-muted/30 flex items-center justify-center p-4 sm:p-6 group-hover:bg-primary/5 transition-colors relative cursor-pointer"
+                    >
                       {p.is_combo && (
                         <div className="absolute top-2 left-2 z-10">
                           <Badge className="bg-purple-600 text-white shadow-md border-0 px-2 py-0.5 text-xs font-black uppercase tracking-wider">🔥 Combo</Badge>
@@ -187,36 +191,45 @@ export default function Catalog() {
                       </div>
                       <p className="text-lg sm:text-xl font-black text-primary font-display">{formatPrice(p.price, storeConfig?.currency)}</p>
                     </CardContent>
-                    <CardFooter className="p-3 sm:p-5 pt-0 mt-auto">
-                      {qty === 0 ? (
-                        <Button 
-                          onClick={() => addToCart({ id: p.id, name: p.name, price: p.price })}
-                          className="w-full font-bold shadow-sm hover:shadow-md transition-all text-xs sm:text-sm h-9 sm:h-10 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
-                        >
-                          Agregar
-                        </Button>
-                      ) : (
-                        <div className="flex items-center justify-between w-full bg-primary/10 rounded-xl p-1 border border-primary/20 h-9 sm:h-10">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => removeFromCart(p.id)}
-                            className="h-7 w-7 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 hover:text-primary rounded-lg"
-                          >
-                            <Minus size={14} className="sm:w-4 sm:h-4" />
-                          </Button>
-                          <span className="font-black text-primary text-sm sm:text-base w-6 sm:w-8 text-center">{qty}</span>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => addToCart({ id: p.id, name: p.name, price: p.price })}
-                            className="h-7 w-7 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 hover:text-primary rounded-lg"
-                          >
-                            <Plus size={14} className="sm:w-4 sm:h-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </CardFooter>
+<CardFooter className="p-3 sm:p-5 pt-0 mt-auto">
+  <div className="flex items-center gap-2 w-full">
+    <Button 
+      onClick={() => navigate(`/${slug}/productos/${p.id}`)}
+      variant="outline"
+      className="flex-1 font-bold shadow-sm hover:shadow-md transition-all text-xs sm:text-sm h-9 sm:h-10 rounded-xl text-primary border-primary/30 hover:bg-primary/10 whitespace-nowrap"
+    >
+      Ver Detalles
+    </Button>
+    {qty === 0 ? (
+      <Button 
+        onClick={() => addToCart({ id: p.id, name: p.name, price: p.price })}
+        className="flex-1 font-bold shadow-sm hover:shadow-md transition-all text-xs sm:text-sm h-9 sm:h-10 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
+      >
+        Agregar
+      </Button>
+    ) : (
+      <div className="flex items-center justify-between w-full bg-primary/10 rounded-xl p-1 border border-primary/20 h-9 sm:h-10 flex-1">
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={() => removeFromCart(p.id)}
+          className="h-7 w-7 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 hover:text-primary rounded-lg"
+        >
+          <Minus size={14} className="sm:w-4 sm:h-4" />
+        </Button>
+        <span className="font-black text-primary text-sm sm:text-base w-6 sm:w-8 text-center">{qty}</span>
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={() => addToCart({ id: p.id, name: p.name, price: p.price })}
+          className="h-7 w-7 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 hover:text-primary rounded-lg"
+        >
+          <Plus size={14} className="sm:w-4 sm:h-4" />
+        </Button>
+      </div>
+    )}
+  </div>
+</CardFooter>
                   </Card>
                 );
               })}

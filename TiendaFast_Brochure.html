@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>TiendaFast — Brochure Comercial</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap');
+
+  :root{
+    --orange:#f97316;
+    --amber:#fbbf24;
+    --rose:#f43f5e;
+    --violet:#7c3aed;
+    --violet-soft:#8b5cf6;
+    --ink:#191225;
+    --ink2:#2a2140;
+    --paper:#fff;
+    --bg:#f6f3ff;
+    --muted:#5b5470;
+    --line:#e9e4f6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{font-family:'Manrope',Arial,sans-serif;color:var(--ink);background:#e7e2f5}
+  @page{size:A4;margin:0}
+
+  .page{width:210mm;height:297mm;page-break-after:always;position:relative;overflow:hidden;background:var(--paper)}
+  .page:last-child{page-break-after:auto}
+
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .logo{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--orange),var(--rose));box-shadow:0 6px 16px rgba(249,115,22,.4)}
+  .brand .logo svg{width:22px;height:22px;color:#fff}
+  .brand .name{font-family:'Sora',sans-serif;font-weight:800;font-size:18px;letter-spacing:-.4px}
+  .brand .name em{font-style:normal;color:var(--orange)}
+
+  /* ---------------- PAGE 1 : HERO ---------------- */
+  .hero{background:
+      radial-gradient(900px 480px at 85% -10%,rgba(139,92,246,.55),transparent 60%),
+      radial-gradient(700px 420px at -10% 115%,rgba(249,115,22,.5),transparent 60%),
+      linear-gradient(160deg,#1c1229 0%,#241638 55%,#321c3d 100%);
+    color:#fff;padding:16mm 15mm 13mm}
+  .hero .top{display:flex;justify-content:space-between;align-items:center}
+  .hero .tag{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--amber);
+    padding:7px 14px;border:1px solid rgba(251,191,36,.5);border-radius:100px}
+  .hero h1{font-family:'Sora',sans-serif;font-weight:800;font-size:40px;line-height:1.06;margin:30px 0 16px;letter-spacing:-1px}
+  .hero h1 .hl{background:linear-gradient(90deg,var(--amber),var(--orange) 55%,var(--rose));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p.lead{font-size:14px;line-height:1.65;color:#d9cfe8;max-width:150mm}
+  .hero .badges{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap}
+  .hero .badge{flex:1;min-width:56mm;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+    border-radius:16px;padding:16px 18px;backdrop-filter:blur(2px)}
+  .hero .badge .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;margin-bottom:10px;
+    background:linear-gradient(135deg,var(--orange),var(--rose))}
+  .hero .badge .ic.violet{background:linear-gradient(135deg,var(--violet-soft),var(--violet))}
+  .hero .badge .ic.amber{background:linear-gradient(135deg,var(--amber),var(--orange))}
+  .hero .badge .ic svg{width:18px;height:18px;color:#fff}
+  .hero .badge b{display:block;font-family:'Sora',sans-serif;font-size:12.5px;margin-bottom:4px}
+  .hero .badge span{font-size:10.5px;color:#cfc3e2;line-height:1.4;display:block}
+  .hero .cta{margin-top:34px;display:inline-flex;align-items:center;gap:10px;background:#fff;color:var(--ink);
+    font-family:'Sora',sans-serif;font-weight:700;font-size:12.5px;padding:14px 22px;border-radius:100px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .hero .cta svg{width:16px;height:16px;color:var(--orange)}
+  .hero .cta-note{margin-top:10px;font-size:9.5px;color:#b9aacc}
+
+  /* ---------------- PAGE 2 : FLUJO ---------------- */
+  .sec2{background:linear-gradient(180deg,#f6f3ff 0%,#fff 100%);padding:13mm 15mm}
+  .kicker{display:inline-block;font-size:9px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;
+    color:var(--violet);background:#ede7ff;padding:6px 13px;border-radius:100px;margin-bottom:10px}
+  .sec-title{font-family:'Sora',sans-serif;font-weight:800;font-size:23px;letter-spacing:-.5px;margin-bottom:6px}
+  .sec-title span{color:var(--orange)}
+  .sec-sub{font-size:11px;color:var(--muted);line-height:1.55}
+  .flow2{display:flex;gap:14px;margin-top:20px}
+  .flowcol{flex:1;background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px 18px 16px;
+    box-shadow:0 10px 26px rgba(124,58,237,.08)}
+  .flowcol h3{font-family:'Sora',sans-serif;font-size:13.5px;display:flex;align-items:center;gap:8px;margin-bottom:14px}
+  .flowcol h3 .chip{width:26px;height:26px;border-radius:8px;display:grid;place-items:center}
+  .flowcol h3 .chip svg{width:14px;height:14px;color:#fff}
+  .chip.orange{background:linear-gradient(135deg,var(--orange),var(--rose))}
+  .chip.violet{background:linear-gradient(135deg,var(--violet-soft),var(--violet))}
+  .step{display:flex;gap:12px;padding:9px 0;position:relative}
+  .step:not(:last-child)::after{content:"";position:absolute;left:11px;top:24px;bottom:-6px;width:2px;
+    background:linear-gradient(180deg,var(--orange),transparent);opacity:.35;border-radius:2px}
+  .step .num{width:24px;height:24px;border-radius:50%;flex:none;display:grid;place-items:center;
+    font-family:'Sora',sans-serif;font-weight:700;font-size:11px;background:#fff;color:var(--violet);
+    border:1.5px solid var(--violet-soft);box-shadow:0 3px 8px rgba(124,58,237,.18)}
+  .step b{display:block;font-size:11.5px;margin-bottom:2px}
+  .step p{font-size:9.8px;color:var(--muted);line-height:1.45}
+  .note{margin-top:18px;background:linear-gradient(90deg,rgba(251,191,36,.16),rgba(249,115,22,.12));
+    border:1px solid rgba(249,115,22,.3);border-radius:14px;padding:13px 16px;display:flex;gap:11px;align-items:flex-start}
+  .note svg{width:17px;height:17px;color:var(--orange);flex:none;margin-top:2px}
+  .note b{font-size:11px;display:block;margin-bottom:2px}
+  .note p{font-size:9.8px;color:#4a3b26;line-height:1.5}
+
+  /* ---------------- PAGE 3 : VENTAJAS ---------------- */
+  .sec3{background:linear-gradient(160deg,#1c1229,#241638 60%,#321c3d);color:#fff;padding:12mm 15mm}
+  .sec3 .kicker{color:var(--amber);background:rgba(251,191,36,.12)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:16px}
+  .card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);border-radius:16px;padding:14px 15px}
+  .card .ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;margin-bottom:9px;background:rgba(255,255,255,.1)}
+  .card .ic svg{width:16px;height:16px;color:var(--amber)}
+  .card b{font-family:'Sora',sans-serif;font-size:11.5px;display:block;margin-bottom:3px}
+  .card span{font-size:9.6px;color:#cfc3e2;line-height:1.45}
+  .strip{margin-top:14px;background:linear-gradient(90deg,var(--orange),var(--rose));border-radius:14px;
+    padding:13px 16px;display:flex;gap:11px;align-items:center}
+  .strip svg{width:18px;height:18px;flex:none;color:#fff}
+  .strip b{font-size:11.5px;display:block}
+  .strip span{font-size:9.8px;color:#fff7ef;line-height:1.45;display:block}
+
+  /* ---------------- PAGE 4 : PLAN + PROCESO ---------------- */
+  .sec4{background:var(--bg);padding:12mm 15mm}
+  .split{display:flex;gap:14px;margin-top:18px}
+  .inc{flex:1.15;background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 10px 26px rgba(124,58,237,.08)}
+  .inc h3,.pro h3{font-family:'Sora',sans-serif;font-size:14px;display:flex;align-items:center;gap:8px;margin-bottom:13px}
+  .inc h3 .dot,.pro h3 .dot{background:linear-gradient(135deg,var(--orange),var(--rose));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .inc ul{list-style:none}
+  .inc li{display:flex;gap:10px;align-items:flex-start;padding:6px 0;font-size:10.3px;line-height:1.4}
+  .inc li svg{width:15px;height:15px;color:var(--amber);flex:none;margin-top:1px}
+  .inc li b{color:var(--ink)}
+  .pro{flex:1;display:flex;flex-direction:column;gap:10px}
+  .pstep{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+  .pstep .n{width:34px;height:34px;border-radius:11px;flex:none;display:grid;place-items:center;font-family:'Sora',sans-serif;
+    font-weight:800;font-size:14px;color:#fff;background:linear-gradient(135deg,var(--violet-soft),var(--violet))}
+  .pstep b{font-size:11.5px;display:block;margin-bottom:2px}
+  .pstep span{font-size:9.7px;color:var(--muted);line-height:1.45;display:block}
+  .promo{margin-top:16px;background:linear-gradient(135deg,var(--ink) ,#2a2140);border-radius:18px;color:#fff;
+    padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:14px}
+  .promo .txt b{font-family:'Sora',sans-serif;font-size:14px;display:block;margin-bottom:4px}
+  .promo .txt span{font-size:10px;color:#cfc3e2;line-height:1.5;display:block}
+  .promo .pill{flex:none;text-align:center;background:linear-gradient(135deg,var(--amber),var(--orange));
+    border-radius:100px;padding:13px 20px;font-family:'Sora',sans-serif;font-weight:800;font-size:11px;color:#3c2410}
+  .promo .pill small{display:block;font-family:'Manrope',sans-serif;font-weight:600;font-size:8.5px;letter-spacing:.3px;color:#6b4a1c}
+  .footer{margin-top:16px;display:flex;justify-content:space-between;align-items:center;border-top:1px dashed var(--ink2)}
+  .footer .me{font-family:'Sora',sans-serif;font-weight:700;font-size:12px}
+  .footer .me span{color:var(--violet)}
+  .footer .contact{font-size:9.5px;color:var(--muted);text-align:right;line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- ============ ICONOS ============ -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4.5 13.5H11L9.5 22 19 10h-7L13 2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="20" r="1.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 3h2l2.5 12h11l2-8H6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-board" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 9h16M9 9v12M15 9v12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15 9h4l3 3v5h-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18.5" r="1.6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.5" cy="18.5" r="1.6" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5V8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 8l9 5 9-5M12 13v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M17.5 19a5.5 5.5 0 0 0-2-4.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M8 15v3M12 11v7M16 7v11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3 14.7 8.6 21 9.5 16.5 13.8 17.6 20 12 17 6.4 20l1.1-6.2L3 9.5l6.3-.9L12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5 9 17.5 20 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 18.5h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-wa" viewBox="0 0 24 24"><path d="M20.5 11.8a8.5 8.5 0 0 1-12.3 7.6L3.5 20l.7-4.6a8.5 8.5 0 1 1 16.3-3.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 8.5c0 4 2.5 6.5 6 6 .5-1-1-1.5-1.5-1.8-.6-.4-1-.3-1.4.2-.5-.4-1-1-1.2-1.5.5-.4.6-.8.2-1.4-.4-.5-1.8-1.9-2.1-.1z" fill="currentColor"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 7.5 12 13.5l8.5-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="18" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 6h6a3 3 0 0 1 0 6h-5a3 3 0 0 0 0 6h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-brush" viewBox="0 0 24 24"><path d="M4 16c-1.5 1.5-2 5-2 5s3.5-.5 5-2c1.2-1.2.7-3-1-4.5C4.8 13 5.5 15.2 4 16z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14.5 4 20 9.5 11 18.5 7.5 17 15 9.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v.5M12 11.5V16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</svg>
+
+<!-- ============ PÁGINA 1 · PORTADA ============ -->
+<div class="page hero">
+  <div class="top">
+    <div class="brand">
+      <div class="logo"><svg><use href="#i-bolt"/></svg></div>
+      <div class="name">Tienda<em>Fast</em></div>
+    </div>
+    <div class="tag">Propuesta comercial</div>
+  </div>
+
+  <h1>Tu negocio en línea,<br>con pedidos y entregas <span class="hl">en tiempo real</span>.</h1>
+  <p class="lead">TiendaFast convierte a tu farmacia, restaurante o supermercado en una tienda digital completa:
+  catálogo, carrito, pago, mapa y un panel de despacho pensado para tu día a día. Tú te concentras en atender;
+  la plataforma se encarga del resto.</p>
+
+  <div class="badges">
+    <div class="badge">
+      <div class="ic"><svg><use href="#i-bolt"/></svg></div>
+      <b>Pedidos en tiempo real</b>
+      <span>Cada pedido te llega con alerta de sonido y vista en vivo, sin recargas de página.</span>
+    </div>
+    <div class="badge">
+      <div class="ic violet"><svg><use href="#i-coin"/></svg></div>
+      <b>Multimoneda automática</b>
+      <span>Precios en USD, bolívares y pesos, sincronizados con la tasa BCV.</span>
+    </div>
+    <div class="badge">
+      <div class="ic amber"><svg><use href="#i-phone"/></svg></div>
+      <b>Sin instalar apps</b>
+      <span>Tu tienda y tus clientes funcionan desde el navegador, en cualquier teléfono.</span>
+    </div>
+  </div>
+
+  <div class="cta"><svg><use href="#i-bolt"/></svg> Pruébala gratis y luego acordamos tu suscripción</div>
+  <div class="cta-note">Plataforma multitienda con marca, URL y panel propios para cada negocio.</div>
+</div>
+
+<!-- ============ PÁGINA 2 · FLUJO ============ -->
+<div class="page sec2">
+  <div class="kicker">Cómo funciona</div>
+  <div class="sec-title">Del pedido del cliente a tu <span>despacho</span></div>
+  <div class="sec-sub">Un solo sistema conecta ambos lados en tiempo real: lo que el cliente ve, lo ves tú al instante.</div>
+
+  <div class="flow2">
+    <div class="flowcol">
+      <h3><span class="chip orange"><svg><use href="#i-cart"/></svg></span> El cliente pide</h3>
+      <div class="step"><div class="num">1</div><div><b>Explora tu catálogo</b><p>Busca productos por categorías, ve ofertas y combos, agrega al carrito.</p></div></div>
+      <div class="step"><div class="num">2</div><div><b>Se identifica con su email</b><p>Código OTP por correo, sin crear otra cuenta complicada.</p></div></div>
+      <div class="step"><div class="num">3</div><div><b>Elige su dirección</b><p>La escribe o toca “usar mi ubicación” y ve el punto en el mapa.</p></div></div>
+      <div class="step"><div class="num">4</div><div><b>Paga</b><p>Efectivo (con o sin vuelto) o pago móvil / transferencia con referencia.</p></div></div>
+      <div class="step"><div class="num">5</div><div><b>Recibe y califica</b><p>Sigue el estado paso a paso en vivo y, al final, valora con 1 a 5 estrellas.</p></div></div>
+    </div>
+    <div class="flowcol">
+      <h3><span class="chip violet"><svg><use href="#i-board"/></svg></span> Tú despachas</h3>
+      <div class="step"><div class="num">1</div><div><b>Te llega el pedido y te avisa</b><p>Alerta con sonido y ventana emergente; ordenes úrgela y crítica resaltadas.</p></div></div>
+      <div class="step"><div class="num">2</div><div><b>Apruebas el pago y aceptas</b><p>Para pagos móviles validas la referencia antes de confirmar la orden.</p></div></div>
+      <div class="step"><div class="num">3</div><div><b>Despachas con tu motorizado</b><p>Asignas repartidor y le envías la ruta directamente por WhatsApp.</p></div></div>
+      <div class="step"><div class="num">4</div><div><b>Entregas y cierras</b><p>Marcas entregado; el cliente recibe su estado y deja su reseña.</p></div></div>
+      <div class="step"><div class="num">5</div><div><b>Revisas tus números</b><p>Ventas de hoy, del mes, histórico y reportes imprimibles.</p></div></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <svg><use href="#i-info"/></svg>
+    <div><b>Todo en tiempo real, de verdad</b>
+    <p>Usando conexiones en vivo (WebSocket), el momento en que el cliente confirma, recibe y califica se refleja en tu panel
+    al instante. Además, cada tienda tiene su propia URL, color y plantilla según su rubro: farmacia, restaurante o supermercado.</p></div>
+  </div>
+</div>
+
+<!-- ============ PÁGINA 3 · VENTAJAS ============ -->
+<div class="page sec3">
+  <div class="kicker">Ventajas</div>
+  <div class="sec-title" style="color:#fff">Todo lo que la plataforma hace por ti</div>
+  <div class="sec-sub" style="color:#cfc3e2">Funcionalidades incluidas, listas para usar desde el primer día.</div>
+
+  <div class="grid">
+    <div class="card"><div class="ic"><svg><use href="#i-board"/></svg></div><b>Panel de despacho ordenado</b><span>Tablero tipo Kanban con tus pedidos por etapa: nuevas, preparando y en camino. Atajos de teclado para aprobar o rechazar.</span></div>
+    <div class="card"><div class="ic"><svg><use href="#i-bell"/></svg></div><b>Alertas de nuevos pedidos</b><span>Sonido, notificación de escritorio y ventana emergente para no perderte ningún pedido, aunque no estés mirando la pantalla.</span></div>
+    <div class="card"><div class="ic"><svg><use href="#i-box"/></svg></div><b>Inventario completo</b><span>Productos con foto y precio, categorías, combos y promociones. Carga masiva con archivo CSV para crear tu catálogo en minutos.</span></div>
+    <div class="card"><div class="ic"><svg><use href="#i-coin"/></svg></div><b>Multimoneda automática</b><span>Guardas en una moneda y el sistema muestra dólares, bolívares y pesos con la tasa del día, sincronizada con el BCV o fijada por ti.</span></div>
+    <div class="card"><div class="ic"><svg><use href="#i-route"/></svg></div><b>Mapa y ruta del pedido</b><span>Distancia real y tiempo estimado de entrega calculados para cada pedido, con la ruta que recorrerá tu motorizado.</span></div>
+    <div class="card"><div class="ic"><svg><use href="#i-truck"/></svg></div><b>Flota de motorizados</b><span>Registra a tus repartidores con teléfono y placa, asígnalos por pedido y envíales la ruta por WhatsApp con un toque.</span></div>
+    <div class="card"><div class="ic"><svg><use href="#i-users"/></svg></div><b>Clientes y reputación</b><span>Historial de cada cliente, calificación de 1 a 5 estrellas y reseñas que construyen tu confianza frente a otros usuarios.</span></div>
+    <div class="card"><div class="ic"><svg><use href="#i-chart"/></svg></div><b>Reportes y estadísticas</b><span>Ventas de hoy, del mes y totales, con filtros por fechas y reporte imprimible para tu control.</span></div>
+    <div class="card"><div class="ic"><svg><use href="#i-shield"/></svg></div><b>Acceso seguro</b><span>Cuenta con usuario y contraseña cifrados, bloqueo tras varios intentos y varios administradores para tu equipo.</span></div>
+    <div class="card"><div class="ic"><svg><use href="#i-mail"/></svg></div><b>Identificación por email</b><span>Tus clientes entran con un código enviado a su correo: simple, seguro y sin contraseñas que olvidar.</span></div>
+  </div>
+
+  <div class="strip">
+    <svg><use href="#i-brush"/></svg>
+    <div><b>Tu marca, tu estilo, tu URL</b>
+    <span>Cada tienda lleva su nombre en su propia dirección web, con color de marca y plantilla acorde al rubro del negocio.</span></div>
+  </div>
+</div>
+
+<!-- ============ PÁGINA 4 · VERSIÓN ESTÁNDAR + PROCESO ============ -->
+<div class="page sec4">
+  <div class="kicker">Qué recibes</div>
+  <div class="sec-title">Versión estándar + cómo <span>empezamos</span></div>
+  <div class="sec-sub">Una suscripción simple que cubre tu tienda completa, el soporte y las mejoras.</div>
+
+  <div class="split">
+    <div class="inc">
+      <h3><span class="dot">✦</span> Incluido en tu tienda</h3>
+      <ul>
+        <li><svg><use href="#i-check"/></svg><span><b>Tienda digital</b> con URL y marca propia</span></li>
+        <li><svg><use href="#i-check"/></svg><span><b>Catálogo ilimitado</b>: productos, fotos, categorías, combos</span></li>
+        <li><svg><use href="#i-check"/></svg><span><b>Pedidos en tiempo real</b> con alertas y panel de despacho</span></li>
+        <li><svg><use href="#i-check"/></svg><span><b>Pagos</b> en efectivo o pago móvil / transferencia</span></li>
+        <li><svg><use href="#i-check"/></svg><span><b>Seguimiento</b> con mapa, ruta y tiempo estimado</span></li>
+        <li><svg><use href="#i-check"/></svg><span><b>Flota de motorizados</b> con envío de ruta por WhatsApp</span></li>
+        <li><svg><use href="#i-check"/></svg><span><b>Clientes y reseñas</b> con historial y calificaciones</span></li>
+        <li><svg><use href="#i-check"/></svg><span><b>Reportes de ventas</b> con impresión</span></li>
+        <li><svg><use href="#i-check"/></svg><span><b>Soporte por WhatsApp</b> y actualizaciones incluidas</span></li>
+      </ul>
+    </div>
+    <div class="pro">
+      <div class="pstep"><div class="n">1</div><div><b>Pruébala</b><span>Te creo tu tienda de demostración para que la explores y hagas un pedido real.</span></div></div>
+      <div class="pstep"><div class="n">2</div><div><b>La implementamos</b><span>Cargamos tu catálogo, fotos, precios y datos de tu negocio. Lista en 48–72 horas.</span></div></div>
+      <div class="pstep"><div class="n">3</div><div><b>Lanzamos</b><span>Activo tu dirección pública y tu panel de administración para recibir pedidos.</span></div></div>
+      <div class="pstep"><div class="n">4</div><div><b>Acordamos tu suscripción</b><span>Una mensualidad sencilla que incluye plataforma, soporte y todas las mejoras.</span></div></div>
+    </div>
+  </div>
+
+  <div class="promo">
+    <div class="txt"><b>¿Listo para digitalizar tu negocio?</b>
+    <span>Prueba primero, decide después: la tienda es tuya, la implemento contigo y el acuerdo de suscripción se firma cuando veas resultados.</span></div>
+    <div class="pill">Hablemos<small>Demo gratuita</small></div>
+  </div>
+
+  <div class="footer">
+    <div class="me"><span>Jesús</span> Quilelli</div>
+    <div class="contact">Móvil / WhatsApp: +58 ___________<br>Correo: ____________@_______<br>Suscripción flexible, sin contratos largos.</div>
+  </div>
+</div>
+
+</body>
+</html>
