@@ -5,10 +5,15 @@ const { JWT_SECRET } = require('../middleware/authMiddleware');
 const { Resend } = require('resend');
 
 // Configuración de cookies compartida
+// `Partitioned` permite que Safari/iOS (ITP) acepte y envíe la cookie en contexto
+// cross-site (frontend en un dominio distinto al de la API), aunque la cookie
+// no persista al cerrar el navegador. Es un puente mientras se migra al mismo
+// dominio con proxy. En same-site, `Partitioned` no tiene efecto negativo.
 const COOKIE_OPTIONS_CLIENT = {
   httpOnly: true,
   secure: true,
   sameSite: 'None',
+  partitioned: true,
   maxAge: 30 * 24 * 60 * 60 * 1000 // 30 días
 };
 
@@ -16,6 +21,7 @@ const COOKIE_OPTIONS_ADMIN = {
   httpOnly: true,
   secure: true,
   sameSite: 'None',
+  partitioned: true,
   maxAge: 24 * 60 * 60 * 1000 // 1 día
 };
 
@@ -269,7 +275,8 @@ const logout = (req, res) => {
   res.clearCookie('auth_token', {
     httpOnly: true,
     secure: true,
-    sameSite: 'None'
+    sameSite: 'None',
+    partitioned: true
   });
   res.json({ message: 'Sesión cerrada exitosamente' });
 };
