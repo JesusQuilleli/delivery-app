@@ -88,6 +88,7 @@ export default function Checkout() {
   const [paymentReference, setPaymentReference] = useState('');
   const [orderStatus, setOrderStatus] = useState<string>('PENDING');
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
+  const [orderId, setOrderId] = useState<number | null>(null);
   const [storeConfig, setStoreConfig] = useState<any>(null);
   const storeId = localStorage.getItem('current_store_id');
 
@@ -99,13 +100,32 @@ export default function Checkout() {
 
   useEffect(() => {
     if (step === 5 && user?.id) {
+      // 1. Carga el estado REAL desde la BD al entrar (no depender solo del socket)
+      const syncFromDb = async () => {
+        try {
+          const res = await api.get('/orders/my-orders');
+          const orders: { id: number; status: string; estimated_minutes: number | null }[] = res.data;
+          const target = orderId
+            ? orders.find((o) => o.id === orderId)
+            : orders[0];
+          if (target) {
+            setOrderStatus(target.status);
+            if (target.estimated_minutes) setEstimatedMinutes(target.estimated_minutes);
+          }
+        } catch (err) {
+          console.error("Error sincronizando estado de la orden:", err);
+        }
+      };
+      syncFromDb();
+
+      // 2. Socket en tiempo real para actualizaciones posteriores
       const socketURL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
       const socket = io(socketURL);
       socket.on('connect', () => socket.emit('join_client', user.id));
       socket.on('estado_actualizado', (order) => setOrderStatus(order.status));
       return () => { socket.disconnect(); };
     }
-  }, [step, user?.id]);
+  }, [step, user?.id, orderId]);
 
   // Autocomplete logic para LocationIQ (Búsqueda inteligente)
   useEffect(() => {
@@ -329,6 +349,9 @@ export default function Checkout() {
       
       if (res.data.estimated_minutes) {
         setEstimatedMinutes(res.data.estimated_minutes);
+      }
+      if (res.data.order_id) {
+        setOrderId(res.data.order_id);
       }
       
       localStorage.setItem('last_address', address);

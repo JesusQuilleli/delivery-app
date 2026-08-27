@@ -101,6 +101,8 @@ export default function Dashboard() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const urgentAudioRef = useRef<HTMLAudioElement | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  // IDs de pedidos pendientes ya alertados (evita duplicar alertas en re-fetch)
+  const alertedPendingIds = useRef<Set<number>>(new Set());
 
   // 3 columnas simplificadas: Nuevas (AWAITING_PAYMENT + PENDING), Preparando (ACCEPTED), En Camino (DISPATCHED)
   const columns = [
@@ -119,6 +121,37 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  // Alerta las órdenes pendientes no vistas que el fetch trae (p. ej. las que
+  // llegaron mientras el admin estaba offline o con el socket desconectado),
+  // igual que si hubieran llegado en vivo, sin duplicar las ya alertadas.
+  const enqueuePendingAlerts = useCallback((orders: Order[]) => {
+    const newPending = orders.filter(
+      o => isNuevas(o.status) && !o.viewed && !alertedPendingIds.current.has(o.id)
+    );
+    if (newPending.length === 0) return;
+
+    setAlertQueue(prev => {
+      const existing = new Set(prev.map(o => o.id));
+      const toAdd = newPending.filter(o => !existing.has(o.id));
+      return [...prev, ...toAdd];
+    });
+    newPending.forEach(o => alertedPendingIds.current.add(o.id));
+
+    if (audioRef.current) {
+      audioRef.current.play().catch(() => {});
+    }
+
+    if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+      newPending.slice(0, 5).forEach((order: Order) => {
+        const notif = new Notification("¡Nuevo Pedido!", {
+          body: `${formatPrice(order.total_amount, storeConfig?.currency)} - ${order.delivery_address.split(' |')[0]}`,
+          icon: '/favicon.ico'
+        });
+        notif.onclick = () => { window.focus(); notif.close(); };
+      });
+    }
+  }, [storeConfig]);
+
   const fetchOrders = useCallback(async () => {
     if (!slug) return;
     try {
@@ -127,10 +160,11 @@ export default function Dashboard() {
       if (res.data.storeId) {
         setStoreId(res.data.storeId);
       }
+      enqueuePendingAlerts(res.data.orders);
     } catch (error) {
       console.error("Error cargando dashboard", error);
     }
-  }, [slug]);
+  }, [slug, enqueuePendingAlerts]);
 
   const fetchStoreConfig = useCallback(async () => {
     if (!slug) return;
