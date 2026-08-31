@@ -191,40 +191,40 @@ export default function Catalog() {
                       </div>
                       <p className="text-lg sm:text-xl font-black text-primary font-display">{formatPrice(p.price, storeConfig?.currency)}</p>
                     </CardContent>
-<CardFooter className="p-3 sm:p-5 pt-0 mt-auto">
-  <div className="flex items-center gap-2 w-full">
+<CardFooter className="p-2 sm:p-5 pt-0 mt-auto">
+  <div className="flex items-center gap-1.5 sm:gap-2 w-full">
     <Button 
       onClick={() => navigate(`/${slug}/productos/${p.id}`)}
       variant="outline"
-      className="flex-1 font-bold shadow-sm hover:shadow-md transition-all text-xs sm:text-sm h-9 sm:h-10 rounded-xl text-primary border-primary/30 hover:bg-primary/10 whitespace-nowrap"
+      className="flex-1 font-bold shadow-sm hover:shadow-md transition-all text-[10px] sm:text-sm h-8 sm:h-10 rounded-lg sm:rounded-xl text-primary border-primary/30 hover:bg-primary/10 whitespace-nowrap px-1"
     >
       Ver Detalles
     </Button>
     {qty === 0 ? (
       <Button 
         onClick={() => addToCart({ id: p.id, name: p.name, price: p.price })}
-        className="flex-1 font-bold shadow-sm hover:shadow-md transition-all text-xs sm:text-sm h-9 sm:h-10 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
+        className="flex-1 font-bold shadow-sm hover:shadow-md transition-all text-[10px] sm:text-sm h-8 sm:h-10 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg sm:rounded-xl px-1 whitespace-nowrap"
       >
         Agregar
       </Button>
     ) : (
-      <div className="flex items-center justify-between w-full bg-primary/10 rounded-xl p-1 border border-primary/20 h-9 sm:h-10 flex-1">
+      <div className="flex items-center justify-between w-full bg-primary/10 rounded-lg sm:rounded-xl p-0.5 sm:p-1 border border-primary/20 h-8 sm:h-10 flex-1">
         <Button 
           variant="ghost" 
           size="icon"
           onClick={() => removeFromCart(p.id)}
-          className="h-7 w-7 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 hover:text-primary rounded-lg"
+          className="h-7 w-6 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 hover:text-primary rounded-lg"
         >
-          <Minus size={14} className="sm:w-4 sm:h-4" />
+          <Minus size={13} className="sm:w-4 sm:h-4" />
         </Button>
-        <span className="font-black text-primary text-sm sm:text-base w-6 sm:w-8 text-center">{qty}</span>
+        <span className="font-black text-primary text-sm sm:text-base w-5 sm:w-8 text-center">{qty}</span>
         <Button 
           variant="ghost" 
           size="icon"
           onClick={() => addToCart({ id: p.id, name: p.name, price: p.price })}
-          className="h-7 w-7 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 hover:text-primary rounded-lg"
+          className="h-7 w-6 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 hover:text-primary rounded-lg"
         >
-          <Plus size={14} className="sm:w-4 sm:h-4" />
+          <Plus size={13} className="sm:w-4 sm:h-4" />
         </Button>
       </div>
     )}

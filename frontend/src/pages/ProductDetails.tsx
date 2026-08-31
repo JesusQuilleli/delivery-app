@@ -89,7 +89,7 @@ export default function ProductDetails() {
       <div className="w-full max-w-5xl bg-card rounded-[2rem] sm:rounded-[3rem] shadow-xl overflow-hidden flex flex-col md:flex-row border border-border/50 relative z-20">
         
         {/* Imagen Principal */}
-        <div className="w-full md:w-1/2 bg-muted/20 p-8 sm:p-12 flex items-center justify-center relative">
+        <div className="w-full md:w-1/2 bg-muted/20 p-5 sm:p-12 flex items-center justify-center relative">
           <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/5 z-0"></div>
           {product.image_url ? (
             <img src={product.image_url} alt={product.name} className="w-full max-w-sm h-auto object-contain mix-blend-multiply relative z-10 hover:scale-105 transition-transform duration-500" style={{ maxHeight: '400px' }} />
@@ -101,7 +101,7 @@ export default function ProductDetails() {
         </div>
 
         {/* Detalles */}
-        <div className="w-full md:w-1/2 p-8 sm:p-12 flex flex-col justify-center relative z-20">
+        <div className="w-full md:w-1/2 p-5 sm:p-12 flex flex-col justify-center relative z-20">
         <div className="flex flex-wrap gap-2 mb-4">
           {product.category && (
             <Badge variant="secondary" className="bg-primary/10 text-primary border-0 px-3 py-1 text-sm font-bold capitalize">
@@ -117,8 +117,8 @@ export default function ProductDetails() {
         
         <h1 className="text-3xl sm:text-5xl font-black text-foreground leading-tight mb-2 font-display">{product.name}</h1>
         
-        <div className="flex items-center gap-4 mb-6">
-          <p className="text-4xl font-black text-primary font-display">{formatPrice(product.price, storeConfig?.currency)}</p>
+        <div className="flex items-center gap-4 mb-6 flex-wrap">
+          <p className="text-3xl sm:text-4xl font-black text-primary font-display whitespace-nowrap">{formatPrice(product.price, storeConfig?.currency)}</p>
         </div>
 
         {product.description && (
@@ -177,7 +177,7 @@ export default function ProductDetails() {
 
 
       {/* Floating Add to Cart Button */}
-      <div className="fixed bottom-0 left-0 w-full p-4 bg-gradient-to-t from-background via-background to-transparent z-50">
+      <div className="fixed bottom-0 left-0 w-full p-4 bg-gradient-to-t from-background via-background to-transparent z-30">
         <div className="max-w-md mx-auto">
           {qty === 0 ? (
             <Button 

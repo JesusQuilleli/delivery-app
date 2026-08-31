@@ -8,8 +8,8 @@ import { Button } from '../components/ui/button';
 import { ArrowLeft, Clock, MapPin, Package, X, Store, CreditCard, Star, XCircle, ChevronLeft, ChevronRight, Phone } from 'lucide-react';
 
 import { toast } from 'sonner';
-import { io } from 'socket.io-client';
 import { formatPrice } from '../utils/currency';
+import { createSocket } from '../lib/socket';
 
 export default function MyOrders() {
   const { token, user } = useContext(AuthContext);
@@ -79,8 +79,7 @@ export default function MyOrders() {
   // Sockets para actualización en tiempo real en todo el historial
   useEffect(() => {
     if (user?.id) {
-      const socketURL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
-      const socket = io(socketURL);
+      const socket = createSocket();
       socket.on('connect', () => socket.emit('join_client', user.id));
       socket.on('estado_actualizado', (updatedOrder) => {
         setOrders(prev => prev.map((o: any) => o.id === updatedOrder.id ? updatedOrder : o));

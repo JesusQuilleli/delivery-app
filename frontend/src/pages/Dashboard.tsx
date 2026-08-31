@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
+import { getSocketURL } from '../lib/socket';
 import api from '../api';
 import { Bell, MapPin, CheckCircle, Package, Clock, Phone, XCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Truck, User, X, Utensils, Check } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -200,7 +201,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!storeId) return;
 
-    const socketURL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+    const socketURL = getSocketURL();
     let reconnectAttempts = 0;
     let reconnectTimer: ReturnType<typeof setTimeout>;
 
@@ -407,7 +408,7 @@ export default function Dashboard() {
 
       {/* Tarjeta Flotante de Alertas (reemplaza el modal bloqueante) */}
       {alertQueue.length > 0 && (
-        <div className="fixed top-4 right-4 z-50 w-[380px] max-h-[calc(100vh-2rem)] overflow-y-auto space-y-3">
+        <div className="fixed top-4 right-4 z-50 w-[calc(100vw-2rem)] sm:w-[380px] left-4 sm:left-auto max-h-[calc(100vh-2rem)] overflow-y-auto space-y-3">
           {alertQueue.slice(0, 3).map((order, idx) => {
             const elapsed = getElapsedMinutes(order.createdAt);
             const isUrgent = elapsed > 10;
@@ -486,9 +487,9 @@ export default function Dashboard() {
 
       {/* Barra de acciones masivas */}
       {selectMode && selectedIds.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-40 p-4 flex items-center justify-between">
-          <span className="font-bold text-sm">{selectedIds.length} seleccionados</span>
-          <div className="flex gap-2">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-40 p-4 flex flex-col sm:flex-row items-center sm:justify-between gap-3">
+          <span className="font-bold text-sm shrink-0">{selectedIds.length} seleccionados</span>
+          <div className="flex gap-2 flex-wrap justify-center">
             <Button variant="outline" size="sm" onClick={() => { setSelectMode(false); setSelectedIds([]); }}>Cancelar</Button>
             <Button variant="destructive" size="sm" className="font-bold" onClick={() => handleBatchAction('CANCELLED')}>
               <Trash2 size={14} className="mr-1" /> Rechazar
@@ -509,7 +510,7 @@ export default function Dashboard() {
               <TabsTrigger
                 key={col.status}
                 value={col.status}
-                className="h-full rounded-lg font-bold text-[9px] md:text-sm uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all whitespace-normal md:whitespace-nowrap flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 px-1 md:px-3 leading-tight"
+                className="h-full rounded-lg font-bold text-[10px] md:text-sm uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all whitespace-normal md:whitespace-nowrap flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 px-1 md:px-3 leading-tight"
               >
                 <col.icon size={14} className="hidden md:block" />
                 {col.title}

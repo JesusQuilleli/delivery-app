@@ -24,6 +24,16 @@ const defaultOrigins = [
   'https://test.shop-mg.com',
   'http://localhost:5173'
 ];
+// Orígenes de desarrollo en red local (móvil probando contra el PC)
+const isDevOrigin = (origin) => {
+  if (!origin) return false;
+  try {
+    const { hostname } = new URL(origin);
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.16.');
+  } catch {
+    return false;
+  }
+};
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? [...new Set([...defaultOrigins, ...process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)])]
@@ -35,7 +45,7 @@ console.log('🌐 Orígenes CORS permitidos:', allowedOrigins);
 const corsOptions = {
   origin: (origin, callback) => {
     // Permitir peticiones sin origen (ej. Postman, scripts de backend a backend)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin) || isDevOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error(`CORS: Origen no permitido: ${origin}`));
@@ -49,7 +59,13 @@ const corsOptions = {
 // Configurar Socket.io con los mismos orígenes permitidos
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || isDevOrigin(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: Origen no permitido: ${origin}`));
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true
   }

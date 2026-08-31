@@ -118,7 +118,48 @@ export default function Customers() {
               <p>Aún no hay clientes registrados.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Vista móvil */}
+            <div className="md:hidden divide-y divide-border">
+              {customers.map((c) => (
+                <div key={c.id} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-bold text-foreground">{c.name || 'Sin Nombre'}</div>
+                    <div className="inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-primary/10 text-primary font-black rounded-lg text-sm shrink-0">
+                      <ShoppingBag size={14} />
+                      {c.total_orders}
+                    </div>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    {c.email && (
+                      <div className="flex items-center gap-2 font-medium text-foreground">
+                        <Mail size={14} className="text-muted-foreground shrink-0" />
+                        <a href={`mailto:${c.email}`} className="hover:text-primary transition-colors break-all">{c.email}</a>
+                      </div>
+                    )}
+                    {c.phone && (
+                      <div className="flex items-center gap-2 font-medium text-foreground">
+                        <Phone size={14} className="text-muted-foreground shrink-0" />
+                        <a href={`tel:${c.phone}`} className="hover:text-primary transition-colors">{c.phone}</a>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 font-medium text-muted-foreground">
+                      <Calendar size={14} />
+                      {format(new Date(c.createdAt), "dd MMM yyyy", { locale: es })}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button size="sm" variant="outline" onClick={() => handleEdit(c)} className="text-blue-600 hover:bg-blue-50">
+                      <Edit size={14} /> Editar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleDelete(c.id)} className="text-red-600 hover:bg-red-50">
+                      <Trash2 size={14} /> Eliminar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
@@ -180,6 +221,7 @@ export default function Customers() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Card>
       </div>

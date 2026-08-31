@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
-import { io } from 'socket.io-client';
 import { formatPrice, getConversions } from '../utils/currency';
+import { createSocket } from '../lib/socket';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -119,8 +119,7 @@ export default function Checkout() {
       syncFromDb();
 
       // 2. Socket en tiempo real para actualizaciones posteriores
-      const socketURL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
-      const socket = io(socketURL);
+      const socket = createSocket();
       socket.on('connect', () => socket.emit('join_client', user.id));
       socket.on('estado_actualizado', (order) => setOrderStatus(order.status));
       return () => { socket.disconnect(); };
@@ -453,7 +452,7 @@ export default function Checkout() {
                     value={rawPhone} 
                     onChange={(e) => setRawPhone(e.target.value)}
                     disabled={isRegistered && !!rawPhone}
-                    className={`flex-1 h-14 text-lg rounded-xl transition-all ${(isRegistered && !!rawPhone) ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'bg-white focus:border-orange-500 focus:ring-orange-500'}`}
+                    className={`flex-1 min-w-0 h-14 text-lg rounded-xl transition-all ${(isRegistered && !!rawPhone) ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'bg-white focus:border-orange-500 focus:ring-orange-500'}`}
                   />
                 </div>
               </div>
@@ -493,7 +492,7 @@ export default function Checkout() {
                 ¿A dónde enviamos?
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-8 space-y-8">
+            <CardContent className="p-5 sm:p-8 space-y-5 sm:space-y-8">
               <div className="space-y-3 relative z-20">
                 <label className="text-sm font-bold text-gray-700 block">Busca tu Dirección en Puerto Ayacucho</label>
                 <div className="relative">
@@ -583,7 +582,7 @@ export default function Checkout() {
                 Método de Pago
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-8 space-y-8">
+            <CardContent className="p-5 sm:p-8 space-y-5 sm:space-y-8">
               <div className="grid grid-cols-2 gap-4">
                 <div 
                   onClick={() => setPaymentMethod('CASH')}
@@ -606,12 +605,12 @@ export default function Checkout() {
               {paymentMethod === 'CASH' && (
                 <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-2xl border border-emerald-200 shadow-inner space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
                   <p className="text-sm font-black text-emerald-900 uppercase tracking-wider text-center">¿En qué moneda vas a pagar al recibir?</p>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
                     {['USD', 'VES', 'COP'].map(curr => (
                       <div 
                         key={curr}
                         onClick={() => setCashCurrency(curr)}
-                        className={`py-3 rounded-xl border-2 text-center cursor-pointer font-black transition-all ${
+                        className={`py-3 px-1 rounded-xl border-2 text-center cursor-pointer font-black text-xs sm:text-sm leading-tight flex items-center justify-center transition-all ${
                           cashCurrency === curr 
                             ? 'bg-emerald-500 border-emerald-600 text-white shadow-md transform scale-105' 
                             : 'bg-white border-emerald-100 text-emerald-700 hover:bg-emerald-50'
@@ -710,16 +709,16 @@ export default function Checkout() {
                 </CardDescription>
               )}
             </CardHeader>
-            <CardContent className="p-8 px-10">
+            <CardContent className="p-5 sm:p-8 sm:px-10">
               <div className="relative border-l-4 border-gray-100 ml-6 space-y-10">
                 {timeline.map((item, index) => {
                   const isCompleted = index <= currentIndex;
                   const isActive = index === currentIndex;
                   
                   return (
-                    <div key={item.status} className={`relative pl-10 transition-all duration-700 ${isCompleted ? 'opacity-100 transform translate-x-0' : 'opacity-40 transform translate-x-2'}`}>
+                    <div key={item.status} className={`relative pl-8 sm:pl-10 transition-all duration-700 ${isCompleted ? 'opacity-100 transform translate-x-0' : 'opacity-40 transform translate-x-2'}`}>
                       {/* Círculo indicador con icono */}
-                      <div className={`absolute -left-[26px] top-0 w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-lg transition-all duration-500 ${
+                      <div className={`absolute -left-[26px] top-0 w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-xl shadow-lg transition-all duration-500 ${
                         isActive ? 'bg-orange-500 text-white shadow-orange-500/40 animate-bounce' : 
                         isCompleted ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-400 grayscale'
                       }`}>

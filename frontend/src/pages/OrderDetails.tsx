@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
+import { createSocket } from '../lib/socket';
 import api from '../api';
 import { Clock, MapPin, Phone, Truck, CheckCircle, Check, ArrowLeft, XCircle } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
@@ -125,8 +126,7 @@ export default function OrderDetails() {
   useEffect(() => {
     if (!storeData) return;
 
-    const socketURL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
-    const socket: Socket = io(socketURL);
+    const socket: Socket = createSocket();
     socket.on('connect', () => {
       socket.emit('join_store', storeData.id);
     });
@@ -328,25 +328,25 @@ export default function OrderDetails() {
       </div>
 
       {/* Botones Flotantes en Mobile (Fijos abajo) */}
-      <div className="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-xl border-t border-gray-200 p-4 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-50">
+      <div className="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-xl border-t border-gray-200 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-50">
         <div className="max-w-5xl mx-auto">
           {order.status === 'AWAITING_PAYMENT' && (
-            <div className="flex gap-2">
-              <Button onClick={() => changeStatus('CANCELLED')} variant="outline" className="w-1/3 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-black h-14 md:h-16 rounded-xl text-lg transition-transform active:scale-95">
-                <XCircle className="mr-2" size={24} /> Rechazar
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button onClick={() => changeStatus('CANCELLED')} variant="outline" className="sm:w-1/3 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-black h-14 md:h-16 rounded-xl text-base md:text-lg transition-transform active:scale-95">
+                <XCircle className="mr-2" size={20} /> Rechazar
               </Button>
-              <Button onClick={() => changeStatus('PENDING')} className="w-2/3 bg-blue-600 hover:bg-blue-700 text-white font-black shadow-xl shadow-blue-500/20 h-14 md:h-16 rounded-xl text-lg md:text-xl transition-transform active:scale-95">
-                <CheckCircle className="mr-3" size={24} /> Aprobar Pago
+              <Button onClick={() => changeStatus('PENDING')} className="sm:w-2/3 bg-blue-600 hover:bg-blue-700 text-white font-black shadow-xl shadow-blue-500/20 h-14 md:h-16 rounded-xl text-base md:text-lg transition-transform active:scale-95">
+                <CheckCircle className="mr-2" size={20} /> Aprobar Pago
               </Button>
             </div>
           )}
           {order.status === 'PENDING' && (
-            <div className="flex gap-2">
-              <Button onClick={() => changeStatus('CANCELLED')} variant="outline" className="w-1/3 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-black h-14 md:h-16 rounded-xl text-lg transition-transform active:scale-95">
-                <XCircle className="mr-2" size={24} /> Rechazar
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button onClick={() => changeStatus('CANCELLED')} variant="outline" className="sm:w-1/3 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-black h-14 md:h-16 rounded-xl text-base md:text-lg transition-transform active:scale-95">
+                <XCircle className="mr-2" size={20} /> Rechazar
               </Button>
-              <Button onClick={() => changeStatus('ACCEPTED')} className="w-2/3 bg-blue-600 hover:bg-blue-700 text-white font-black shadow-xl shadow-blue-500/20 h-14 md:h-16 rounded-xl text-lg md:text-xl transition-transform active:scale-95">
-                <CheckCircle className="mr-3" size={24} /> Aceptar
+              <Button onClick={() => changeStatus('ACCEPTED')} className="sm:w-2/3 bg-blue-600 hover:bg-blue-700 text-white font-black shadow-xl shadow-blue-500/20 h-14 md:h-16 rounded-xl text-base md:text-lg transition-transform active:scale-95">
+                <CheckCircle className="mr-2" size={20} /> Aceptar
               </Button>
             </div>
           )}

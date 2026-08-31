@@ -32,6 +32,9 @@ export default function OrderHistory() {
   const totalPages = Math.max(1, Math.ceil(orders.length / ITEMS_PER_PAGE));
   const paginatedOrders = orders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
+  const kpiCount = 1 + (showMonthSales ? 1 : 0) + (showTotalSales ? 1 : 0) + (showTotalOrders ? 1 : 0);
+  const kpiGridClass = kpiCount === 4 ? 'xl:grid-cols-4' : kpiCount === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-2';
+
   const fetchHistory = async () => {
     setLoading(true);
     setCurrentPage(1);
@@ -114,7 +117,7 @@ export default function OrderHistory() {
 
       {/* Tarjetas de Estadísticas (KPIs) */}
       {analytics && (
-        <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-${1 + (showMonthSales ? 1 : 0) + (showTotalSales ? 1 : 0) + (showTotalOrders ? 1 : 0)} gap-4 mb-8`}>
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${kpiGridClass} gap-4 mb-8`}>
           <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-none shadow-lg shadow-emerald-500/20">
             <CardContent className="p-6">
               <div className="flex justify-between items-start">
@@ -218,7 +221,35 @@ export default function OrderHistory() {
         </div>
       ) : (
         <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden print:border-none print:shadow-none print:bg-white">
-          <div className="overflow-x-auto">
+          {/* Vista móvil: tarjetas de órdenes */}
+          <div className="md:hidden divide-y divide-border">
+            {paginatedOrders.map(order => (
+              <div key={order.id} className="p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-black text-foreground">#{order.id}</span>
+                  <Badge variant="outline" className={order.status === 'DELIVERED' ? 'text-emerald-700 border-emerald-200 bg-emerald-500/10' : 'text-destructive border-destructive/20 bg-destructive/10'}>
+                    {order.status === 'DELIVERED' ? 'COMPLETADO' : 'CANCELADO'}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="font-bold text-foreground">{order.user.name || 'Sin Nombre'}</p>
+                  <p className="text-xs text-primary font-semibold">{order.user.phone}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{new Date(order.createdAt).toLocaleString()}</p>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold text-foreground/80">
+                    {order.payment_method === 'CASH' ? 'Efectivo' : 'Pago Móvil'}
+                    {order.payment_reference && <span className="block text-xs text-muted-foreground">Ref: {order.payment_reference}</span>}
+                  </span>
+                  <span className="font-black text-primary">{formatPrice(order.total_amount, storeConfig?.currency)}</span>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => deleteOrder(order.id)} className="text-destructive hover:bg-destructive/10 hover:text-destructive">
+                  <Trash2 size={16} /> Eliminar
+                </Button>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full min-w-[800px] text-left text-sm">
               <thead className="bg-muted/50 border-b border-border print:bg-white print:border-black">
                 <tr>
@@ -260,9 +291,9 @@ export default function OrderHistory() {
               </tbody>
             </table>
           </div>
-          <div className="bg-muted/30 p-6 border-t border-border flex justify-end items-center gap-4 print:bg-white print:border-black">
+          <div className="bg-muted/30 p-6 border-t border-border flex justify-end items-center gap-4 print:bg-white print:border-black flex-wrap">
             <span className="text-muted-foreground font-bold uppercase tracking-widest text-sm">Total Recaudado:</span>
-            <span className="text-4xl font-black text-foreground font-display">
+            <span className="text-3xl sm:text-4xl font-black text-foreground font-display">
               {formatPrice(orders.filter(o => o.status === 'DELIVERED').reduce((acc, o) => acc + o.total_amount, 0), storeConfig?.currency)}
             </span>
           </div>

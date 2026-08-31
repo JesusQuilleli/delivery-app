@@ -130,13 +130,13 @@ export default function Layout() {
                     <div className="w-16 h-16 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-orange-100">
                       <Store className="text-orange-500/50" size={24} />
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-gray-900 leading-tight">{item.name}</h4>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-sm font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-gray-900 leading-tight truncate">{item.name}</h4>
+                      <div className="flex items-center justify-between gap-2 mt-2">
+                        <span className="text-sm font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
                           {item.quantity} x {formatPrice(item.unit_price, storeConfig?.currency)}
                         </span>
-                        <span className="font-black text-gray-900 text-lg">
+                        <span className="font-black text-gray-900 text-base sm:text-lg shrink-0 whitespace-nowrap">
                           {formatPrice(item.quantity * item.unit_price, storeConfig?.currency)}
                         </span>
                       </div>
@@ -154,9 +154,9 @@ export default function Layout() {
 
             {cart.length > 0 && (
               <div className="p-4 sm:p-6 bg-white border-t border-gray-200 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] pb-8 sm:pb-6">
-                <div className="flex justify-between items-end mb-4 sm:mb-6">
-                  <span className="text-gray-500 font-bold uppercase tracking-wider text-xs sm:text-sm">Total a pagar</span>
-                  <span className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tighter">{formatPrice(total, storeConfig?.currency)}</span>
+                <div className="flex justify-between items-end gap-3 mb-4 sm:mb-6">
+                  <span className="text-gray-500 font-bold uppercase tracking-wider text-xs sm:text-sm shrink-0">Total a pagar</span>
+                  <span className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tighter whitespace-nowrap text-right">{formatPrice(total, storeConfig?.currency)}</span>
                 </div>
                 <Button
                   variant="default"

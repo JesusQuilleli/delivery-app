@@ -97,17 +97,17 @@ export default function SuperAdmin() {
     <div className="min-h-screen bg-gray-50 p-6 md:p-12">
       <div className="max-w-6xl mx-auto space-y-8">
         
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
-              <ShieldAlert size={32} />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <ShieldAlert size={28} className="sm:w-8 sm:h-8" />
             </div>
-            <div>
-              <h1 className="text-3xl font-black text-gray-900">Panel SuperAdmin (SaaS)</h1>
-              <p className="text-gray-500 font-medium">Gestiona todas las tiendas e inquilinos (Tenants) de la plataforma.</p>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-3xl font-black text-gray-900 leading-tight">Panel SuperAdmin (SaaS)</h1>
+              <p className="text-gray-500 font-medium text-sm sm:text-base">Gestiona todas las tiendas e inquilinos (Tenants) de la plataforma.</p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleLogout} className="gap-2 font-bold">
+          <Button variant="outline" onClick={handleLogout} className="gap-2 font-bold w-full md:w-auto justify-center">
             <LogOut size={16} />
             Cerrar Sesión
           </Button>

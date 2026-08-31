@@ -471,8 +471,8 @@ export default function Inventory() {
             </DialogContent>
           </Dialog>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <Table>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
+            <Table className="min-w-[480px]">
               <TableHeader className="bg-gray-50/50">
                 <TableRow>
                   <TableHead className="font-black text-gray-900 w-[80px]">Img</TableHead>
@@ -525,7 +525,7 @@ export default function Inventory() {
         </TabsContent>
 
         <TabsContent value="products" className="mt-6 space-y-4 animate-in fade-in duration-300">
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 flex-wrap">
             <input
               type="file"
               id="csv-upload"
@@ -663,8 +663,56 @@ export default function Inventory() {
             </Dialog>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <Table>
+          {/* Vista móvil: tarjetas de productos */}
+          <div className="md:hidden space-y-3">
+            {loading ? (
+              <div className="text-center py-8 text-gray-500 font-bold">Cargando...</div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 font-bold">No hay productos. Crea uno arriba.</div>
+            ) : (
+              products.map(p => (
+                <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex gap-3">
+                  <div className="flex-shrink-0 w-14 h-14">
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} className="w-14 h-14 object-cover rounded-lg bg-gray-100 border border-gray-200" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center"><ImageIcon size={18} className="text-gray-400" /></div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-bold text-gray-900 leading-tight truncate">{p.name}</h4>
+                      <span className="font-black text-blue-600 shrink-0">{formatPrice(p.price, storeConfig?.currency)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {p.category ? (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">{p.category.name}</Badge>
+                      ) : (
+                        <span className="text-xs text-gray-400 font-bold">-</span>
+                      )}
+                      <button
+                        onClick={() => toggleAvailability(p.id, p.is_available)}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-full transition-colors ${p.is_available ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                      >
+                        {p.is_available ? 'ACTIVO' : 'INACTIVO'}
+                      </button>
+                    </div>
+                    <div className="flex gap-1 mt-2">
+                      <Button variant="ghost" size="icon" onClick={() => openEditModal(p)} className="text-blue-500 hover:bg-blue-50 hover:text-blue-600 rounded-lg h-9 w-9">
+                        <Pencil size={16} />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteProduct(p.id)} className="text-red-500 hover:bg-red-50 hover:text-red-600 rounded-lg h-9 w-9">
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
+            <Table className="min-w-[640px]">
               <TableHeader className="bg-gray-50/50">
                 <TableRow>
                   <TableHead className="font-black text-gray-900 w-[80px]">Img</TableHead>
@@ -815,8 +863,53 @@ export default function Inventory() {
             </Dialog>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <Table>
+          {/* Vista móvil: tarjetas de combos */}
+          <div className="md:hidden space-y-3">
+            {loading ? (
+              <div className="text-center py-8 text-gray-500 font-bold">Cargando...</div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 font-bold">No hay combos. Crea uno arriba.</div>
+            ) : (
+              products.map(c => (
+                <div key={c.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex gap-3">
+                  <div className="flex-shrink-0 w-14 h-14">
+                    {c.image_url ? (
+                      <img src={c.image_url} alt={c.name} className="w-14 h-14 object-cover rounded-lg bg-gray-100 border border-gray-200" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center"><Layers size={18} className="text-gray-400" /></div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-black text-gray-900 truncate">{c.name}</h4>
+                      <span className="font-black text-purple-600 shrink-0">{formatPrice(c.price, storeConfig?.currency)}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {c.comboItems?.map(ci => (
+                        <Badge key={ci.product_id} variant="secondary" className="bg-gray-100 text-gray-600 text-[10px]">
+                          {ci.quantity}x {ci.product.name}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        onClick={() => toggleAvailability(c.id, c.is_available)}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-full transition-colors ${c.is_available ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                      >
+                        {c.is_available ? 'ACTIVO' : 'INACTIVO'}
+                      </button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteProduct(c.id)} className="text-red-500 hover:bg-red-50 hover:text-red-600 rounded-lg h-9 w-9">
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
+            <Table className="min-w-[640px]">
               <TableHeader className="bg-gray-50/50">
                 <TableRow>
                   <TableHead className="font-black text-gray-900 w-[80px]">Img</TableHead>

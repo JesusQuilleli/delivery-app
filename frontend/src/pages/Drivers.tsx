@@ -108,8 +108,8 @@ export default function Drivers() {
     <AdminLayout title="Flota y Motorizados">
       <div className="max-w-6xl mx-auto space-y-6">
         
-        <div className="flex justify-between items-center">
-          <Card className="bg-card border-border shadow-sm flex-1 max-w-sm">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <Card className="bg-card border-border shadow-sm flex-1 max-w-sm w-full">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
                 <Bike size={24} />
@@ -121,7 +121,7 @@ export default function Drivers() {
             </CardContent>
           </Card>
 
-          <Button onClick={openNewModal} className="h-12 px-6 font-black shadow-lg shadow-primary/20 flex items-center gap-2">
+          <Button onClick={openNewModal} className="h-12 px-6 font-black shadow-lg shadow-primary/20 flex items-center gap-2 w-full sm:w-auto justify-center">
             <Plus size={20} /> Registrar Motorizado
           </Button>
         </div>
@@ -135,7 +135,30 @@ export default function Drivers() {
               <p>No tienes motorizados registrados en tu flota.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Vista móvil */}
+            <div className="md:hidden divide-y divide-border">
+              {drivers.map((d) => (
+                <div key={d.id} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-foreground flex items-center gap-2">
+                      <Bike size={16} className="text-primary shrink-0" /> {d.name}
+                    </span>
+                    <span className="text-sm font-medium text-muted-foreground shrink-0">{d.phone}</span>
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">Placa / Vehículo: {d.vehicle_plate || 'No especificada'}</p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button size="sm" variant="outline" onClick={() => openEditModal(d)} className="text-blue-600 hover:bg-blue-50">
+                      <Edit size={14} /> Editar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleDelete(d.id)} className="text-red-600 hover:bg-red-50">
+                      <Trash2 size={14} /> Eliminar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
@@ -185,6 +208,7 @@ export default function Drivers() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Card>
       </div>
