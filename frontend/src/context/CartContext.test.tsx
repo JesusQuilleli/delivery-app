@@ -1,12 +1,25 @@
 import React from 'react';
 import type { ReactNode } from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { CartProvider, CartContext } from './CartContext';
 
-const wrapper = ({ children }: { children: ReactNode }) => <CartProvider>{children}</CartProvider>;
+const makeWrapper = (path: string) => {
+  return ({ children }: { children: ReactNode }) => (
+    <MemoryRouter initialEntries={[path]}>
+      <CartProvider>{children}</CartProvider>
+    </MemoryRouter>
+  );
+};
+
+const wrapper = makeWrapper('/demo-farmacia');
 
 describe('CartContext', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it('incrementa la cantidad si el producto ya existe', () => {
     const { result } = renderHook(() => React.useContext(CartContext), { wrapper });
     act(() => result.current.addToCart({ id: 1, name: 'A', price: 10 }));
@@ -45,6 +58,30 @@ describe('CartContext', () => {
     act(() => result.current.addToCart({ id: 1, name: 'A', price: 10 }));
     act(() => result.current.addToCart({ id: 2, name: 'B', price: 3.5 }));
     expect(result.current.total).toBe(13.5);
+  });
+
+  it('persiste y restaura el carrito de la misma tienda', () => {
+    const first = renderHook(() => React.useContext(CartContext), { wrapper });
+    act(() => first.result.current.addToCart({ id: 1, name: 'A', price: 10 }));
+    first.unmount();
+
+    const second = renderHook(() => React.useContext(CartContext), { wrapper });
+    expect(second.result.current.cart).toHaveLength(1);
+    expect(second.result.current.cart[0].name).toBe('A');
+  });
+
+  it('aísla el carrito entre tiendas', () => {
+    const storeA = renderHook(() => React.useContext(CartContext), { wrapper: makeWrapper('/tienda-a') });
+    act(() => storeA.result.current.addToCart({ id: 1, name: 'A', price: 10 }));
+    storeA.unmount();
+
+    const storeB = renderHook(() => React.useContext(CartContext), { wrapper: makeWrapper('/tienda-b') });
+    expect(storeB.result.current.cart).toHaveLength(0);
+    storeB.unmount();
+
+    const backToA = renderHook(() => React.useContext(CartContext), { wrapper: makeWrapper('/tienda-a') });
+    expect(backToA.result.current.cart).toHaveLength(1);
+    expect(backToA.result.current.cart[0].name).toBe('A');
   });
 
   it('abre y cierra el drawer del carrito', () => {

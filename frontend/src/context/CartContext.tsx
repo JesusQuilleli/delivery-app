@@ -1,4 +1,5 @@
-import React, { createContext, useState, type ReactNode } from 'react';
+import React, { createContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 
 export interface CartItem {
   product_id: number;
@@ -19,9 +20,43 @@ interface CartContextType {
 
 export const CartContext = createContext<CartContextType>({} as CartContextType);
 
+const getStoreSlug = (pathname: string) => {
+  const first = pathname.split('/').filter(Boolean)[0];
+  if (!first || ['admin', 'admin-login', 'superadmin'].includes(first)) return null;
+  return first;
+};
+
+const storageKey = (slug: string) => `cart:${slug}`;
+
+const readCart = (slug: string | null): CartItem[] => {
+  if (!slug) return [];
+  try {
+    const saved = localStorage.getItem(storageKey(slug));
+    const parsed = saved ? JSON.parse(saved) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const location = useLocation();
+  const storeSlug = getStoreSlug(location.pathname);
+  const [cart, setCart] = useState<CartItem[]>(() => readCart(storeSlug));
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const activeSlug = useRef(storeSlug);
+
+  useEffect(() => {
+    if (activeSlug.current !== storeSlug) {
+      activeSlug.current = storeSlug;
+      setCart(readCart(storeSlug));
+      return;
+    }
+
+    if (storeSlug) {
+      localStorage.setItem(storageKey(storeSlug), JSON.stringify(cart));
+    }
+  }, [cart, storeSlug]);
 
   const addToCart = (product: { id: number; name: string; price: number }) => {
     setCart((prev) => {

@@ -6,7 +6,7 @@
 - **Última actualización:** 2026-11-01
 - **Rama actual:** `feature/security-hardening`
 - **Rama principal:** `main`
-- **Estado general:** F1-06 completada; siguiente F1-05
+- **Estado general:** F1-08 completada; siguiente F1-09
 - **Zona del piloto:** Puerto Ayacucho, Amazonas
 - **Segmento:** farmacias independientes y cadenas pequeñas
 
@@ -227,13 +227,13 @@ Si 3 o más farmacias exigen recetas o lotes, agregar la Fase 2C (3–5 días).
 - [x] F1-02 Manejar expiración real (401) sin cerrar sesión por errores de red.
 - [x] F1-03 Derivar tienda, moneda y configuración desde el `slug`.
 - [x] F1-04 Eliminar la dependencia de `current_store_id` en `localStorage`.
-- [ ] F1-05 Verificar checkout directo sin visitar el catálogo.
+- [x] F1-05 Verificar checkout directo sin visitar el catálogo.
 - [x] F1-06 Corregir redirección de `/mis-pedidos` para conservar el slug.
 
 #### Carrito y stock
 
-- [ ] F1-07 Aislar el carrito por tienda.
-- [ ] F1-08 Limpiar o confirmar carrito al cambiar de tienda.
+- [x] F1-07 Aislar el carrito por tienda.
+- [x] F1-08 Limpiar o confirmar carrito al cambiar de tienda.
 - [ ] F1-09 Validar disponibilidad y stock antes de agregar o confirmar.
 - [ ] F1-10 Impedir cantidades superiores al stock.
 - [ ] F1-11 Descontar o reservar stock al crear el pedido en una transacción.
@@ -551,7 +551,7 @@ npm run build
 
 | Fecha | Backend unitario | Backend API | Frontend | Lint | Typecheck | Build | Notas |
 |---|---|---|---|---|---|---|---|
-| 2026-11-01 | 23/23 | 63/63 | 35/35 | 0 errores, 85 warnings | Correcto | Correcto | Fase 0, F1-01, F1-02, F1-03, F1-04 y F1-06 completadas. Bundle ~1 MB. |
+| 2026-11-01 | 23/23 | 63/63 | 37/37 | 0 errores, 85 warnings | Correcto | Correcto | Fase 0 y F1-01–F1-08 completadas. Carrito por tienda y persistente. Bundle ~1 MB. |
 
 ---
 
@@ -566,8 +566,11 @@ npm run build
 | 2026-11-01 | F1-02 | Hecho | Solo 401 limpia sesión; red y 500 conservan usuario; 2 pruebas nuevas |
 | 2026-11-01 | F1-03 | Hecho | Checkout usa `storeConfig.id`; moneda y tasas tipadas desde el slug |
 | 2026-11-01 | F1-04 | Hecho | Eliminado `current_store_id` de `localStorage` y de `Catalog` |
-| 2026-11-01 | F1-05 | Pendiente | Verificar checkout directo con carrito sin pasar por catálogo |
+| 2026-11-01 | F1-05 | Hecho | Checkout directo funciona con `storeConfig.id`; carrito persiste por tienda |
 | 2026-11-01 | F1-06 | Hecho | `/mis-pedidos` conserva el slug y espera la restauración de sesión |
+| 2026-11-01 | F1-07 | Hecho | `CartProvider` dentro del router; carrito separado por slug |
+| 2026-11-01 | F1-08 | Hecho | Al cambiar de tienda se carga su carrito; no se mezclan productos |
+| 2026-11-01 | F1-09 | Pendiente | Validar stock antes de agregar y confirmar |
 |  |  |  |  |
 
 Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
@@ -588,16 +591,17 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 
 ## 12. Punto de continuación
 
-**Fase 0, F1-01, F1-02, F1-03, F1-04 y F1-06 completadas.** Continuar con **F1-05**.
+**Fase 0 y F1-01–F1-08 completadas.** Continuar con **F1-09**.
 
-### Primeros pasos de F1-05
+### Primeros pasos de F1-09
 
-1. Abrir directamente `/:slug/checkout` con productos en el carrito y sin visitar el catálogo.
-2. Confirmar que `storeConfig.id` llega antes de solicitar OTP o crear el pedido.
-3. Probar recarga de página en checkout: el carrito actual no persiste; decidir si se persiste por tienda.
-4. Agregar una prueba de checkout directo o documentar la limitación.
-5. Ejecutar `npm run typecheck`, `npm test` y `npm run lint`.
-6. Registrar y commitear `F1-05`; después seguir con la Fase 2.
+1. Revisar `backend/controllers/orderController.js` y `backend/controllers/inventoryController.js`.
+2. Revisar cómo `Catalog`, `ProductDetails` y `Checkout` validan stock hoy.
+3. Agregar validación de stock en frontend antes de `addToCart` y al confirmar.
+4. Impedir cantidades mayores al stock disponible (F1-10).
+5. Implementar descuento transaccional de stock al crear el pedido (F1-11), incluidos combos (F1-12).
+6. Rechazar pedidos con stock insuficiente (F1-13); probar concurrencia y ejecutar pruebas backend.
+7. Registrar y commitear `F1-09`–`F1-13`.
 
 ### Cómo ejecutar las pruebas de API
 

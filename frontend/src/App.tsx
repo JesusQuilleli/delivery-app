@@ -23,8 +23,8 @@ import { Toaster } from 'sonner';
 function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <BrowserRouter>
+      <BrowserRouter>
+        <CartProvider>
           <Routes>
             <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['SUPERADMIN']}><SuperAdmin /></ProtectedRoute>} />
             <Route path="/admin-login" element={<AdminLogin />} />
@@ -49,9 +49,9 @@ function App() {
 
             <Route path="/" element={<Navigate to="/demo-farmacia" />} />
           </Routes>
-        </BrowserRouter>
+        </CartProvider>
         <Toaster position="top-center" richColors />
-      </CartProvider>
+      </BrowserRouter>
     </AuthProvider>
   );
 }
