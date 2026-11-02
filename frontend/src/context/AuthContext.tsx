@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import api from '../api';
 
 const clearLocalSession = () => {
@@ -37,9 +37,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
-  const userRef = useRef(user);
-  userRef.current = user;
-
   const token = user !== null;
 
   const login = useCallback((userData: User) => {
@@ -75,7 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const res = await api.post('/auth/refresh');
         if (!cancelled && res.data.user) {
-          const updatedUser = { ...userRef.current, ...res.data.user };
+          const updatedUser = { ...user, ...res.data.user };
           setUser(updatedUser);
           sessionStorage.setItem('user', JSON.stringify(updatedUser));
         }

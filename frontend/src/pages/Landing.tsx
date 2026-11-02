@@ -6,23 +6,40 @@ import RestaurantTemplate from "@/components/landing/RestaurantTemplate";
 import SupermarketTemplate from "@/components/landing/SupermarketTemplate";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
+interface StoreConfig {
+  industry?: string;
+  theme_color?: string;
+  name?: string;
+  slug?: string;
+}
+
+interface Category {
+  id?: number;
+  name?: string;
+}
+
+interface Product {
+  id?: number;
+  is_combo?: boolean;
+}
+
 export default function Landing() {
   const { slug } = useParams<{ slug: string }>();
-  const [categories, setCategories] = useState([]);
-  const [offers, setOffers] = useState([]);
-  const [combos, setCombos] = useState([]);
-  const [storeConfig, setStoreConfig] = useState(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [offers, setOffers] = useState<Product[]>([]);
+  const [combos, setCombos] = useState<Product[]>([]);
+  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCatalog = async () => {
       try {
         const res = await api.get(`/stores/${slug}/products`);
-        const allProducts = res.data.products || [];
+        const allProducts: Product[] = res.data.products || [];
         setStoreConfig(res.data.store || null);
         setCategories(res.data.categories ? res.data.categories.slice(0, 3) : []);
-        setCombos(allProducts.filter((p: any) => p.is_combo));
-        setOffers(allProducts.filter((p: any) => !p.is_combo).slice(0, 4));
+        setCombos(allProducts.filter((p) => p.is_combo));
+        setOffers(allProducts.filter((p) => !p.is_combo).slice(0, 4));
       } catch (error) {
         console.error("Error fetching landing data", error);
       } finally {

@@ -27,15 +27,6 @@ export default function SuperAdmin() {
   const [themeColor, setThemeColor] = useState('blue');
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    fetchStores();
-  }, []);
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/admin-login', { replace: true });
-  };
-
   const fetchStores = async () => {
     try {
       setLoading(true);
@@ -50,6 +41,15 @@ export default function SuperAdmin() {
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchStores();
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/admin-login', { replace: true });
   };
 
   const handleCreateStore = async (e: React.FormEvent) => {

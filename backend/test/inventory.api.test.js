@@ -11,7 +11,18 @@ let createdCategoryIds = [];
 let createdComboId = [];
 
 before(async () => {
-  await prisma.product.deleteMany({ where: { name: { contains: 'TEST-INV' } } });
+  const testProducts = await prisma.product.findMany({
+    where: { name: { contains: 'TEST-INV' } },
+    select: { id: true }
+  });
+  const testProductIds = testProducts.map(p => p.id);
+
+  if (testProductIds.length > 0) {
+    await prisma.comboItem.deleteMany({ where: { product_id: { in: testProductIds } } });
+    await prisma.orderItem.deleteMany({ where: { product_id: { in: testProductIds } } });
+    await prisma.product.deleteMany({ where: { id: { in: testProductIds } } });
+  }
+
   await prisma.category.deleteMany({ where: { name: { contains: 'TEST-INV' } } });
 });
 

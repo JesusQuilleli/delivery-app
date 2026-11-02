@@ -22,7 +22,7 @@ import icon from 'leaflet/dist/images/marker-icon.png';
 // @ts-ignore
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-let DefaultIcon = L.icon({
+const DefaultIcon = L.icon({
     iconUrl: icon,
     shadowUrl: iconShadow,
     iconAnchor: [12, 41]
@@ -191,7 +191,7 @@ export default function Checkout() {
     setIsSearchingAddress(true);
     
     // Función auxiliar para usar IP si todo falla
-    const useIpFallback = async (reason: string) => {
+    const applyIpFallback = async (reason: string) => {
       toast.warning(`Usando ubicación aproximada (${reason}). Por favor, ajusta el pin en el mapa manualmente.`);
       try {
         const ipRes = await fetch('https://ipapi.co/json/');
@@ -259,11 +259,11 @@ export default function Checkout() {
         
         if (error.code === error.PERMISSION_DENIED) {
           toast.error("Permiso de ubicación denegado. Debes autorizar el uso de GPS en tu navegador o celular para una ubicación precisa.");
-          useIpFallback("Permiso denegado");
+          applyIpFallback("Permiso denegado");
         } else if (error.code === error.TIMEOUT) {
-          useIpFallback("La señal GPS tardó mucho");
+          applyIpFallback("La señal GPS tardó mucho");
         } else {
-          useIpFallback("GPS no disponible");
+          applyIpFallback("GPS no disponible");
         }
       },
       { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 } // Aumentamos el timeout a 25 segundos para celulares lentos

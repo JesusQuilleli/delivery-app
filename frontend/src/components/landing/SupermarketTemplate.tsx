@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, ShoppingCart, Apple, Package, CreditCard } from "lucide-react";
 import { motion } from "framer-motion";
 
-export default function SupermarketTemplate({ store, categories, offers, combos }: any) {
+export default function SupermarketTemplate({ store, categories }: any) {
   return (
     <div className="min-h-screen bg-green-50 text-gray-900 font-sans">
       <nav className="bg-white/90 backdrop-blur-md sticky top-0 z-50 border-b border-green-100 shadow-sm">

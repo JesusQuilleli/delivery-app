@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Utensils, Clock, Star, Flame } from "lucide-react";
+import { ArrowRight, Utensils, Star, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 
-export default function RestaurantTemplate({ store, categories, offers, combos }: any) {
+export default function RestaurantTemplate({ store, categories }: any) {
   return (
     <div className="min-h-screen bg-orange-50 text-gray-900 font-sans">
       {/* Basic Navbar */}
