@@ -20,6 +20,7 @@ interface Product {
   description: string | null;
   is_available: boolean;
   is_combo: boolean;
+  stock?: number | null;
   category?: Category;
   comboItems?: { product: { name: string; id: number }; quantity: number }[];
 }
@@ -52,6 +53,8 @@ export default function ProductDetails() {
   }, []);
 
   const qty = product ? (cart.find(i => i.product_id === product.id)?.quantity || 0) : 0;
+  const soldOut = product?.stock != null && product.stock <= 0;
+  const maxed = product?.stock != null && qty >= product.stock;
 
   if (loading) {
     return (
@@ -181,10 +184,11 @@ export default function ProductDetails() {
         <div className="max-w-md mx-auto">
           {qty === 0 ? (
             <Button 
-              onClick={() => addToCart({ id: product.id, name: product.name, price: product.price })}
-              className="w-full h-14 text-lg font-black bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl shadow-xl shadow-primary/25 transition-all transform hover:-translate-y-1"
+              onClick={() => addToCart({ id: product.id, name: product.name, price: product.price, stock: product.stock })}
+              disabled={soldOut}
+              className="w-full h-14 text-lg font-black bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl shadow-xl shadow-primary/25 transition-all transform hover:-translate-y-1 disabled:opacity-50 disabled:hover:translate-y-0"
             >
-              <Plus className="mr-2 w-5 h-5" /> Añadir al Carrito
+              <Plus className="mr-2 w-5 h-5" /> {soldOut ? 'Agotado' : 'Añadir al Carrito'}
             </Button>
           ) : (
             <div className="flex items-center justify-between w-full h-14 bg-primary text-primary-foreground rounded-2xl shadow-xl shadow-primary/25 px-2">
@@ -201,8 +205,9 @@ export default function ProductDetails() {
               </div>
               <Button 
                 variant="ghost" 
-                onClick={() => addToCart({ id: product.id, name: product.name, price: product.price })}
-                className="h-10 w-10 sm:h-12 sm:w-12 hover:bg-black/10 hover:text-white rounded-xl text-white"
+                onClick={() => addToCart({ id: product.id, name: product.name, price: product.price, stock: product.stock })}
+                disabled={maxed}
+                className="h-10 w-10 sm:h-12 sm:w-12 hover:bg-black/10 hover:text-white rounded-xl text-white disabled:opacity-40"
               >
                 <Plus size={24} />
               </Button>

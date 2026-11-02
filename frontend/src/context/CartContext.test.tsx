@@ -84,6 +84,20 @@ describe('CartContext', () => {
     expect(backToA.result.current.cart[0].name).toBe('A');
   });
 
+  it('no permite superar el stock disponible', () => {
+    const { result } = renderHook(() => React.useContext(CartContext), { wrapper });
+    act(() => result.current.addToCart({ id: 1, name: 'A', price: 10, stock: 2 }));
+    act(() => result.current.addToCart({ id: 1, name: 'A', price: 10, stock: 2 }));
+    act(() => result.current.addToCart({ id: 1, name: 'A', price: 10, stock: 2 }));
+    expect(result.current.cart[0].quantity).toBe(2);
+  });
+
+  it('no agrega productos agotados', () => {
+    const { result } = renderHook(() => React.useContext(CartContext), { wrapper });
+    act(() => result.current.addToCart({ id: 1, name: 'A', price: 10, stock: 0 }));
+    expect(result.current.cart).toHaveLength(0);
+  });
+
   it('abre y cierra el drawer del carrito', () => {
     const { result } = renderHook(() => React.useContext(CartContext), { wrapper });
     act(() => result.current.setIsCartOpen(true));

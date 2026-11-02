@@ -14,6 +14,14 @@ const isAllowedTransition = (from, to) => {
   return Array.isArray(allowed) && allowed.includes(to);
 };
 
+class StockError extends Error {
+  constructor(message, details = []) {
+    super(message);
+    this.name = 'StockError';
+    this.details = details;
+  }
+}
+
 const placeOrder = async (req, res) => {
   try {
     const {
@@ -27,7 +35,7 @@ const placeOrder = async (req, res) => {
     } = req.body;
 
     // 1. Validaciones básicas
-    if (!store_id || !items || items.length === 0 || !delivery_address || !payment_method) {
+    if (!store_id || !Array.isArray(items) || items.length === 0 || !delivery_address || !payment_method) {
       return res.status(400).json({ error: 'Faltan datos obligatorios para crear el pedido' });
     }
 
@@ -42,8 +50,10 @@ const placeOrder = async (req, res) => {
       return res.status(401).json({ error: 'Usuario no autenticado' });
     }
 
+    const storeId = Number(store_id);
+
     // 2.5 Verificar la tienda y calcular distancia/tiempo
-    const store = await prisma.store.findUnique({ where: { id: Number(store_id) } });
+    const store = await prisma.store.findUnique({ where: { id: storeId } });
     if (!store) {
       return res.status(400).json({ error: 'Tienda no encontrada' });
     }
@@ -63,13 +73,32 @@ const placeOrder = async (req, res) => {
       estimated_minutes = Math.round((distance_km / 25) * 60) + 15;
     }
 
-    // 3. Validar y recalcular precios desde la base de datos (nunca confiar en el cliente)
-    const productIds = items.map(item => Number(item.product_id));
+    // 3. Normalizar cantidades y productos solicitados
+    const requested = new Map();
+    for (const item of items) {
+      const productId = Number(item.product_id);
+      const qty = Number(item.quantity);
+      if (!Number.isInteger(productId) || productId <= 0 || !Number.isInteger(qty) || qty <= 0) {
+        return res.status(400).json({ error: 'Productos y cantidades inválidas.' });
+      }
+      requested.set(productId, (requested.get(productId) || 0) + qty);
+    }
+
+    const productIds = [...requested.keys()];
     const products = await prisma.product.findMany({
       where: {
         id: { in: productIds },
-        store_id: Number(store_id),
+        store_id: storeId,
         is_available: true
+      },
+      include: {
+        comboItems: {
+          include: {
+            product: {
+              select: { id: true, name: true, stock: true, is_available: true, store_id: true }
+            }
+          }
+        }
       }
     });
 
@@ -77,61 +106,121 @@ const placeOrder = async (req, res) => {
       return res.status(400).json({ error: 'Uno o más productos no existen, no están disponibles o no pertenecen a esta tienda.' });
     }
 
-    // Construir mapa de precio real por product_id
-    const priceMap = {};
-    for (const p of products) {
-      priceMap[p.id] = p.price;
+    const productById = new Map(products.map((product) => [product.id, product]));
+
+    // 4. Calcular stock requerido, incluyendo componentes de combos
+    const requiredStock = new Map();
+    const stockInfo = new Map(products.map((product) => [product.id, product]));
+
+    for (const [productId, qty] of requested) {
+      const product = productById.get(productId);
+
+      if (product.is_combo && product.comboItems.length > 0) {
+        for (const component of product.comboItems) {
+          const item = component.product;
+          if (!item || item.store_id !== storeId || !item.is_available) {
+            return res.status(400).json({ error: `El combo "${product.name}" tiene componentes no disponibles.` });
+          }
+          if (!Number.isInteger(component.quantity) || component.quantity <= 0) {
+            return res.status(400).json({ error: `El combo "${product.name}" tiene una cantidad de componente inválida.` });
+          }
+
+          stockInfo.set(item.id, item);
+          if (item.stock !== null) {
+            requiredStock.set(item.id, (requiredStock.get(item.id) || 0) + qty * component.quantity);
+          }
+        }
+      } else if (product.stock !== null) {
+        requiredStock.set(product.id, (requiredStock.get(product.id) || 0) + qty);
+      }
     }
 
-    // Calcular total real en el servidor
+    // 5. Rechazar antes de crear la orden si no alcanza el stock
+    for (const [productId, needed] of requiredStock) {
+      const product = stockInfo.get(productId);
+      if (product.stock !== null && product.stock < needed) {
+        throw new StockError(`Stock insuficiente para "${product.name}".`, [{
+          product_id: productId,
+          name: product.name,
+          requested: needed,
+          available: product.stock
+        }]);
+      }
+    }
+
+    // 6. Calcular total real en el servidor
     let total_amount = 0;
-    const verifiedItems = items.map(item => {
-      const realPrice = priceMap[Number(item.product_id)];
-      const qty = Number(item.quantity);
-      total_amount += realPrice * qty;
+    const verifiedItems = productIds.map((productId) => {
+      const product = productById.get(productId);
+      const qty = requested.get(productId);
+      total_amount += product.price * qty;
       return {
-        product_id: Number(item.product_id),
+        product_id: productId,
         quantity: qty,
-        unit_price: realPrice
+        unit_price: product.price
       };
     });
 
-    // 4. Crear la orden con precios verificados
-    const order = await prisma.order.create({
-      data: {
-        store_id: Number(store_id),
-        user_id: user.id,
-        delivery_address,
-        latitude: latitude ? parseFloat(latitude) : null,
-        longitude: longitude ? parseFloat(longitude) : null,
-        distance_km,
-        estimated_minutes,
-        total_amount,
-        payment_method,
-        payment_reference: payment_reference || null,
-        status: payment_method === 'TRANSFER' ? 'AWAITING_PAYMENT' : 'PENDING',
-        items: {
-          create: verifiedItems.map(item => ({
-            product: { connect: { id: item.product_id } },
-            quantity: item.quantity,
-            unit_price: item.unit_price
-          }))
+    // 7. Descontar stock y crear la orden en una sola transacción
+    const order = await prisma.$transaction(async (tx) => {
+      for (const [productId, needed] of requiredStock) {
+        const updated = await tx.product.updateMany({
+          where: {
+            id: productId,
+            store_id: storeId,
+            stock: { gte: needed }
+          },
+          data: { stock: { decrement: needed } }
+        });
+
+        if (updated.count !== 1) {
+          const product = stockInfo.get(productId);
+          throw new StockError(`Stock insuficiente para "${product.name}".`, [{
+            product_id: productId,
+            name: product.name,
+            requested: needed,
+            available: null
+          }]);
         }
-      },
-      include: {
-        items: {
-          include: {
-            product: true
+      }
+
+      return tx.order.create({
+        data: {
+          store_id: storeId,
+          user_id: user.id,
+          delivery_address,
+          latitude: latitude ? parseFloat(latitude) : null,
+          longitude: longitude ? parseFloat(longitude) : null,
+          distance_km,
+          estimated_minutes,
+          total_amount,
+          payment_method,
+          payment_reference: payment_reference || null,
+          status: payment_method === 'TRANSFER' ? 'AWAITING_PAYMENT' : 'PENDING',
+          items: {
+            create: verifiedItems.map(item => ({
+              product: { connect: { id: item.product_id } },
+              quantity: item.quantity,
+              unit_price: item.unit_price
+            }))
           }
         },
-        user: true
-      }
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          },
+          user: true
+        }
+      });
     });
 
-    // 5. Emitir el evento de WebSockets usando 'io'
+    // 8. Emitir el evento de WebSockets usando 'io'
     const io = req.app.get('io');
-    const room = `store_${store_id}`;
-    io.to(room).emit('nuevo_pedido', order);
+    if (io) {
+      io.to(`store_${storeId}`).emit('nuevo_pedido', order);
+    }
 
     res.json({
       message: 'Pedido creado exitosamente',
@@ -140,6 +229,9 @@ const placeOrder = async (req, res) => {
     });
 
   } catch (error) {
+    if (error instanceof StockError) {
+      return res.status(400).json({ error: error.message, details: error.details });
+    }
     console.error('Error al procesar pedido:', error);
     res.status(500).json({ error: 'Error interno al procesar el pedido' });
   }

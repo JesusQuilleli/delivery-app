@@ -1,6 +1,6 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { req, adminToken, superadminToken, clientToken, getDemoProduct, prisma } = require('./helpers');
+const { req, adminToken, superadminToken, clientToken, prisma } = require('./helpers');
 
 const admin = adminToken();
 const superadmin = superadminToken();
@@ -12,7 +12,15 @@ let testOrderIds = [];
 let product = null;
 
 before(async () => {
-  product = await getDemoProduct();
+  product = await prisma.product.create({
+    data: {
+      store_id: 1,
+      name: `Test Order Product ${Date.now()}`,
+      price: 10.25,
+      stock: 100000,
+      is_available: true
+    }
+  });
   clientUser = await prisma.user.create({
     data: {
       email: `order-${Date.now()}@example.com`,
@@ -31,6 +39,7 @@ after(async () => {
     await prisma.order.delete({ where: { id } }).catch(() => {});
   }
   if (clientUser) await prisma.user.delete({ where: { id: clientUser.id } }).catch(() => {});
+  if (product) await prisma.product.delete({ where: { id: product.id } }).catch(() => {});
 });
 
 async function placeOrder(extra = {}) {

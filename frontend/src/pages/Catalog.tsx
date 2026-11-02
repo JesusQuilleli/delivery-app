@@ -22,6 +22,7 @@ interface Product {
   is_combo?: boolean;
   description?: string | null;
   category_id?: number | null;
+  stock?: number | null;
 }
 
 export default function Catalog() {
@@ -166,6 +167,8 @@ export default function Catalog() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
                 {products.map(p => {
                   const qty = getProductQuantity(p.id);
+                  const soldOut = p.stock != null && p.stock <= 0;
+                  const maxed = p.stock != null && qty >= p.stock;
                 return (
                   <Card key={p.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 border-border group flex flex-col h-full bg-card">
                     <div 
@@ -201,10 +204,11 @@ export default function Catalog() {
     </Button>
     {qty === 0 ? (
       <Button 
-        onClick={() => addToCart({ id: p.id, name: p.name, price: p.price })}
-        className="flex-1 font-bold shadow-sm hover:shadow-md transition-all text-[10px] sm:text-sm h-8 sm:h-10 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg sm:rounded-xl px-1 whitespace-nowrap"
+        onClick={() => addToCart({ id: p.id, name: p.name, price: p.price, stock: p.stock })}
+        disabled={soldOut}
+        className="flex-1 font-bold shadow-sm hover:shadow-md transition-all text-[10px] sm:text-sm h-8 sm:h-10 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg sm:rounded-xl px-1 whitespace-nowrap disabled:opacity-50"
       >
-        Agregar
+        {soldOut ? 'Agotado' : 'Agregar'}
       </Button>
     ) : (
       <div className="flex items-center justify-between w-full bg-primary/10 rounded-lg sm:rounded-xl p-0.5 sm:p-1 border border-primary/20 h-8 sm:h-10 flex-1">
@@ -220,8 +224,9 @@ export default function Catalog() {
         <Button 
           variant="ghost" 
           size="icon"
-          onClick={() => addToCart({ id: p.id, name: p.name, price: p.price })}
-          className="h-7 w-6 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 hover:text-primary rounded-lg"
+          onClick={() => addToCart({ id: p.id, name: p.name, price: p.price, stock: p.stock })}
+          disabled={maxed}
+          className="h-7 w-6 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 hover:text-primary rounded-lg disabled:opacity-40"
         >
           <Plus size={13} className="sm:w-4 sm:h-4" />
         </Button>
