@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const http = require('http');
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 
 const storeRoutes = require('./routes/storeRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -13,6 +14,7 @@ const inventoryRoutes = require('./routes/inventoryRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const superadminRoutes = require('./routes/superadminRoutes');
 const { globalLimiter } = require('./middleware/rateLimiter');
+const { JWT_SECRET } = require('./middleware/authMiddleware');
 
 const app = express();
 const server = http.createServer(app);
@@ -24,9 +26,10 @@ const defaultOrigins = [
   'https://test.shop-mg.com',
   'http://localhost:5173'
 ];
-// Orígenes de desarrollo en red local (móvil probando contra el PC)
+// Orígenes de desarrollo en red local (solo en desarrollo)
 const isDevOrigin = (origin) => {
   if (!origin) return false;
+  if (process.env.NODE_ENV === 'production') return false;
   try {
     const { hostname } = new URL(origin);
     return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.16.');
@@ -39,13 +42,19 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? [...new Set([...defaultOrigins, ...process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)])]
   : defaultOrigins;
 
-console.log('🌐 Orígenes CORS permitidos:', allowedOrigins);
+console.log('🛡️ Orígenes CORS permitidos:', allowedOrigins);
 
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Permitir peticiones sin origen (ej. Postman, scripts de backend a backend)
-    if (!origin || allowedOrigins.includes(origin) || isDevOrigin(origin)) {
+    // Permitir peticiones sin origen solo en desarrollo (nunca en producción)
+    if (!origin) {
+      if (process.env.NODE_ENV === 'production') {
+        return callback(new Error('CORS: Origen requerido'));
+      }
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin) || isDevOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error(`CORS: Origen no permitido: ${origin}`));
@@ -60,7 +69,13 @@ const corsOptions = {
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || isDevOrigin(origin)) {
+      if (!origin) {
+        if (process.env.NODE_ENV === 'production') {
+          return callback(new Error('CORS: Origen requerido'));
+        }
+        return callback(null, true);
+      }
+      if (allowedOrigins.includes(origin) || isDevOrigin(origin)) {
         callback(null, true);
       } else {
         callback(new Error(`CORS: Origen no permitido: ${origin}`));

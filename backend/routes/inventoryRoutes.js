@@ -13,6 +13,15 @@ const {
   createProductsBulk
 } = require('../controllers/inventoryController');
 const { requireStoreAdmin, requireAdmin } = require('../middleware/authMiddleware');
+const validate = require('../middleware/validate');
+const {
+  createProductSchema,
+  updateProductSchema,
+  createComboSchema,
+  createProductsBulkSchema,
+  createCategorySchema,
+  updateCategorySchema
+} = require('../validations/inventoryValidation');
 const prisma = require('../prismaClient');
 
 /**
@@ -53,24 +62,24 @@ const requireResourceOwnership = (resourceType) => async (req, res, next) => {
 router.get('/:slug/inventory', requireStoreAdmin, getInventory);
 
 // Crear producto individual
-router.post('/:slug/products', requireStoreAdmin, createProduct);
+router.post('/:slug/products', requireStoreAdmin, validate(createProductSchema), createProduct);
 
 // Crear productos en batch (Excel/CSV)
-router.post('/:slug/products/bulk', requireStoreAdmin, createProductsBulk);
+router.post('/:slug/products/bulk', requireStoreAdmin, validate(createProductsBulkSchema), createProductsBulk);
 
 // Crear combo
-router.post('/:slug/combos', requireStoreAdmin, createCombo);
+router.post('/:slug/combos', requireStoreAdmin, validate(createComboSchema), createCombo);
 
 // Actualizar producto o combo (verifica que pertenezca a la tienda del admin)
-router.put('/products/:id', requireResourceOwnership('product'), updateProduct);
+router.put('/products/:id', requireResourceOwnership('product'), validate(updateProductSchema), updateProduct);
 
 // Eliminar producto o combo
 router.delete('/products/:id', requireResourceOwnership('product'), deleteProduct);
 
 // ================= CATEGORÍAS ================= //
 router.get('/:slug/categories', requireStoreAdmin, getCategories);
-router.post('/:slug/categories', requireStoreAdmin, createCategory);
-router.put('/categories/:id', requireResourceOwnership('category'), updateCategory);
+router.post('/:slug/categories', requireStoreAdmin, validate(createCategorySchema), createCategory);
+router.put('/categories/:id', requireResourceOwnership('category'), validate(updateCategorySchema), updateCategory);
 router.delete('/categories/:id', requireResourceOwnership('category'), deleteCategory);
 
 module.exports = router;

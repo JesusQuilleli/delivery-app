@@ -1,5 +1,19 @@
 const prisma = require('../prismaClient');
 
+const validTransitions = {
+  'AWAITING_PAYMENT': ['PENDING', 'CANCELLED'],
+  'PENDING': ['ACCEPTED', 'CANCELLED'],
+  'ACCEPTED': ['DISPATCHED', 'CANCELLED'],
+  'DISPATCHED': ['DELIVERED'],
+  'DELIVERED': [],
+  'CANCELLED': []
+};
+
+const isAllowedTransition = (from, to) => {
+  const allowed = validTransitions[from];
+  return Array.isArray(allowed) && allowed.includes(to);
+};
+
 const placeOrder = async (req, res) => {
   try {
     const {
@@ -150,15 +164,8 @@ const updateOrderStatus = async (req, res) => {
       return res.status(403).json({ error: 'No tienes permisos sobre este pedido' });
     }
 
-    const validTransitions = {
-      'AWAITING_PAYMENT': ['PENDING', 'CANCELLED'],
-      'PENDING': ['ACCEPTED', 'CANCELLED'],
-      'ACCEPTED': ['DISPATCHED', 'CANCELLED'],
-      'DISPATCHED': ['DELIVERED'],
-    };
-
-    const allowed = validTransitions[existingOrder.status];
-    if (allowed && !allowed.includes(status)) {
+    const allowed = isAllowedTransition(existingOrder.status, status);
+    if (!allowed) {
       return res.status(409).json({ error: `No se puede cambiar de ${existingOrder.status} a ${status}. Estado actual ya fue modificado.` });
     }
 
@@ -249,10 +256,14 @@ const rateOrder = async (req, res) => {
       return res.status(403).json({ error: 'No tienes permiso para calificar este pedido' });
     }
 
+    // Solo se puede calificar un pedido ya entregado
+    if (existingOrder.status !== 'DELIVERED') {
+      return res.status(400).json({ error: 'Solo puedes calificar pedidos ya entregados.' });
+    }
+
     const order = await prisma.order.update({
       where: { id: Number(id) },
       data: { 
-        status: 'DELIVERED', // Se marca como entregado implícitamente
         client_rating: rating,
         client_review: review || null
       },
@@ -357,15 +368,21 @@ const batchUpdateStatus = async (req, res) => {
       ? orders
       : orders.filter(o => o.store_id === user.store_id);
 
-    const validIds = validForStore.map(o => o.id);
-    const failedIds = order_ids.filter(id => !validIds.includes(id));
+    const ownedIds = validForStore.map(o => o.id);
+    const deniedIds = order_ids.filter(id => !ownedIds.includes(id));
 
-    if (validIds.length === 0) {
-      return res.status(403).json({ error: 'No tienes permisos sobre estos pedidos', updated: 0, failed: failedIds });
+    const transitionAllowedIds = validForStore
+      .filter(o => isAllowedTransition(o.status, status))
+      .map(o => o.id);
+
+    const invalidTransitionIds = ownedIds.filter(id => !transitionAllowedIds.includes(id));
+
+    if (transitionAllowedIds.length === 0) {
+      return res.status(409).json({ error: 'Ninguno de los pedidos puede cambiar a ese estado', updated: 0, failed: [...deniedIds, ...invalidTransitionIds] });
     }
 
     const result = await prisma.order.updateMany({
-      where: { id: { in: validIds } },
+      where: { id: { in: transitionAllowedIds } },
       data: {
         status,
         cancel_reason: cancel_reason || undefined
@@ -374,7 +391,7 @@ const batchUpdateStatus = async (req, res) => {
 
     const io = req.app.get('io');
     const updatedOrders = await prisma.order.findMany({
-      where: { id: { in: validIds } },
+      where: { id: { in: transitionAllowedIds } },
       include: { user: true, items: { include: { product: true } }, driver: true }
     });
 
@@ -383,7 +400,7 @@ const batchUpdateStatus = async (req, res) => {
       io.to(`store_${order.store_id}`).emit('pedido_actualizado', order);
     }
 
-    res.json({ message: `${result.count} pedidos actualizados`, updated: result.count, failed: failedIds });
+    res.json({ message: `${result.count} pedidos actualizados`, updated: result.count, failed: [...deniedIds, ...invalidTransitionIds] });
   } catch (error) {
     console.error('Error en batch update:', error);
     res.status(500).json({ error: 'Error interno al actualizar pedidos' });
@@ -393,6 +410,16 @@ const batchUpdateStatus = async (req, res) => {
 const markOrderViewed = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const existing = await prisma.order.findUnique({
+      where: { id: Number(id) },
+      select: { id: true }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+
     await prisma.order.update({
       where: { id: Number(id) },
       data: { viewed: true }
