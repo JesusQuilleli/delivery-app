@@ -6,7 +6,7 @@
 - **Última actualización:** 2026-11-01
 - **Rama actual:** `feature/security-hardening`
 - **Rama principal:** `main`
-- **Estado general:** Fase 0 completada; siguiente F1-01
+- **Estado general:** F1-01 completada; siguiente F1-02
 - **Zona del piloto:** Puerto Ayacucho, Amazonas
 - **Segmento:** farmacias independientes y cadenas pequeñas
 
@@ -177,7 +177,7 @@ Si 3 o más farmacias exigen recetas o lotes, agregar la Fase 2C (3–5 días).
 | P-03 | Tiendas inactivas siguen operando | Alta |
 | P-04 | Sin pruebas E2E ni pruebas de carga | Media |
 | P-05 | Sin zonas ni tarifas de delivery configurables | Alta |
-| P-06 | Lint con 89 advertencias: `any`, efectos con setState y exports de UI | Media |
+| P-06 | Lint con 88 advertencias: `any`, efectos con setState y exports de UI | Media |
 | P-07 | Bundle principal de ~1 MB sin code splitting | Media |
 | P-08 | Las pruebas de API requieren esperar a que el servidor esté listo | Baja |
 | P-09 | Resend rechaza correos `example.com`; las pruebas usan el código de la DB | Baja |
@@ -223,7 +223,7 @@ Si 3 o más farmacias exigen recetas o lotes, agregar la Fase 2C (3–5 días).
 
 #### Sesión y contexto de tienda
 
-- [ ] F1-01 Restaurar sesión con `/auth/refresh` al iniciar la app.
+- [x] F1-01 Restaurar sesión con `/auth/refresh` al iniciar la app.
 - [ ] F1-02 Manejar expiración real (401) sin cerrar sesión por errores de red.
 - [ ] F1-03 Derivar tienda, moneda y configuración desde el `slug`.
 - [ ] F1-04 Eliminar la dependencia de `current_store_id` en `localStorage`.
@@ -551,7 +551,7 @@ npm run build
 
 | Fecha | Backend unitario | Backend API | Frontend | Lint | Typecheck | Build | Notas |
 |---|---|---|---|---|---|---|---|
-| 2026-11-01 | 23/23 | 63/63 | 32/32 | 0 errores, 89 warnings | Correcto | Correcto | Fase 0 completada. Bundle ~1 MB. API requiere servidor listo. |
+| 2026-11-01 | 23/23 | 63/63 | 33/33 | 0 errores, 88 warnings | Correcto | Correcto | Fase 0 completada; F1-01 con prueba de restauración por cookie. Bundle ~1 MB. |
 
 ---
 
@@ -562,7 +562,8 @@ npm run build
 | 2026-11-01 | Plan creado | Hecho | Decisiones comerciales y técnicas cerradas |
 | 2026-11-01 | Fase 0 | Hecho | Línea base `c7c0377`, `.env.example`, scripts y CI |
 | 2026-11-01 | Fase 0 pruebas | Hecho | Backend 86/86, frontend 32/32, lint sin errores, build OK |
-| 2026-11-01 | F1-01 | Pendiente | Restaurar sesión con `/auth/refresh` al iniciar |
+| 2026-11-01 | F1-01 | Hecho | Refresh al montar, `isInitializing` y espera en `ProtectedRoute`; no cierra sesión por errores de red |
+| 2026-11-01 | F1-02 | Pendiente | Validar expiración real 401 y errores de red |
 |  |  |  |  |
 
 Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
@@ -583,16 +584,16 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 
 ## 12. Punto de continuación
 
-**Fase 0 completada.** Continuar con **F1-01**.
+**Fase 0 y F1-01 completadas.** Continuar con **F1-02**.
 
-### Primeros pasos de F1-01
+### Primeros pasos de F1-02
 
-1. Leer `frontend/src/context/AuthContext.tsx`, `frontend/src/api.ts`, `backend/controllers/authController.js` y `backend/routes/authRoutes.js`.
-2. Confirmar el contrato actual de `/auth/refresh` y el nombre de la cookie.
-3. Implementar un intento de refresh al montar la app cuando no haya usuario en `sessionStorage`, sin cerrar sesión ante errores de red.
-4. Actualizar `AuthContext.test.tsx` con el caso de nueva pestaña y el caso 401 real.
+1. Revisar el interceptor de `frontend/src/api.ts` y el refresh periódico de `AuthContext.tsx`.
+2. Probar en navegador: sin cookie, cookie válida, cookie expirada, red caída y servidor 500.
+3. Confirmar que solo un 401 real limpia la sesión; un error de red conserva al usuario.
+4. Agregar pruebas para error de red y 500 en `AuthContext.test.tsx`.
 5. Ejecutar `npm run typecheck`, `npm test` y `npm run lint` en frontend.
-6. Registrar el avance y hacer commit con `F1-01`.
+6. Registrar el avance y hacer commit con `F1-02`.
 
 ### Cómo ejecutar las pruebas de API
 

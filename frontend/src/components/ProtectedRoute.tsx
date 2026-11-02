@@ -8,9 +8,13 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, token } = useContext(AuthContext);
+  const { user, token, isInitializing } = useContext(AuthContext);
   const { slug } = useParams<{ slug: string }>();
   const location = useLocation();
+
+  if (isInitializing) {
+    return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
+  }
 
   if (!token || !user) {
     return <Navigate to="/admin-login" state={{ from: location.pathname }} replace />;

@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import api from '../api';
 
 const clearLocalSession = () => {
@@ -21,6 +21,7 @@ interface User {
 interface AuthContextType {
   token: boolean;
   user: User | null;
+  isInitializing: boolean;
   login: (userData: User) => void;
   logout: () => void;
 }
@@ -37,7 +38,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
+  const [isInitializing, setIsInitializing] = useState(true);
+  const hadStoredUser = useRef(user !== null);
   const token = user !== null;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreSession = async () => {
+      if (hadStoredUser.current) {
+        setIsInitializing(false);
+        return;
+      }
+
+      try {
+        const res = await api.post('/auth/refresh');
+        if (!cancelled && res.data.user) {
+          setUser(res.data.user);
+          sessionStorage.setItem('user', JSON.stringify(res.data.user));
+        }
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (!cancelled && status === 401 && !sessionStorage.getItem('user')) {
+          setUser(null);
+          clearLocalSession();
+        }
+      } finally {
+        if (!cancelled) setIsInitializing(false);
+      }
+    };
+
+    restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const login = useCallback((userData: User) => {
     setUser(userData);
@@ -76,10 +112,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(updatedUser);
           sessionStorage.setItem('user', JSON.stringify(updatedUser));
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Solo cerrar sesión si es 401 real (token expirado/inválido)
         // No cerrar sesión por errores de red o timeouts
-        if (!cancelled && err?.response?.status === 401) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (!cancelled && status === 401) {
           setUser(null);
           sessionStorage.removeItem('user');
         }
@@ -99,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout }}>
+    <AuthContext.Provider value={{ token, user, isInitializing, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

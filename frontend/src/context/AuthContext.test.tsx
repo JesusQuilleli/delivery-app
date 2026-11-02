@@ -51,6 +51,21 @@ describe('AuthContext', () => {
     expect(sessionStorage.getItem('user')).toBeNull();
   });
 
+  it('restaura la sesión desde la cookie al montar sin sessionStorage', async () => {
+    mock.onPost('/auth/refresh').reply(200, {
+      user: { id: 9, name: 'Cookie', role: 'CLIENT' },
+    });
+
+    const { result } = renderHook(useAuth, { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.user).toEqual({ id: 9, name: 'Cookie', role: 'CLIENT' });
+    });
+    expect(result.current.token).toBe(true);
+    expect(result.current.isInitializing).toBe(false);
+    expect(sessionStorage.getItem('user')).toContain('Cookie');
+  });
+
   it('limpia la sesión si refresh devuelve 401', async () => {
     mock.onPost('/auth/refresh').reply(401, { error: 'Expirado' });
     const { result } = renderHook(useAuth, { wrapper });
