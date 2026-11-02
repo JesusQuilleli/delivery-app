@@ -6,7 +6,7 @@
 - **Última actualización:** 2026-11-01
 - **Rama actual:** `feature/security-hardening`
 - **Rama principal:** `main`
-- **Estado general:** F1-01 completada; siguiente F1-02
+- **Estado general:** F1-02 completada; siguiente F1-03
 - **Zona del piloto:** Puerto Ayacucho, Amazonas
 - **Segmento:** farmacias independientes y cadenas pequeñas
 
@@ -224,7 +224,7 @@ Si 3 o más farmacias exigen recetas o lotes, agregar la Fase 2C (3–5 días).
 #### Sesión y contexto de tienda
 
 - [x] F1-01 Restaurar sesión con `/auth/refresh` al iniciar la app.
-- [ ] F1-02 Manejar expiración real (401) sin cerrar sesión por errores de red.
+- [x] F1-02 Manejar expiración real (401) sin cerrar sesión por errores de red.
 - [ ] F1-03 Derivar tienda, moneda y configuración desde el `slug`.
 - [ ] F1-04 Eliminar la dependencia de `current_store_id` en `localStorage`.
 - [ ] F1-05 Verificar checkout directo sin visitar el catálogo.
@@ -551,7 +551,7 @@ npm run build
 
 | Fecha | Backend unitario | Backend API | Frontend | Lint | Typecheck | Build | Notas |
 |---|---|---|---|---|---|---|---|
-| 2026-11-01 | 23/23 | 63/63 | 33/33 | 0 errores, 88 warnings | Correcto | Correcto | Fase 0 completada; F1-01 con prueba de restauración por cookie. Bundle ~1 MB. |
+| 2026-11-01 | 23/23 | 63/63 | 35/35 | 0 errores, 88 warnings | Correcto | Correcto | Fase 0, F1-01 y F1-02 completadas. Bundle ~1 MB. |
 
 ---
 
@@ -563,7 +563,8 @@ npm run build
 | 2026-11-01 | Fase 0 | Hecho | Línea base `c7c0377`, `.env.example`, scripts y CI |
 | 2026-11-01 | Fase 0 pruebas | Hecho | Backend 86/86, frontend 32/32, lint sin errores, build OK |
 | 2026-11-01 | F1-01 | Hecho | Refresh al montar, `isInitializing` y espera en `ProtectedRoute`; no cierra sesión por errores de red |
-| 2026-11-01 | F1-02 | Pendiente | Validar expiración real 401 y errores de red |
+| 2026-11-01 | F1-02 | Hecho | Solo 401 limpia sesión; red y 500 conservan usuario; 2 pruebas nuevas |
+| 2026-11-01 | F1-03 | Pendiente | Derivar tienda, moneda y configuración desde el slug |
 |  |  |  |  |
 
 Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
@@ -584,16 +585,16 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 
 ## 12. Punto de continuación
 
-**Fase 0 y F1-01 completadas.** Continuar con **F1-02**.
+**Fase 0, F1-01 y F1-02 completadas.** Continuar con **F1-03**.
 
-### Primeros pasos de F1-02
+### Primeros pasos de F1-03
 
-1. Revisar el interceptor de `frontend/src/api.ts` y el refresh periódico de `AuthContext.tsx`.
-2. Probar en navegador: sin cookie, cookie válida, cookie expirada, red caída y servidor 500.
-3. Confirmar que solo un 401 real limpia la sesión; un error de red conserva al usuario.
-4. Agregar pruebas para error de red y 500 en `AuthContext.test.tsx`.
-5. Ejecutar `npm run typecheck`, `npm test` y `npm run lint` en frontend.
-6. Registrar el avance y hacer commit con `F1-02`.
+1. Rastrear todos los usos de `current_store_id`, `localStorage` y `slug` en el frontend.
+2. Revisar cómo `Layout`, `Catalog`, `Checkout`, `MyOrders` y las plantillas obtienen la tienda.
+3. Hacer que la tienda, moneda y configuración se derivan de la respuesta de `/stores/:slug/products`.
+4. Eliminar la dependencia de `current_store_id` en `localStorage`.
+5. Probar checkout directo con el slug y `/mis-pedidos` conservando el slug.
+6. Ejecutar `npm run typecheck`, `npm test` y `npm run lint`; registrar y commitear `F1-03`.
 
 ### Cómo ejecutar las pruebas de API
 

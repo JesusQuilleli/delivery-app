@@ -18,6 +18,7 @@ describe('AuthContext', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -79,6 +80,36 @@ describe('AuthContext', () => {
       { timeout: 8000 }
     );
   }, 12000);
+
+  it('conserva la sesión si el refresh falla por red', async () => {
+    vi.useFakeTimers();
+    sessionStorage.setItem('user', JSON.stringify({ id: 3, name: 'Red' }));
+    mock.onPost('/auth/refresh').networkError();
+
+    const { result } = renderHook(useAuth, { wrapper });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    expect(result.current.user).toEqual({ id: 3, name: 'Red' });
+    expect(result.current.token).toBe(true);
+    expect(sessionStorage.getItem('user')).toContain('Red');
+  });
+
+  it('conserva la sesión si el refresh devuelve 500', async () => {
+    vi.useFakeTimers();
+    sessionStorage.setItem('user', JSON.stringify({ id: 4, name: 'Servidor' }));
+    mock.onPost('/auth/refresh').reply(500, { error: 'Error interno' });
+
+    const { result } = renderHook(useAuth, { wrapper });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    expect(result.current.user).toEqual({ id: 4, name: 'Servidor' });
+    expect(result.current.token).toBe(true);
+    expect(sessionStorage.getItem('user')).toContain('Servidor');
+  });
 
   it('el evento auth:session-expired limpia la sesión', () => {
     mock.onPost('/auth/refresh').reply(401, { error: 'Sin sesión' });
