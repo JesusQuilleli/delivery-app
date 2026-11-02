@@ -17,6 +17,14 @@ import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-lea
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
+interface StoreConfig {
+  id: number;
+  currency?: string;
+  usd_rate?: number;
+  ves_rate?: number;
+  cop_rate?: number;
+}
+
 // @ts-ignore
 import icon from 'leaflet/dist/images/marker-icon.png';
 // @ts-ignore
@@ -54,9 +62,10 @@ export default function Checkout() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { cart, total, clearCart } = useContext(CartContext);
-  const { token, login, user } = useContext(AuthContext);
+  const { token, login, user, isInitializing } = useContext(AuthContext);
 
   const [step, setStep] = useState(token ? 3 : 1);
+  const currentStep = token && step === 1 ? 3 : step;
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+58');
   const [rawPhone, setRawPhone] = useState('');
@@ -89,8 +98,8 @@ export default function Checkout() {
   const [orderStatus, setOrderStatus] = useState<string>('PENDING');
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
   const [orderId, setOrderId] = useState<number | null>(null);
-  const [storeConfig, setStoreConfig] = useState<any>(null);
-  const storeId = localStorage.getItem('current_store_id');
+  const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
+  const storeId = storeConfig?.id;
 
   useEffect(() => {
     api.get(`/stores/${slug}/products`).then(res => {
@@ -99,7 +108,8 @@ export default function Checkout() {
   }, [slug]);
 
   useEffect(() => {
-    if (step === 5 && user?.id) {
+    if (isInitializing) return;
+    if (currentStep === 5 && user?.id) {
       // 1. Carga el estado REAL desde la BD al entrar (no depender solo del socket)
       const syncFromDb = async () => {
         try {
@@ -124,7 +134,7 @@ export default function Checkout() {
       socket.on('estado_actualizado', (order) => setOrderStatus(order.status));
       return () => { socket.disconnect(); };
     }
-  }, [step, user?.id, orderId]);
+  }, [currentStep, isInitializing, user?.id, orderId]);
 
   // Autocomplete logic para LocationIQ (Búsqueda inteligente)
   useEffect(() => {
@@ -278,12 +288,16 @@ export default function Checkout() {
   }, [mapPosition]);
 
   useEffect(() => {
-    if (cart.length === 0 && step !== 5) {
+    if (cart.length === 0 && currentStep !== 5) {
       navigate(`/${slug}`);
     }
-  }, [cart, navigate, slug, step]);
+  }, [cart, navigate, slug, currentStep]);
 
   const requestOtp = async () => {
+    if (!storeId) {
+      toast.error('Cargando información de la tienda. Intenta de nuevo.');
+      return;
+    }
     setLoading(true);
     try {
       const res = await api.post('/auth/check-email', { email, store_id: storeId });
@@ -308,6 +322,10 @@ export default function Checkout() {
   };
 
   const resendOtp = async () => {
+    if (!storeId) {
+      toast.error('Cargando información de la tienda. Intenta de nuevo.');
+      return;
+    }
     setLoading(true);
     try {
       await api.post('/auth/check-email', { email, store_id: storeId });
@@ -320,6 +338,10 @@ export default function Checkout() {
   };
 
   const verifyOtp = async () => {
+    if (!storeId) {
+      toast.error('Cargando información de la tienda. Intenta de nuevo.');
+      return;
+    }
     setLoading(true);
     try {
       const res = await api.post('/auth/verify-otp', { email, code: otp, store_id: storeId, name, phone });
@@ -333,6 +355,10 @@ export default function Checkout() {
   };
 
   const confirmOrder = async () => {
+    if (!storeId) {
+      toast.error('Cargando información de la tienda. Intenta de nuevo.');
+      return;
+    }
     setLoading(true);
     try {
       const res = await api.post('/orders/place', {
@@ -368,7 +394,7 @@ export default function Checkout() {
   };
 
   const renderStep = () => {
-    switch (step) {
+    switch (currentStep) {
       case 1:
         return (
           <Card className="border-none shadow-2xl backdrop-blur-xl bg-white/90">
@@ -623,7 +649,7 @@ export default function Checkout() {
                   <div className="bg-white p-4 rounded-xl text-center border border-emerald-100 shadow-sm mt-4">
                     <span className="text-gray-500 text-sm">Monto a tener listo:</span><br/>
                     <strong className="text-2xl text-emerald-700 font-black">
-                      {cashCurrency === storeConfig?.currency ? formatPrice(total, cashCurrency) : (getConversions(total, storeConfig) as any)?.[cashCurrency]}
+                      {cashCurrency === storeConfig?.currency ? formatPrice(total, cashCurrency) : getConversions(total, storeConfig)?.[cashCurrency]}
                     </strong>
                   </div>
                 </div>
@@ -754,17 +780,17 @@ export default function Checkout() {
   return (
     <div className="px-4 pt-10 pb-20 min-h-[80vh] flex flex-col justify-center bg-gray-50">
       <div className="max-w-md mx-auto w-full">
-        {step < 5 && (
+        {currentStep < 5 && (
           <div className="flex justify-between items-center mb-10 px-4 relative">
             <div className="absolute left-8 right-8 h-1.5 bg-gray-200 top-4 -z-10 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-orange-500 transition-all duration-500" 
-                style={{ width: `${((step - 1) / 3) * 100}%` }}
+                style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
               ></div>
             </div>
             {[1, 2, 3, 4].map(s => (
               <div key={s} className="flex flex-col items-center gap-2">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm transition-all duration-500 ${step >= s ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-110' : 'bg-white text-gray-400 border-2 border-gray-200'}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm transition-all duration-500 ${currentStep >= s ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-110' : 'bg-white text-gray-400 border-2 border-gray-200'}`}>
                   {s}
                 </div>
               </div>

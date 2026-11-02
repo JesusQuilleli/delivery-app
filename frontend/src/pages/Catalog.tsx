@@ -71,7 +71,6 @@ export default function Catalog() {
         } else {
           setTotalPages(1);
         }
-        localStorage.setItem('current_store_id', res.data.store.id.toString());
       })
       .catch(err => console.error("Error cargando productos", err))
       .finally(() => setIsLoading(false));

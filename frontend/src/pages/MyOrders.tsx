@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
 import { AuthContext } from '../context/AuthContext';
 import { Card, CardContent } from '../components/ui/card';
@@ -12,7 +12,8 @@ import { formatPrice } from '../utils/currency';
 import { createSocket } from '../lib/socket';
 
 export default function MyOrders() {
-  const { token, user } = useContext(AuthContext);
+  const { token, user, isInitializing } = useContext(AuthContext);
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,8 +61,9 @@ export default function MyOrders() {
   };
 
   useEffect(() => {
+    if (isInitializing) return;
     if (!token) {
-      navigate('/');
+      navigate(slug ? `/${slug}` : '/');
       return;
     }
     const fetchOrders = async () => {
@@ -74,7 +76,7 @@ export default function MyOrders() {
       setLoading(false);
     };
     fetchOrders();
-  }, [token, navigate]);
+  }, [token, isInitializing, navigate, slug]);
 
   // Sockets para actualización en tiempo real en todo el historial
   useEffect(() => {

@@ -5,9 +5,16 @@ export const formatPrice = (price: number, currency: string = 'USD') => {
   return `$${price.toFixed(2)}`;
 };
 
-export const getConversions = (price: number, store: any) => {
+interface StoreRates {
+  currency?: string;
+  usd_rate?: number;
+  ves_rate?: number;
+  cop_rate?: number;
+}
+
+export const getConversions = (price: number, store: StoreRates | null | undefined) => {
   if (!store) return null;
-  
+
   const base = store.currency || 'USD';
   const usdRate = store.usd_rate || 1;
   const vesRate = store.ves_rate || 36.5;
