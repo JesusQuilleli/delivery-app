@@ -517,6 +517,8 @@ const quoteStoreDelivery = async (req, res) => {
       estimated_minutes: quote.estimated_minutes,
       delivery_fee: quote.delivery_fee,
       zone: quote.zone ? { id: quote.zone.id, name: quote.zone.name } : null,
+      in_range: quote.in_range,
+      coverage: quote.coverage,
       currency: store.currency
     });
   } catch (error) {

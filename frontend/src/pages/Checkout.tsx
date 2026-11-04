@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useRef, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { CartContext } from '../context/CartContext';
@@ -9,7 +9,7 @@ import { createSocket } from '../lib/socket';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Phone, MapPin, CreditCard, ChevronRight, CheckCircle2, ShieldCheck, User as UserIcon, LocateFixed } from 'lucide-react';
+import { Phone, MapPin, CreditCard, ChevronRight, CheckCircle2, ShieldCheck, User as UserIcon, LocateFixed, Home, Briefcase, AlertTriangle, Navigation } from 'lucide-react';
 import LoadingOverlay from '../components/LoadingOverlay';
 import { toast } from 'sonner';
 
@@ -19,6 +19,9 @@ import L from 'leaflet';
 
 interface StoreConfig {
   id: number;
+  name?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   currency?: string;
   usd_rate?: number;
   ves_rate?: number;
@@ -47,7 +50,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 // @ts-ignore
 function LocationMarker({ position, setPosition }) {
   const map = useMap();
-  
+
   useEffect(() => {
     if (position) {
       map.flyTo(position, 16);
@@ -61,7 +64,16 @@ function LocationMarker({ position, setPosition }) {
   });
 
   return position === null ? null : (
-    <Marker position={position}></Marker>
+    <Marker
+      position={position}
+      draggable
+      eventHandlers={{
+        dragend: (event: L.DragEndEvent) => {
+          const { lat, lng } = event.target.getLatLng();
+          setPosition([lat, lng]);
+        }
+      }}
+    ></Marker>
   )
 }
 
@@ -86,19 +98,28 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
 
   const [addressQuery, setAddressQuery] = useState(localStorage.getItem('last_address') || '');
-  const [addressSuggestions, setAddressSuggestions] = useState<{ display_name: string; lat: string; lon: string }[]>([]);
+  const [addressSuggestions, setAddressSuggestions] = useState<{ place_id?: number | string; display_name: string; latitude: number; longitude: number; address?: Record<string, string | null> }[]>([]);
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  
+
   const [address, setAddress] = useState(localStorage.getItem('last_address') || '');
   const [addressDetails, setAddressDetails] = useState(localStorage.getItem('last_address_details') || '');
   const [latitude, setLatitude] = useState<number | null>(parseFloat(localStorage.getItem('last_lat') || '') || null);
   const [longitude, setLongitude] = useState<number | null>(parseFloat(localStorage.getItem('last_lon') || '') || null);
-  
-  const defaultPosition: [number, number] = [5.6667, -67.6333]; // Puerto Ayacucho
-  const [mapPosition, setMapPosition] = useState<[number, number]>(() => {
-    return latitude && longitude ? [latitude, longitude] : defaultPosition;
+  const [savedAddresses, setSavedAddresses] = useState<{ address: string; address_details: string | null; latitude: number; longitude: number }[]>([]);
+
+  const defaultPosition: [number, number] = [5.6667, -67.6333];
+  const [mapPosition, setMapPosition] = useState<[number, number] | null>(() => {
+    return latitude && longitude ? [latitude, longitude] : null;
   });
+  const skipNextReverse = useRef(false);
+  const [deliveryQuote, setDeliveryQuote] = useState<{
+    in_range: boolean | null;
+    coverage?: { has_zones: boolean; max_distance_km: number | null; zones_count: number };
+    distance_km: number | null;
+    estimated_minutes: number | null;
+  } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [cashCurrency, setCashCurrency] = useState('USD');
   const [paymentReference, setPaymentReference] = useState('');
@@ -108,6 +129,9 @@ export default function Checkout() {
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [deliveryFee, setDeliveryFee] = useState(0);
   const storeId = storeConfig?.id;
+  const mapCenter: [number, number] = storeConfig?.latitude != null && storeConfig?.longitude != null
+    ? [Number(storeConfig.latitude), Number(storeConfig.longitude)]
+    : defaultPosition;
   const grandTotal = total + deliveryFee;
   const isTransferReferenceValid = /^\d{4,10}$/.test(paymentReference);
 
@@ -119,12 +143,21 @@ export default function Checkout() {
   }, [slug]);
 
   useEffect(() => {
-    if (currentStep !== 4 || !slug) return;
+    if (currentStep < 3 || currentStep === 5 || !slug || latitude === null || longitude === null) {
+      return;
+    }
     let cancelled = false;
 
     api.post(`/stores/${slug}/delivery-quote`, { latitude, longitude })
       .then(res => {
-        if (!cancelled) setDeliveryFee(Number(res.data.delivery_fee) || 0);
+        if (cancelled) return;
+        setDeliveryFee(Number(res.data.delivery_fee) || 0);
+        setDeliveryQuote({
+          in_range: res.data.in_range ?? null,
+          coverage: res.data.coverage,
+          distance_km: res.data.distance_km ?? null,
+          estimated_minutes: res.data.estimated_minutes ?? null
+        });
       })
       .catch((err) => {
         console.error('Error cotizando delivery', err);
@@ -164,61 +197,99 @@ export default function Checkout() {
     }
   }, [currentStep, isInitializing, user?.id, orderId]);
 
-  // Autocomplete logic para LocationIQ (Búsqueda inteligente)
+  // Búsqueda predictiva con debounce de 350 ms, centrada en la tienda activa.
   useEffect(() => {
+    if (currentStep !== 3) return;
+    const query = addressQuery.trim();
+    if (query.length < 3 || query === address.trim()) {
+      setAddressSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const controller = new AbortController();
     const delayDebounceFn = setTimeout(async () => {
-      // Solo buscar si hay más de 3 letras y el query no es exactamente la dirección seleccionada
-      if (addressQuery.length > 3 && addressQuery !== address) {
-        setIsSearchingAddress(true);
-        try {
-          // Token proporcionado por el usuario
-          const token = 'pk.5e4e5017eb24eea8537c98df5437797f';
-          
-          // Bounding Box para limitar la búsqueda estrictamente a Puerto Ayacucho (y alrededores)
-          // Formato LocationIQ: lon_left, lat_top, lon_right, lat_bottom
-          const viewbox = '-67.68,5.72,-67.58,5.62';
-          
-          // bounded=1 obliga a que los resultados estén dentro del viewbox
-          // countrycodes=ve asegura que solo devuelva resultados en Venezuela
-          const url = `https://api.locationiq.com/v1/autocomplete.php?key=${token}&q=${encodeURIComponent(addressQuery)}&limit=5&viewbox=${viewbox}&bounded=1&countrycodes=ve`;
-          
-          const res = await fetch(url);
-          
-          if (res.ok) {
-            const data = await res.json();
-            setAddressSuggestions(data);
-            setShowSuggestions(true);
-          } else {
-            setAddressSuggestions([]);
-            setShowSuggestions(false);
-          }
-        } catch(e) {
-          console.error('Error fetching address suggestions:', e);
-          setAddressSuggestions([]);
-          setShowSuggestions(false);
-        }
-        setIsSearchingAddress(false);
-      } else {
+      setIsSearchingAddress(true);
+      try {
+        const res = await api.get('/geocode/autocomplete', {
+          params: { q: query, slug },
+          signal: controller.signal
+        });
+        if (controller.signal.aborted) return;
+        setAddressSuggestions(Array.isArray(res.data?.results) ? res.data.results : []);
+        setShowSuggestions(true);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.error('Error buscando direcciones:', error);
         setAddressSuggestions([]);
         setShowSuggestions(false);
+      } finally {
+        if (!controller.signal.aborted) setIsSearchingAddress(false);
       }
-    }, 800);
+    }, 350);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [addressQuery, address]);
+    return () => {
+      clearTimeout(delayDebounceFn);
+      controller.abort();
+      setIsSearchingAddress(false);
+    };
+  }, [addressQuery, address, slug, currentStep]);
 
-  const selectAddress = (suggestion: { display_name: string; lat: string; lon: string }) => {
-    // Limpiamos un poco el display name si trae mucho texto genérico
-    const cleanName = suggestion.display_name.replace(', Venezuela', '').trim();
+  const selectAddress = (suggestion: { display_name: string; latitude: number; longitude: number }) => {
+    const cleanName = suggestion.display_name.replace(/, Venezuela$/i, '').trim();
+    skipNextReverse.current = true;
     setAddressQuery(cleanName);
     setAddress(cleanName);
-    const lat = parseFloat(suggestion.lat);
-    const lon = parseFloat(suggestion.lon);
-    setLatitude(lat);
-    setLongitude(lon);
-    setMapPosition([lat, lon]);
+    setLatitude(Number(suggestion.latitude));
+    setLongitude(Number(suggestion.longitude));
+    setMapPosition([Number(suggestion.latitude), Number(suggestion.longitude)]);
     setShowSuggestions(false);
   };
+
+  const selectSavedAddress = (saved: { address: string; address_details: string | null; latitude: number; longitude: number }) => {
+    skipNextReverse.current = true;
+    setAddressQuery(saved.address);
+    setAddress(saved.address);
+    if (saved.address_details) setAddressDetails(saved.address_details);
+    setLatitude(Number(saved.latitude));
+    setLongitude(Number(saved.longitude));
+    setMapPosition([Number(saved.latitude), Number(saved.longitude)]);
+    setShowSuggestions(false);
+  };
+
+  useEffect(() => {
+    if (!token || currentStep !== 3) return;
+    api.get('/orders/my-addresses')
+      .then(res => setSavedAddresses(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setSavedAddresses([]));
+  }, [token, currentStep]);
+
+  useEffect(() => {
+    if (currentStep !== 3 || !mapPosition) return;
+    if (skipNextReverse.current) {
+      skipNextReverse.current = false;
+      return;
+    }
+
+    const [lat, lon] = mapPosition;
+    const timer = setTimeout(async () => {
+      setIsResolvingAddress(true);
+      try {
+        const res = await api.get('/geocode/reverse', { params: { latitude: lat, longitude: lon } });
+        if (res.data?.display_name) {
+          const cleanName = String(res.data.display_name).replace(/, Venezuela$/i, '').trim();
+          setAddressQuery(cleanName);
+          setAddress(cleanName);
+        }
+      } catch (error) {
+        console.error('Error obteniendo la dirección del pin:', error);
+      } finally {
+        setIsResolvingAddress(false);
+      }
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [mapPosition, currentStep]);
 
   const handleGPSLocation = () => {
     if (!navigator.geolocation) {
@@ -227,30 +298,22 @@ export default function Checkout() {
     }
 
     setIsSearchingAddress(true);
-    
-    // Función auxiliar para usar IP si todo falla
+
+    const applyPosition = (lat: number, lon: number) => {
+      setLatitude(lat);
+      setLongitude(lon);
+      setMapPosition([lat, lon]);
+    };
+
     const applyIpFallback = async (reason: string) => {
-      toast.warning(`Usando ubicación aproximada (${reason}). Por favor, ajusta el pin en el mapa manualmente.`);
+      toast.warning(`Usando ubicación aproximada (${reason}). Ajusta el pin en el mapa si es necesario.`);
       try {
         const ipRes = await fetch('https://ipapi.co/json/');
         const ipData = await ipRes.json();
-        
-        if (ipData.latitude && ipData.longitude) {
-          const lat = ipData.latitude;
-          const lon = ipData.longitude;
-          
-          setLatitude(lat);
-          setLongitude(lon);
-          setMapPosition([lat, lon]);
-
-          const token = 'pk.5e4e5017eb24eea8537c98df5437797f';
-          const res = await fetch(`https://us1.locationiq.com/v1/reverse.php?key=${token}&lat=${lat}&lon=${lon}&format=json`);
-          if (res.ok) {
-            const data = await res.json();
-            const cleanName = data.display_name.replace(', Venezuela', '').trim();
-            setAddressQuery(cleanName);
-            setAddress(cleanName);
-          }
+        const lat = Number(ipData.latitude);
+        const lon = Number(ipData.longitude);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+          applyPosition(lat, lon);
         }
       } catch (fallbackError) {
         console.error("El respaldo por IP falló", fallbackError);
@@ -260,43 +323,16 @@ export default function Checkout() {
     };
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        
-        setLatitude(lat);
-        setLongitude(lon);
-        setMapPosition([lat, lon]);
-
-        try {
-          const token = 'pk.5e4e5017eb24eea8537c98df5437797f';
-          const res = await fetch(`https://us1.locationiq.com/v1/reverse.php?key=${token}&lat=${lat}&lon=${lon}&format=json`);
-          if (res.ok) {
-            const data = await res.json();
-            const addressObj = data.address || {};
-            // Intentar construir una dirección más específica si está disponible
-            let specificName = data.display_name;
-            if (addressObj.road || addressObj.neighbourhood || addressObj.suburb) {
-               const parts = [addressObj.road, addressObj.neighbourhood, addressObj.suburb, addressObj.city].filter(Boolean);
-               if (parts.length > 0) {
-                 specificName = parts.join(', ');
-               }
-            }
-            const cleanName = specificName.replace(', Venezuela', '').trim();
-            setAddressQuery(cleanName);
-            setAddress(cleanName);
-            toast.success("¡Ubicación precisa obtenida con éxito!");
-          }
-        } catch (error) {
-          console.error("Error reverse geocoding", error);
-        }
+      (position) => {
+        applyPosition(position.coords.latitude, position.coords.longitude);
         setIsSearchingAddress(false);
+        toast.success("Ubicación GPS obtenida. Verifica la dirección en el mapa.");
       },
       (error) => {
         console.warn("Error con GPS nativo:", error);
-        
+
         if (error.code === error.PERMISSION_DENIED) {
-          toast.error("Permiso de ubicación denegado. Debes autorizar el uso de GPS en tu navegador o celular para una ubicación precisa.");
+          toast.error("Permiso de ubicación denegado. Autoriza el GPS o busca tu dirección manualmente.");
           applyIpFallback("Permiso denegado");
         } else if (error.code === error.TIMEOUT) {
           applyIpFallback("La señal GPS tardó mucho");
@@ -304,12 +340,12 @@ export default function Checkout() {
           applyIpFallback("GPS no disponible");
         }
       },
-      { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 } // Aumentamos el timeout a 25 segundos para celulares lentos
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
   useEffect(() => {
-    if (mapPosition && mapPosition !== defaultPosition) {
+    if (mapPosition) {
       setLatitude(mapPosition[0]);
       setLongitude(mapPosition[1]);
     }
@@ -387,12 +423,17 @@ export default function Checkout() {
       toast.error('Cargando información de la tienda. Intenta de nuevo.');
       return;
     }
+    if (deliveryQuote?.in_range === false) {
+      toast.error('Tu ubicación está fuera del rango de entrega de esta tienda.');
+      return;
+    }
     setLoading(true);
     try {
       const res = await api.post('/orders/place', {
         store_id: storeId,
         items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price })),
-        delivery_address: `${address} | Detalles: ${addressDetails || 'Sin detalles extra'}`,
+        delivery_address: address,
+        address_details: addressDetails || null,
         latitude: latitude,
         longitude: longitude,
         total_amount: grandTotal,
@@ -546,22 +587,22 @@ export default function Checkout() {
                 ¿A dónde enviamos?
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-5 sm:p-8 space-y-5 sm:space-y-8">
+            <CardContent className="p-5 sm:p-8 space-y-5 sm:space-y-6">
               <div className="space-y-3 relative z-20">
-                <label className="text-sm font-bold text-gray-700 block">Busca tu Dirección en Puerto Ayacucho</label>
+                <label className="text-sm font-bold text-gray-700 block">Busca tu dirección de entrega</label>
                 <div className="relative">
                   <MapPin className="absolute left-4 top-[18px] text-orange-500" size={20} />
                   <Input 
-                    placeholder="Ej: Sector 57..." 
+                    placeholder="Ej: Sector 57, casa 12..."
                     value={addressQuery} 
                     onChange={(e) => {
                       setAddressQuery(e.target.value);
-                      if(e.target.value !== address) setAddress(''); 
+                      if (e.target.value.trim() !== address.trim()) setAddress('');
                     }}
                     onFocus={() => { if(addressSuggestions.length > 0) setShowSuggestions(true); }}
                     className="h-14 pl-12 rounded-xl text-lg bg-gray-50 focus:bg-white transition-colors"
                   />
-                  {isSearchingAddress && <div className="absolute right-4 top-[18px] w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>}
+                  {(isSearchingAddress || isResolvingAddress) && <div className="absolute right-4 top-[18px] w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>}
                 </div>
 
                 <Button 
@@ -571,45 +612,96 @@ export default function Checkout() {
                   className="w-full flex items-center justify-center gap-2 text-orange-600 border-orange-200 hover:bg-orange-50 h-12 rounded-xl mt-2 font-bold"
                 >
                   <LocateFixed size={18} /> 
-                  {isSearchingAddress ? 'Ubicando...' : 'Usar mi ubicación actual por GPS'}
+                  {isSearchingAddress ? 'Ubicando...' : 'Ubicar mi casa por GPS'}
                 </Button>
 
                 {showSuggestions && addressSuggestions.length > 0 && (
                   <div className="absolute z-[1000] w-full bg-white border border-gray-200 shadow-2xl rounded-xl mt-1 overflow-hidden max-h-60 overflow-y-auto">
                     {addressSuggestions.map((sug, i) => (
                       <div 
-                        key={i} 
+                        key={sug.place_id || i}
                         className="p-4 hover:bg-orange-50 cursor-pointer border-b border-gray-100 last:border-0 text-sm text-gray-700 flex items-start gap-2"
                         onClick={() => selectAddress(sug)}
                       >
                         <MapPin size={16} className="text-orange-400 mt-0.5 flex-shrink-0" />
-                        <span>{sug.display_name.replace(', Venezuela', '')}</span>
+                        <span>{sug.display_name.replace(/, Venezuela$/i, '')}</span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
 
+              {savedAddresses.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                    <Navigation size={13} /> Direcciones anteriores
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {savedAddresses.map((saved, index) => (
+                      <button
+                        key={`${saved.latitude}-${saved.longitude}-${index}`}
+                        type="button"
+                        onClick={() => selectSavedAddress(saved)}
+                        className="inline-flex items-center gap-1.5 max-w-full rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                      >
+                        {index === 0 ? <Home size={13} /> : <Briefcase size={13} />}
+                        <span className="truncate max-w-[220px]">{saved.address}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Mapa Interactivo */}
               <div className="space-y-2 relative rounded-2xl overflow-hidden border border-gray-200 shadow-inner h-64 z-0">
-                <MapContainer center={mapPosition} zoom={15} style={{ height: '100%', width: '100%' }}>
+                <MapContainer key={`${mapCenter[0]}-${mapCenter[1]}`} center={mapCenter} zoom={15} style={{ height: '100%', width: '100%' }}>
                   <TileLayer
-                    attribution='&copy; <a href="https://locationiq.com/?ref=maps">LocationIQ</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                    url="https://{s}-tiles.locationiq.com/v3/streets/r/{z}/{x}/{y}.png?key=pk.5e4e5017eb24eea8537c98df5437797f"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                   />
                   <LocationMarker position={mapPosition} setPosition={setMapPosition} />
                 </MapContainer>
                 <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-sm p-2 rounded-xl text-xs text-center text-gray-600 font-medium z-[400] shadow-sm pointer-events-none border border-gray-100">
-                  Toca el mapa para ajustar la ubicación exacta
+                  Toca el mapa o arrastra el pin para ajustar la ubicación exacta
                 </div>
               </div>
+
+              {deliveryQuote?.in_range === false && (
+                <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
+                  <AlertTriangle size={20} className="flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-black text-sm">Tu ubicación está fuera del rango de entrega de esta tienda.</p>
+                    <p className="text-xs mt-1">
+                      {deliveryQuote.coverage?.max_distance_km
+                        ? `La cobertura máxima es de ${deliveryQuote.coverage.max_distance_km} km. `
+                        : ''}
+                      Mueve el pin o busca una dirección más cercana para continuar.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {deliveryQuote?.in_range !== false && deliveryQuote?.distance_km !== null && deliveryQuote?.distance_km !== undefined && (
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    <Navigation size={18} /> Delivery estimado
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black">{formatPrice(deliveryFee, storeConfig?.currency)}</p>
+                    <p className="text-[11px] font-semibold text-emerald-700">
+                      {deliveryQuote.distance_km} km
+                      {deliveryQuote.estimated_minutes ? ` · ~${deliveryQuote.estimated_minutes} min` : ''}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {address && (
                 <div className="space-y-3 bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100 animate-in fade-in slide-in-from-top-4">
                   <label className="text-sm font-bold text-emerald-900 flex items-center gap-2">
-                    <CheckCircle2 size={18} className="text-emerald-500" /> Dirección Confirmada
+                    <CheckCircle2 size={18} className="text-emerald-500" /> Dirección confirmada
                   </label>
-                  <p className="text-xs text-emerald-700 mb-2">Añade detalles específicos (Piso, Casa, Apartamento, Referencias):</p>
+                  <p className="text-xs text-emerald-700 mb-2">Añade detalles específicos (piso, casa, apartamento, referencias):</p>
                   <Input 
                     placeholder="Ej: Casa amarilla portón negro, al lado de la panadería..." 
                     value={addressDetails} 
@@ -619,7 +711,11 @@ export default function Checkout() {
                 </div>
               )}
 
-              <Button onClick={() => setStep(4)} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-gray-900 to-gray-800 hover:from-black hover:to-gray-900 shadow-xl shadow-gray-900/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={!address}>
+              <Button
+                onClick={() => setStep(4)}
+                className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-gray-900 to-gray-800 hover:from-black hover:to-gray-900 shadow-xl shadow-gray-900/20 font-black text-white transition-all transform hover:scale-[1.02]"
+                disabled={!address || isResolvingAddress || deliveryQuote?.in_range === false}
+              >
                 Continuar al Pago <ChevronRight className="ml-2" />
               </Button>
             </CardContent>

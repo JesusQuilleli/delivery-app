@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import { getSocketURL } from '../lib/socket';
 import api from '../api';
-import { Bell, MapPin, CheckCircle, Package, Clock, Phone, XCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Truck, User, X, Utensils, Check } from 'lucide-react';
+import { Bell, MapPin, CheckCircle, Package, Clock, Phone, XCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Truck, User, X, Utensils, Check, Navigation } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardFooter } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -40,6 +40,12 @@ interface Order {
   user: { name: string | null; phone: string };
   driver?: { id: number; name: string; phone: string; vehicle_plate: string | null } | null;
 }
+
+const googleMapsUrl = (order: Order) =>
+  `https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`;
+
+const wazeUrl = (order: Order) =>
+  `https://waze.com/ul?ll=${order.latitude},${order.longitude}&navigate=yes`;
 
 interface Driver {
   id: number;
@@ -653,6 +659,30 @@ export default function Dashboard() {
                                   <Check size={14} className="mr-1" /> Entregado
                                 </Button>
                               )}
+                              {order.latitude && order.longitude && (
+                                <>
+                                  <a
+                                    href={googleMapsUrl(order)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    title="Abrir ruta en Google Maps"
+                                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border text-blue-600 hover:bg-blue-50 transition-colors"
+                                  >
+                                    <MapPin size={14} />
+                                  </a>
+                                  <a
+                                    href={wazeUrl(order)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    title="Abrir ruta en Waze"
+                                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border text-cyan-600 hover:bg-cyan-50 transition-colors"
+                                  >
+                                    <Navigation size={14} />
+                                  </a>
+                                </>
+                              )}
                               <Button variant="secondary" size="sm" className="font-bold shadow-sm rounded-lg h-8 px-2 hover:bg-primary/10 hover:text-primary transition-colors text-xs" onClick={(e) => { e.stopPropagation(); navigate(`/admin/${slug}/order/${order.id}`); }}>
                                 Ver
                               </Button>
@@ -734,6 +764,26 @@ export default function Dashboard() {
                         <p className="font-medium text-sm text-foreground/90 leading-snug line-clamp-2">
                           {order.delivery_address.split(' | Link GMaps:')[0]}
                         </p>
+                        {order.latitude && order.longitude && (
+                          <div className="flex gap-2 mt-2">
+                            <a
+                              href={googleMapsUrl(order)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-black text-blue-700"
+                            >
+                              <MapPin size={11} /> Google Maps
+                            </a>
+                            <a
+                              href={wazeUrl(order)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded-md border border-cyan-200 bg-cyan-50 px-2 py-1 text-[10px] font-black text-cyan-700"
+                            >
+                              <Navigation size={11} /> Waze
+                            </a>
+                          </div>
+                        )}
                       </div>
 
                       {/* Resumen de Productos */}

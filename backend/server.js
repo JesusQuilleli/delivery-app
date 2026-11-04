@@ -14,6 +14,7 @@ const inventoryRoutes = require('./routes/inventoryRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const superadminRoutes = require('./routes/superadminRoutes');
 const ratesRoutes = require('./routes/ratesRoutes');
+const geocodingRoutes = require('./routes/geocodingRoutes');
 const { globalLimiter } = require('./middleware/rateLimiter');
 const { JWT_SECRET } = require('./middleware/authMiddleware');
 const serializeDecimals = require('./middleware/serialize');
@@ -131,6 +132,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/rates', ratesRoutes);
+app.use('/api/geocode', geocodingRoutes);
 
 // Ruta de prueba base
 app.get('/', (req, res) => {

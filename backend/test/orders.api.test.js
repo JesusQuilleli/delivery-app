@@ -71,6 +71,27 @@ test('orders: placeOrder crea pedido PENDING con precio del servidor', async () 
   testOrderIds.push(res.json.order_id);
 });
 
+test('orders: guarda address_details y coordenadas del pin', async () => {
+  const res = await placeOrder({
+    delivery_address: 'Calle 5, Sector 57',
+    address_details: 'Casa verde, portón negro, frente a la panadería',
+    latitude: 5.6667,
+    longitude: -67.6333
+  });
+  assert.equal(res.status, 200, JSON.stringify(res.json));
+  testOrderIds.push(res.json.order_id);
+
+  const order = await prisma.order.findUnique({ where: { id: res.json.order_id } });
+  assert.equal(order.delivery_address, 'Calle 5, Sector 57');
+  assert.equal(order.address_details, 'Casa verde, portón negro, frente a la panadería');
+  assert.equal(order.latitude, 5.6667);
+  assert.equal(order.longitude, -67.6333);
+
+  const saved = await req('GET', '/orders/my-addresses', { token: client });
+  assert.equal(saved.status, 200, JSON.stringify(saved.json));
+  assert.ok(saved.json.some((address) => address.address === 'Calle 5, Sector 57'));
+});
+
 test('orders: aplica tarifa de zona y tarifa plana de delivery', async () => {
   const storeBefore = await prisma.store.findUnique({ where: { id: 1 } });
   const original = {
@@ -110,6 +131,11 @@ test('orders: aplica tarifa de zona y tarifa plana de delivery', async () => {
     const flatOrder = await prisma.order.findUnique({ where: { id: flat.json.order_id } });
     assert.equal(Number(flatOrder.delivery_fee), 1.5);
     assert.equal(Number(flatOrder.total_amount), Number(flatOrder.subtotal) + 1.5);
+
+    const outside = await placeOrder({ latitude: 6.6667, longitude: -67.6333 });
+    assert.equal(outside.status, 400, JSON.stringify(outside.json));
+    assert.equal(outside.json.coverage.has_zones, true);
+    assert.equal(outside.json.coverage.in_range, false);
   } finally {
     if (zoneId) await prisma.deliveryZone.delete({ where: { id: zoneId } }).catch(() => {});
     await prisma.store.update({

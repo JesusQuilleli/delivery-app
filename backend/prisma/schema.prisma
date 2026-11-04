@@ -87,6 +87,7 @@ model Order {
   store_id          Int
   user_id           Int
   delivery_address  String
+  address_details   String?
   latitude          Float?
   longitude         Float?
   currency          String      @default("USD")

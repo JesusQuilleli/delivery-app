@@ -40,6 +40,14 @@ const orderLimiter = rateLimit({
   message: { error: 'Demasiados pedidos. Espera un minuto.' }
 });
 
+const geocodeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 90,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas búsquedas de ubicación. Espera un momento.' }
+});
+
 const uploadLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
@@ -54,5 +62,6 @@ module.exports = {
   authLimiter,
   adminLoginLimiter,
   orderLimiter,
+  geocodeLimiter,
   uploadLimiter
 };

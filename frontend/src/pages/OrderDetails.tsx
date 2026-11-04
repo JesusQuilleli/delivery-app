@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Socket } from 'socket.io-client';
 import { createSocket } from '../lib/socket';
 import api from '../api';
-import { Clock, MapPin, Phone, Truck, CheckCircle, Check, ArrowLeft, XCircle } from 'lucide-react';
+import { Clock, MapPin, Phone, Truck, CheckCircle, Check, ArrowLeft, XCircle, Navigation } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
@@ -23,6 +23,7 @@ interface OrderItem {
 interface Order {
   id: number;
   delivery_address: string;
+  address_details?: string | null;
   latitude: number | null;
   longitude: number | null;
   total_amount: number;
@@ -244,6 +245,9 @@ export default function OrderDetails() {
           <div className="bg-white p-4 md:p-5 rounded-2xl border border-gray-100 shadow-sm lg:col-span-3">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1"><MapPin size={14} /> Dirección de Entrega</p>
             <p className="font-medium text-gray-800 leading-snug">{order.delivery_address.split(' | Link GMaps:')[0]}</p>
+            {order.address_details && (
+              <p className="text-sm text-gray-500 font-medium mt-1.5">{order.address_details}</p>
+            )}
 
             {order.latitude && order.longitude ? (
               <div className="mt-5 pt-5 border-t border-gray-100">
@@ -261,7 +265,26 @@ export default function OrderDetails() {
                 )}
 
                 <OrderRouteMap order={order} storeLocation={storeData?.latitude ? [Number(storeData.latitude), Number(storeData.longitude)] : undefined} />
-                
+
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm font-black text-blue-700 hover:bg-blue-100 transition-colors"
+                  >
+                    <MapPin size={18} /> Google Maps
+                  </a>
+                  <a
+                    href={`https://waze.com/ul?ll=${order.latitude},${order.longitude}&navigate=yes`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3 text-sm font-black text-cyan-700 hover:bg-cyan-100 transition-colors"
+                  >
+                    <Navigation size={18} /> Waze
+                  </a>
+                </div>
+
                 {order.driver && (
                   <div className="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-xl">
                     <p className="text-[11px] font-bold text-purple-400 uppercase tracking-widest mb-1">Motorizado Asignado</p>

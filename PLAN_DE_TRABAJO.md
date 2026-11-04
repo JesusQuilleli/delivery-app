@@ -9,7 +9,7 @@
 - **Estrategia de despliegue y validación:**
   1. **Hito 1 (Inmediato / En curso):** Sistema 100% listo, probado y validable en **Localhost** y en el entorno de pruebas existente en la nube (**Netlify** para frontend + **Render** para backend + **Neon** para PostgreSQL). Con esta base lista y pulida se realizarán las demostraciones presenciales y la validación comercial con negocios de comida rápida, víveres y farmacias de Puerto Ayacucho.
   2. **Hito 2 (Final / Producción autónoma):** Migración y despliegue definitivo a **VPS propio** (PostgreSQL 16 local, Nginx, Let's Encrypt, backups automáticos). Los accesos SSH y credenciales del VPS se solicitarán al usuario en el momento exacto de ejecutar esta fase.
-- **Estado general:** F1-34 completada; prioridad activa inmediata: **Fase 1B (Ubicación y Geocodificación precisa del cliente)** y **Fase 2 (Bugs críticos de Admin, Flujo de Pago y Stock)**.
+- **Estado general:** F1-34 y Fase 1B completadas; prioridad activa inmediata: **Fase 2 (Bugs críticos de Admin, Flujo de Pago y Stock)**.
 - **Zona del piloto:** Puerto Ayacucho, Estado Amazonas
 - **Verticales comerciales prioritarias:**
   1. **Comida Rápida:** Puestos de perros calientes, hamburgueserías, pizzerías y comida rápida nocturna (alta rotación de pedidos vespertinos/nocturnos, combos y necesidad de despacho express).
@@ -374,24 +374,24 @@ Al integrar comida rápida y víveres, el mercado potencial local se multiplica 
 
 Optimización de la búsqueda y precisión de la dirección del cliente en el checkout:
 
-- [ ] F1B-01 **Input predictivo con autocompletado debounced (~350ms):**
+- [x] F1B-01 **Input predictivo con autocompletado debounced (~350ms):**
   - Búsqueda en tiempo real al escribir con sugerencias visuales desplegables.
   - Centrado dinámico en las coordenadas de la tienda activa (`store.latitude`, `store.longitude`), eliminando el viewbox estático de Puerto Ayacucho.
   - Al seleccionar una sugerencia: rellena el input, posiciona el pin del mapa (`flyTo`) y cotiza delivery automáticamente.
-- [ ] F1B-02 **Botón "Ubicar mi casa por GPS" con Reverse Geocoding automático:**
+- [x] F1B-02 **Botón "Ubicar mi casa por GPS" con Reverse Geocoding automático:**
   - Consulta al GPS del navegador/dispositivo con `enableHighAccuracy: true` y timeout de 15 s.
   - Si el usuario autoriza: obtiene coordenadas exactas y ejecuta Geocodificación Inversa (Reverse Geocoding) inmediata para rellenar de forma legible la calle, sector y ciudad en el input sin requerir tipeo manual.
   - Manejo amigable de permisos denegados o señales débiles con fallback a estimación por IP y aviso claro para ajustar el pin manualmente.
-- [ ] F1B-03 **Sincronización bidireccional mapa-input (Reverse Geocoding al interactuar con el mapa):**
+- [x] F1B-03 **Sincronización bidireccional mapa-input (Reverse Geocoding al interactuar con el mapa):**
   - Al hacer clic o arrastrar el marcador (pin) en el mapa Leaflet, ejecutar Reverse Geocoding para actualizar el texto de la dirección en el input y no dejar inconsistencias entre el mapa y el texto.
-- [ ] F1B-04 **Validación de cobertura y bloqueo fuera de zona:**
+- [x] F1B-04 **Validación de cobertura y bloqueo fuera de zona:**
   - Validar contra las zonas activas de la tienda (`DeliveryZone`). Si las coordenadas del cliente superan el radio máximo de entrega, advertir de inmediato con alerta visual ("Tu ubicación está fuera del rango de entrega de esta tienda") y deshabilitar el botón de continuar al pago.
-- [ ] F1B-05 **Direcciones guardadas para clientes frecuentes:**
+- [x] F1B-05 **Direcciones guardadas para clientes frecuentes:**
   - Para usuarios identificados (post-OTP), ofrecer selector de "Direcciones anteriores" (ej. "Casa", "Trabajo") para comprar en 1 clic sin tener que buscar o geolocalizar desde cero.
-- [ ] F1B-06 **Despacho y navegación para repartidor y admin:**
+- [x] F1B-06 **Despacho y navegación para repartidor y admin:**
   - Guardar `latitude`, `longitude`, `address` y `address_details` (punto de referencia, color de casa) en el pedido.
   - Generar botones directos en la vista de órdenes del Admin y del Motorizado para abrir la ruta en **Google Maps** y **Waze** (`https://www.google.com/maps/search/?api=1&query=lat,lng`).
-- [ ] F1B-07 **Seguridad, variables de entorno y contingencia:**
+- [x] F1B-07 **Seguridad, variables de entorno y contingencia:**
   - Retirar token público de mapas del código fuente frontend y gestionarlo mediante variable de entorno (`VITE_LOCATIONIQ_KEY` o proxy backend).
   - Implementar fallback transparente a OpenStreetMap (Nominatim) o ingreso manual asistido si la cuota de la API se agota o hay cortes de servicio.
 
@@ -767,6 +767,7 @@ npm run build
 | 2026-11-01 | 23/23 | 68/68 | 39/39 | 0 errores, 85 warnings | Correcto | Correcto | Fase 0 y F1-01–F1-13 completadas. Stock transaccional y combos. Bundle ~1 MB. |
 | 2026-11-02 | 33/33 | 77/77 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | F1-14–F1-26 y F1-27/F1-28. Decimal, tasas BCV, delivery por zonas, datos bancarios por tienda. Bundle ~1 MB. |
 | 2026-11-02 | 34/34 | 83/83 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | F1-29–F1-34. Identidad de clientes por tienda, mismo correo/teléfono en dos tiendas, compra aislada y timeout de transacción a 20 s. Bundle ~1 MB. |
+| 2026-11-03 | 45/45 | 84/84 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | Fase 1B. Autocompletado, GPS, reverse geocoding, cobertura, direcciones guardadas, `address_details` y navegación Google Maps/Waze. Bundle ~1 MB. |
 
 ---
 
@@ -812,6 +813,13 @@ npm run build
 | 2026-11-02 | F1-33 | Hecho | Migración `20261103022000_user_identity_per_store`; respaldo previo de usuarios y códigos OTP |
 | 2026-11-02 | F1-34 | Hecho | Prueba: mismo correo y teléfono en dos tiendas, compra en tienda 2 y pedidos aislados por usuario |
 | 2026-11-02 | F1-29 extra | Hecho | Transacción de `placeOrder` con `timeout: 20000` y `maxWait: 10000`; P2028 responde 503 en vez de 500 |
+| 2026-11-03 | F1B-01 | Hecho | Autocompletado debounced 350 ms vía `/api/geocode/autocomplete`; viewbox centrado en la tienda y pin sincronizado |
+| 2026-11-03 | F1B-02 | Hecho | GPS con `enableHighAccuracy`, timeout 15 s, reverse geocoding y fallback a estimación por IP |
+| 2026-11-03 | F1B-03 | Hecho | Clic y arrastre del pin ejecutan reverse geocoding y actualizan la dirección |
+| 2026-11-03 | F1B-04 | Hecho | `evaluateCoverage` en backend; aviso visual y bloqueo de continuar fuera de cobertura |
+| 2026-11-03 | F1B-05 | Hecho | `GET /orders/my-addresses`; chips de direcciones anteriores en checkout |
+| 2026-11-03 | F1B-06 | Hecho | `address_details` en `Order`; botones Google Maps/Waze en Dashboard y OrderDetails |
+| 2026-11-03 | F1B-07 | Hecho | Proxy backend LocationIQ con fallback Nominatim; token retirado del frontend |
 
 Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 
@@ -831,7 +839,7 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 
 ## 12. Punto de continuación
 
-**Fase 0 y F1-01–F1-34 completadas.** Siguientes prioridades: **Fase 1B** (autocompletado, búsqueda predictiva y geolocalización de clientes) y **Fase 2** (**F2-25** restaurar stock al cancelar + **F2-01 a F2-05** aprobación/rechazo de pagos).
+**Fase 0, F1-01–F1-34 y Fase 1B completadas.** Siguiente prioridad: **Fase 2** (**F2-25** restaurar stock al cancelar + **F2-01 a F2-05** aprobación/rechazo de pagos).
 
 ### Decisiones de F1-14
 
@@ -851,12 +859,22 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 - Respaldo previo: `C:\Users\Jesus\AppData\Local\Temp\opencode\users-backup-2026-11-03T02-18-39-374Z.json` (5 usuarios, 2 códigos OTP).
 - La transacción de `placeOrder` ahora usa `maxWait: 10000` y `timeout: 20000`; si expira (P2028) responde 503 “La operación tardó demasiado. Intenta de nuevo.”.
 
+### Decisiones de Fase 1B
+
+- La geocodificación pasa por el backend (`/api/geocode/autocomplete` y `/api/geocode/reverse`); el frontend no expone claves de LocationIQ.
+- Proveedor principal LocationIQ con fallback transparente a Nominatim y caché en memoria (TTL configurable).
+- El viewbox se calcula con `store.latitude`/`store.longitude` y un radio configurable; el mapa usa tiles CARTO/OSM sin token.
+- La cobertura se calcula contra las zonas activas de la tienda; `in_range = null` cuando no hay coordenadas o no hay zonas, `false` fuera de rango y `true` dentro.
+- `Order.address_details` guarda el punto de referencia; `delivery_address` conserva la dirección legible.
+- El pedido se rechaza con 400 si `delivery.in_range === false`; el frontend además deshabilita el botón de continuar.
+- Migración aplicada: `20261103120000_order_address_details`.
+
 ### Siguiente bloque recomendado (Ruta a Demostración y Validación)
 
-1. **Fase 1B (Ubicación y Geocodificación del Cliente):** Autocompletado predictivo debounced (~350ms) centrado en tienda, geolocalización GPS "Ubicar mi casa", Reverse Geocoding bidireccional mapa-input, validación de zona de cobertura de delivery y botones Google Maps/Waze para el repartidor.
-2. **Fase 2 (Prioridades críticas de Admin y Stock):**
+1. **Fase 2 (Prioridades críticas de Admin y Stock):**
    - **F2-25:** Devolución y restauración transaccional de stock al cancelar pedidos (productos y combos).
    - **F2-01 a F2-05:** Bandeja y flujo de aprobación/rechazo de pagos por Pago Móvil y transferencia bancaria.
+2. **Fase 2 restante:** paginación/filtros server-side, validación de pertenencia en `markOrderViewed`, edición de configuración y demás bugs del administrador.
    - **F2-08 a F2-13:** Edición completa de datos bancarios, WhatsApp, horarios y logo de tienda desde el panel.
 3. **Fase 3B (Validación en Staging Netlify + Render + Neon y Catálogo Demo):**
    - Aplicar migraciones a Neon con `npx prisma migrate deploy`.

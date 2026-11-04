@@ -30,6 +30,7 @@ const placeOrder = async (req, res) => {
       store_id,
       items,
       delivery_address,
+      address_details,
       latitude,
       longitude,
       payment_method,
@@ -70,6 +71,13 @@ const placeOrder = async (req, res) => {
 
     const delivery = await resolveDeliveryFee({ store, latitude, longitude });
     const { distance_km, estimated_minutes } = delivery;
+
+    if (delivery.in_range === false) {
+      return res.status(400).json({
+        error: 'Tu ubicación está fuera del rango de entrega de esta tienda.',
+        coverage: delivery.coverage
+      });
+    }
 
     // 3. Normalizar cantidades y productos solicitados
     const requested = new Map();
@@ -191,6 +199,7 @@ const placeOrder = async (req, res) => {
           store_id: storeId,
           user_id: user.id,
           delivery_address,
+          address_details: address_details || null,
           latitude: latitude ? parseFloat(latitude) : null,
           longitude: longitude ? parseFloat(longitude) : null,
           distance_km,
@@ -341,6 +350,51 @@ const getMyOrders = async (req, res) => {
   } catch (error) {
     console.error('Error fetching my orders:', error);
     res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const getMyAddresses = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'Usuario no autenticado' });
+
+    const orders = await prisma.order.findMany({
+      where: {
+        user_id: user.id,
+        latitude: { not: null },
+        longitude: { not: null }
+      },
+      select: {
+        delivery_address: true,
+        address_details: true,
+        latitude: true,
+        longitude: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 30
+    });
+
+    const seen = new Set();
+    const addresses = [];
+    for (const order of orders) {
+      const key = `${Number(order.latitude).toFixed(4)}|${Number(order.longitude).toFixed(4)}|${order.delivery_address}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      addresses.push({
+        address: order.delivery_address,
+        address_details: order.address_details,
+        latitude: order.latitude,
+        longitude: order.longitude,
+        last_used_at: order.createdAt
+      });
+      if (addresses.length >= 5) break;
+    }
+
+    res.json(addresses);
+  } catch (error) {
+    console.error('Error obteniendo direcciones guardadas:', error);
+    res.status(500).json({ error: 'Error interno obteniendo direcciones' });
   }
 };
 
@@ -534,4 +588,4 @@ const markOrderViewed = async (req, res) => {
   }
 };
 
-module.exports = { placeOrder, updateOrderStatus, deleteOrder, getMyOrders, rateOrder, getOrderById, cancelOrderClient, batchUpdateStatus, markOrderViewed };
+module.exports = { placeOrder, updateOrderStatus, deleteOrder, getMyOrders, getMyAddresses, rateOrder, getOrderById, cancelOrderClient, batchUpdateStatus, markOrderViewed };

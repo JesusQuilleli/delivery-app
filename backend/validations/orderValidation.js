@@ -6,6 +6,7 @@ const placeOrderSchema = z.object({
     product_id: z.coerce.number().int().positive(),
     quantity: z.coerce.number().int().positive('La cantidad debe ser mayor a 0')
   })).min(1, 'Debe incluir al menos un producto'),
+  address_details: z.string().max(300).optional().nullable(),
   delivery_address: z.string().min(5, 'Dirección requerida').max(500),
   latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
   longitude: z.coerce.number().min(-180).max(180).optional().nullable(),

@@ -27,6 +27,35 @@ const matchesZone = (zone, distanceKm) => {
   return distanceKm >= min && (max === null || distanceKm <= max);
 };
 
+const evaluateCoverage = (zones, distanceKm) => {
+  const activeZones = Array.isArray(zones) ? zones : [];
+  if (activeZones.length === 0) {
+    return { has_zones: false, in_range: true, max_distance_km: null, zones_count: 0 };
+  }
+
+  const maxDistance = activeZones.reduce((max, zone) => {
+    const zoneMax = toFiniteNumber(zone.max_distance_km);
+    if (zoneMax === null) return Infinity;
+    return Math.max(max, zoneMax);
+  }, 0);
+
+  if (distanceKm === null || distanceKm === undefined) {
+    return {
+      has_zones: true,
+      in_range: null,
+      max_distance_km: Number.isFinite(maxDistance) ? maxDistance : null,
+      zones_count: activeZones.length
+    };
+  }
+
+  return {
+    has_zones: true,
+    in_range: activeZones.some((zone) => matchesZone(zone, distanceKm)),
+    max_distance_km: Number.isFinite(maxDistance) ? maxDistance : null,
+    zones_count: activeZones.length
+  };
+};
+
 const resolveDeliveryFee = async ({ store, latitude, longitude }) => {
   const lat = toFiniteNumber(latitude);
   const lon = toFiniteNumber(longitude);
@@ -38,14 +67,17 @@ const resolveDeliveryFee = async ({ store, latitude, longitude }) => {
     distanceKm = Math.round(haversineDistanceKm(storeLat, storeLon, lat, lon) * 100) / 100;
   }
 
-  let zone = null;
-  if (distanceKm !== null) {
-    const zones = await prisma.deliveryZone.findMany({
-      where: { store_id: store.id, is_active: true },
-      orderBy: { min_distance_km: 'asc' }
-    });
-    zone = zones.find((candidate) => matchesZone(candidate, distanceKm)) || null;
-  }
+  const zones = await prisma.deliveryZone.findMany({
+    where: { store_id: store.id, is_active: true },
+    orderBy: { min_distance_km: 'asc' }
+  });
+
+  const zone = distanceKm !== null
+    ? zones.find((candidate) => matchesZone(candidate, distanceKm)) || null
+    : null;
+
+  const coverage = evaluateCoverage(zones, distanceKm);
+  const inRange = coverage.in_range;
 
   const fee = zone
     ? new Prisma.Decimal(zone.fee)
@@ -55,7 +87,9 @@ const resolveDeliveryFee = async ({ store, latitude, longitude }) => {
     distance_km: distanceKm,
     estimated_minutes: distanceKm === null ? null : estimateMinutes(distanceKm),
     delivery_fee: fee,
-    zone
+    zone,
+    in_range: inRange,
+    coverage
   };
 };
 
@@ -64,5 +98,6 @@ module.exports = {
   haversineDistanceKm,
   estimateMinutes,
   matchesZone,
+  evaluateCoverage,
   resolveDeliveryFee
 };

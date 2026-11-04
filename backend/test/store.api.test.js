@@ -115,6 +115,15 @@ test('store: CRUD de zonas y cotización de delivery', async () => {
     const flat = await req('POST', '/stores/demo-farmacia/delivery-quote', { body: {} });
     assert.equal(flat.status, 200, JSON.stringify(flat.json));
     assert.equal(Number(flat.json.delivery_fee), 1.5);
+    assert.equal(flat.json.in_range, null);
+
+    const outside = await req('POST', '/stores/demo-farmacia/delivery-quote', {
+      body: { latitude: 6.6667, longitude: -67.6333 }
+    });
+    assert.equal(outside.status, 200, JSON.stringify(outside.json));
+    assert.equal(outside.json.in_range, false);
+    assert.equal(outside.json.coverage.has_zones, true);
+    assert.equal(outside.json.coverage.max_distance_km, 50);
 
     const updated = await req('PUT', `/stores/demo-farmacia/delivery-zones/${zoneId}`, {
       token: admin,
