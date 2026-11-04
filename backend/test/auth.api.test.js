@@ -1,63 +1,162 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { req, prisma } = require('./helpers');
+const { req, clientToken, prisma } = require('./helpers');
 
 const EMAIL = `test-auth-${Date.now()}@example.com`;
-let createdUserId = null;
+const EMAIL_DUP = `test-auth-dup-${Date.now()}@example.com`;
+const PHONE = `0411${String(Date.now()).slice(-7)}`;
+let firstStoreId = 1;
+let secondStoreId = null;
+let secondProduct = null;
+const createdUserIds = [];
+
+const cleanupUser = async (userId) => {
+  const orders = await prisma.order.findMany({ where: { user_id: userId } });
+  for (const order of orders) {
+    await prisma.orderItem.deleteMany({ where: { order_id: order.id } });
+  }
+  await prisma.order.deleteMany({ where: { user_id: userId } });
+  await prisma.user.delete({ where: { id: userId } }).catch(() => {});
+};
 
 before(async () => {
-  await prisma.verificationCode.deleteMany({ where: { email: EMAIL } });
+  await prisma.verificationCode.deleteMany({ where: { email: { in: [EMAIL, EMAIL_DUP] } } });
+
+  const store = await prisma.store.create({
+    data: {
+      name: `Test Store Auth ${Date.now()}`,
+      slug: `test-auth-store-${Date.now()}`,
+      is_active: true
+    }
+  });
+  secondStoreId = store.id;
+
+  secondProduct = await prisma.product.create({
+    data: {
+      store_id: secondStoreId,
+      name: `Test Auth Product ${Date.now()}`,
+      price: 7.5,
+      stock: 100,
+      is_available: true
+    }
+  });
 });
 
 after(async () => {
-  if (createdUserId) {
-    const orders = await prisma.order.findMany({ where: { user_id: createdUserId } });
-    for (const o of orders) await prisma.orderItem.deleteMany({ where: { order_id: o.id } });
-    await prisma.order.deleteMany({ where: { user_id: createdUserId } });
-    await prisma.user.delete({ where: { id: createdUserId } }).catch(() => {});
+  for (const userId of createdUserIds) {
+    await cleanupUser(userId);
   }
-  await prisma.verificationCode.deleteMany({ where: { email: EMAIL } });
+  if (secondProduct) {
+    await prisma.product.delete({ where: { id: secondProduct.id } }).catch(() => {});
+  }
+  if (secondStoreId) {
+    await prisma.user.deleteMany({ where: { store_id: secondStoreId } });
+    await prisma.store.delete({ where: { id: secondStoreId } }).catch(() => {});
+  }
+  await prisma.verificationCode.deleteMany({ where: { email: { in: [EMAIL, EMAIL_DUP] } } });
+});
+
+test('check-email: 400 sin store_id', async () => {
+  const res = await req('POST', '/auth/check-email', { body: { email: EMAIL } });
+  assert.equal(res.status, 400, JSON.stringify(res.json));
 });
 
 test('check-email: 200 y genera código en DB', async () => {
-  const res = await req('POST', '/auth/check-email', { body: { email: EMAIL, store_id: 1 } });
+  const res = await req('POST', '/auth/check-email', { body: { email: EMAIL, store_id: firstStoreId } });
   assert.equal(res.status, 200, JSON.stringify(res.json));
   assert.equal(res.json.is_registered, false);
-  const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL } });
+  const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL, store_id: firstStoreId } });
   assert.ok(code, 'debe existir código en DB');
   assert.equal(code.code.length, 6);
 });
 
 test('check-email: redosificación bloqueada (429) dentro del minuto', async () => {
-  const res = await req('POST', '/auth/check-email', { body: { email: EMAIL, store_id: 1 } });
+  const res = await req('POST', '/auth/check-email', { body: { email: EMAIL, store_id: firstStoreId } });
   assert.equal(res.status, 429, JSON.stringify(res.json));
 });
 
 test('check-email: 400 con email inválido', async () => {
-  const res = await req('POST', '/auth/check-email', { body: { email: 'invalido', store_id: 1 } });
+  const res = await req('POST', '/auth/check-email', { body: { email: 'invalido', store_id: firstStoreId } });
   assert.equal(res.status, 400);
 });
 
 test('verify-otp: 200 crea usuario cliente y devuelve cookie', async () => {
-  const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL } });
+  const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL, store_id: firstStoreId } });
   const res = await req('POST', '/auth/verify-otp', {
-    body: { email: EMAIL, code: code.code, store_id: 1, name: 'Test Auth', phone: '0411-000-0000' }
+    body: { email: EMAIL, code: code.code, store_id: firstStoreId, name: 'Test Auth', phone: PHONE }
   });
   assert.equal(res.status, 200, JSON.stringify(res.json));
   assert.equal(res.json.user.name, 'Test Auth');
   assert.equal(res.json.user.role, 'CLIENT');
-  createdUserId = res.json.user.id;
+  createdUserIds.push(res.json.user.id);
 });
 
 test('verify-otp: 400 con código inválido', async () => {
-  const res = await req('POST', '/auth/verify-otp', { body: { email: EMAIL, code: '999999', store_id: 1 } });
+  const res = await req('POST', '/auth/verify-otp', { body: { email: EMAIL, code: '999999', store_id: firstStoreId } });
   assert.equal(res.status, 400);
 });
 
 test('verify-otp: el mismo código no se puede reutilizar', async () => {
-  const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL } });
-  const res = await req('POST', '/auth/verify-otp', { body: { email: EMAIL, code: code?.code || '123456', store_id: 1 } });
+  const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL, store_id: firstStoreId } });
+  const res = await req('POST', '/auth/verify-otp', { body: { email: EMAIL, code: code?.code || '123456', store_id: firstStoreId } });
   assert.equal(res.status, 400);
+});
+
+test('check-email: el mismo correo no está registrado en otra tienda', async () => {
+  const res = await req('POST', '/auth/check-email', { body: { email: EMAIL, store_id: secondStoreId } });
+  assert.equal(res.status, 200, JSON.stringify(res.json));
+  assert.equal(res.json.is_registered, false);
+});
+
+test('verify-otp: un código de una tienda no sirve en otra', async () => {
+  const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL, store_id: secondStoreId } });
+  const res = await req('POST', '/auth/verify-otp', {
+    body: { email: EMAIL, code: code.code, store_id: firstStoreId, name: 'Test Auth', phone: PHONE }
+  });
+  assert.equal(res.status, 400, JSON.stringify(res.json));
+});
+
+test('verify-otp: mismo correo y teléfono se registran en otra tienda', async () => {
+  const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL, store_id: secondStoreId } });
+  const res = await req('POST', '/auth/verify-otp', {
+    body: { email: EMAIL, code: code.code, store_id: secondStoreId, name: 'Test Auth Store 2', phone: PHONE }
+  });
+  assert.equal(res.status, 200, JSON.stringify(res.json));
+  assert.notEqual(res.json.user.id, createdUserIds[0]);
+  createdUserIds.push(res.json.user.id);
+});
+
+test('F1-34: el mismo correo compra en dos tiendas sin mezclar pedidos', async () => {
+  const [userOneId, userTwoId] = createdUserIds;
+
+  const placed = await req('POST', '/orders/place', {
+    token: clientToken(userTwoId, secondStoreId),
+    body: {
+      store_id: secondStoreId,
+      items: [{ product_id: secondProduct.id, quantity: 1 }],
+      delivery_address: 'Av. Principal 123, Torre A',
+      payment_method: 'CASH'
+    }
+  });
+  assert.equal(placed.status, 200, JSON.stringify(placed.json));
+
+  const storeTwoOrders = await req('GET', '/orders/my-orders', { token: clientToken(userTwoId, secondStoreId) });
+  assert.equal(storeTwoOrders.status, 200, JSON.stringify(storeTwoOrders.json));
+  assert.ok(storeTwoOrders.json.some((order) => order.id === placed.json.order_id));
+  assert.ok(storeTwoOrders.json.every((order) => order.store_id === secondStoreId));
+
+  const storeOneOrders = await req('GET', '/orders/my-orders', { token: clientToken(userOneId, firstStoreId) });
+  assert.equal(storeOneOrders.status, 200, JSON.stringify(storeOneOrders.json));
+  assert.ok(storeOneOrders.json.every((order) => order.id !== placed.json.order_id));
+});
+
+test('DB: teléfono duplicado dentro de la misma tienda se rechaza (P2002)', async () => {
+  await assert.rejects(
+    prisma.user.create({
+      data: { store_id: firstStoreId, email: EMAIL_DUP, phone: PHONE, name: 'Duplicate Phone' }
+    }),
+    (error) => error.code === 'P2002'
+  );
 });
 
 test('admin-login: 401 con contraseña incorrecta', async () => {

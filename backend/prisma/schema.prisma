@@ -15,9 +15,16 @@ model Store {
   latitude   Float?
   longitude  Float?
   currency   String     @default("USD")
-  usd_rate   Float      @default(1.0)
-  ves_rate   Float      @default(36.5)
-  cop_rate   Float      @default(4000.0)
+  usd_rate   Decimal    @default(1.0) @db.Decimal(14, 6)
+  ves_rate   Decimal    @default(36.5) @db.Decimal(14, 6)
+  cop_rate   Decimal    @default(4000.0) @db.Decimal(14, 6)
+  delivery_fee Decimal  @default(0) @db.Decimal(12, 2)
+  bank_name   String?
+  bank_code   String?
+  bank_phone  String?
+  bank_id_number String?
+  bank_holder String?
+  payment_note String?
   industry   String     @default("PHARMACY")
   theme_color String    @default("blue")
   categories Category[]
@@ -25,6 +32,7 @@ model Store {
   products   Product[]
   users      User[]
   drivers    Driver[]
+  deliveryZones DeliveryZone[]
 }
 
 model User {
@@ -32,8 +40,8 @@ model User {
   store_id       Int?
   client_token   String    @unique @default(uuid())
   name           String?
-  phone          String?   @unique
-  email          String?   @unique
+  phone          String?
+  email          String?
   username       String?   @unique
   password       String?
   role           String    @default("CLIENT")
@@ -41,22 +49,26 @@ model User {
   locked_until   DateTime?
   orders         Order[]
   store          Store?    @relation(fields: [store_id], references: [id])
+
+  @@unique([store_id, email])
+  @@unique([store_id, phone])
 }
 
 model VerificationCode {
   id         Int      @id @default(autoincrement())
+  store_id   Int?
   email      String
   code       String
   expires_at DateTime
 
-  @@unique([email, code])
+  @@unique([store_id, email, code])
 }
 
 model Product {
   id           Int         @id @default(autoincrement())
   store_id     Int
   name         String
-  price        Float
+  price        Decimal     @db.Decimal(12, 2)
   image_url    String?
   is_available Boolean     @default(true)
   description  String?
@@ -77,7 +89,13 @@ model Order {
   delivery_address  String
   latitude          Float?
   longitude         Float?
-  total_amount      Float
+  currency          String      @default("USD")
+  usd_rate          Decimal     @default(1.0) @db.Decimal(14, 6)
+  ves_rate          Decimal     @default(36.5) @db.Decimal(14, 6)
+  cop_rate          Decimal     @default(4000.0) @db.Decimal(14, 6)
+  subtotal          Decimal     @default(0) @db.Decimal(12, 2)
+  delivery_fee      Decimal     @default(0) @db.Decimal(12, 2)
+  total_amount      Decimal     @db.Decimal(12, 2)
   payment_method    String
   payment_reference String?
   status            String      @default("PENDING")
@@ -100,7 +118,7 @@ model OrderItem {
   order_id   Int
   product_id Int
   quantity   Int
-  unit_price Float
+  unit_price Decimal @db.Decimal(12, 2)
   order      Order   @relation(fields: [order_id], references: [id])
   product    Product @relation(fields: [product_id], references: [id])
 }
@@ -132,4 +150,17 @@ model Driver {
   is_active     Boolean  @default(true)
   store         Store    @relation(fields: [store_id], references: [id])
   orders        Order[]
+}
+
+model DeliveryZone {
+  id              Int     @id @default(autoincrement())
+  store_id        Int
+  name            String
+  min_distance_km Decimal @default(0) @db.Decimal(8, 2)
+  max_distance_km Decimal? @db.Decimal(8, 2)
+  fee             Decimal @db.Decimal(12, 2)
+  is_active       Boolean @default(true)
+  store           Store   @relation(fields: [store_id], references: [id], onDelete: Cascade)
+
+  @@index([store_id])
 }

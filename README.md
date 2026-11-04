@@ -14,7 +14,7 @@ Bienvenido al repositorio de la plataforma de Delivery y Gestión de Inventario.
 ## 🛠️ Stack Tecnológico
 
 **Frontend:**
-*   React.js 18 + TypeScript
+*   React.js 19 + TypeScript
 *   Vite (Bundler ultra rápido)
 *   TailwindCSS + shadcn/ui (Diseño moderno, Glassmorphism)
 *   Zustand / Context API (Estado Global)
@@ -55,5 +55,14 @@ Bienvenido al repositorio de la plataforma de Delivery y Gestión de Inventario.
     npm run dev
     ```
 
+## 📚 Documentación y estado del proyecto
+
+*   `PLAN_DE_TRABAJO.md` — documento vivo con tareas, pruebas y bitácora. **Retomar por aquí después de cada sesión.**
+*   `Guia_Migracion_VPS.md` — recursos mínimos, despliegue, onboarding por tienda, pruebas multi-usuario y esquema de negocio.
+*   `Documentacion_Completa.md` — arquitectura, funcionalidades y detalles técnicos.
+*   `Flujo_Completo_App.md` — recorrido funcional de cliente, administrador y motorizado.
+*   `Brochure_Comercial.md` — presentación para clientes.
+*   `Documentacion_TiendaFast.pdf` — PDF consolidado con toda la documentación, recursos y esquema de negocio.
+
 ## 📝 Documentación Comercial
-Si deseas ver las funcionalidades desde una perspectiva de negocio (para presentaciones a clientes o ventas), por favor revisa el archivo `Brochure_Comercial.md` incluido en la raíz de este proyecto.
+Si deseas ver las funcionalidades desde una perspectiva de negocio (para presentaciones a clientes o ventas), revisa `Brochure_Comercial.md` o el PDF consolidado.

@@ -60,9 +60,63 @@ test('orders: placeOrder crea pedido PENDING con precio del servidor', async () 
   assert.equal(res.status, 200, JSON.stringify(res.json));
   assert.ok(res.json.order_id);
   const order = await prisma.order.findUnique({ where: { id: res.json.order_id } });
+  const store = await prisma.store.findUnique({ where: { id: 1 } });
   assert.equal(order.status, 'PENDING');
-  assert.equal(order.total_amount, product.price * 2);
+  assert.equal(Number(order.total_amount), Number(product.price) * 2);
+  assert.equal(Number(order.subtotal), Number(product.price) * 2);
+  assert.equal(Number(order.delivery_fee), 0);
+  assert.equal(order.currency, store.currency);
+  assert.equal(Number(order.ves_rate), Number(store.ves_rate));
+  assert.equal(Number(order.cop_rate), Number(store.cop_rate));
   testOrderIds.push(res.json.order_id);
+});
+
+test('orders: aplica tarifa de zona y tarifa plana de delivery', async () => {
+  const storeBefore = await prisma.store.findUnique({ where: { id: 1 } });
+  const original = {
+    latitude: storeBefore.latitude,
+    longitude: storeBefore.longitude,
+    delivery_fee: storeBefore.delivery_fee
+  };
+
+  await prisma.store.update({
+    where: { id: 1 },
+    data: { latitude: 5.6667, longitude: -67.6333, delivery_fee: 1.5 }
+  });
+
+  let zoneId = null;
+  try {
+    const zone = await prisma.deliveryZone.create({
+      data: {
+        store_id: 1,
+        name: `Zona test ${Date.now()}`,
+        min_distance_km: 0,
+        max_distance_km: 50,
+        fee: 5
+      }
+    });
+    zoneId = zone.id;
+
+    const withZone = await placeOrder({ latitude: 5.6667, longitude: -67.6333 });
+    assert.equal(withZone.status, 200, JSON.stringify(withZone.json));
+    testOrderIds.push(withZone.json.order_id);
+    const zoneOrder = await prisma.order.findUnique({ where: { id: withZone.json.order_id } });
+    assert.equal(Number(zoneOrder.delivery_fee), 5);
+    assert.equal(Number(zoneOrder.total_amount), Number(zoneOrder.subtotal) + 5);
+
+    const flat = await placeOrder();
+    assert.equal(flat.status, 200, JSON.stringify(flat.json));
+    testOrderIds.push(flat.json.order_id);
+    const flatOrder = await prisma.order.findUnique({ where: { id: flat.json.order_id } });
+    assert.equal(Number(flatOrder.delivery_fee), 1.5);
+    assert.equal(Number(flatOrder.total_amount), Number(flatOrder.subtotal) + 1.5);
+  } finally {
+    if (zoneId) await prisma.deliveryZone.delete({ where: { id: zoneId } }).catch(() => {});
+    await prisma.store.update({
+      where: { id: 1 },
+      data: { latitude: original.latitude, longitude: original.longitude, delivery_fee: original.delivery_fee }
+    });
+  }
 });
 
 test('orders: TRANSFER sin referencia da 400', async () => {
@@ -71,11 +125,31 @@ test('orders: TRANSFER sin referencia da 400', async () => {
 });
 
 test('orders: TRANSFER con referencia queda AWAITING_PAYMENT', async () => {
-  const res = await placeOrder({ payment_method: 'TRANSFER', payment_reference: 'REF123' });
+  const res = await placeOrder({ payment_method: 'TRANSFER', payment_reference: '123456' });
   assert.equal(res.status, 200, JSON.stringify(res.json));
   const order = await prisma.order.findUnique({ where: { id: res.json.order_id } });
   assert.equal(order.status, 'AWAITING_PAYMENT');
   testOrderIds.push(res.json.order_id);
+});
+
+test('orders: TRANSFER con referencia no numérica da 400', async () => {
+  const res = await placeOrder({ payment_method: 'TRANSFER', payment_reference: 'ABC123' });
+  assert.equal(res.status, 400, JSON.stringify(res.json));
+});
+
+test('orders: cliente cancela pedido AWAITING_PAYMENT', async () => {
+  const created = await placeOrder({ payment_method: 'TRANSFER', payment_reference: '123456' });
+  assert.equal(created.status, 200, JSON.stringify(created.json));
+  testOrderIds.push(created.json.order_id);
+
+  const cancel = await req('PUT', `/orders/${created.json.order_id}/cancel`, {
+    token: client,
+    body: { cancel_reason: 'Cambié de opinión' }
+  });
+  assert.equal(cancel.status, 200, JSON.stringify(cancel.json));
+
+  const order = await prisma.order.findUnique({ where: { id: created.json.order_id } });
+  assert.equal(order.status, 'CANCELLED');
 });
 
 test('orders: producto de otra tienda da 400', async () => {
@@ -89,6 +163,61 @@ test('orders: producto de otra tienda da 400', async () => {
     }
   });
   assert.equal(res.status, 400, JSON.stringify(res.json));
+});
+
+test('orders: un ADMIN no puede comprar como cliente', async () => {
+  const res = await req('POST', '/orders/place', {
+    token: admin,
+    body: {
+      store_id: 1,
+      items: [{ product_id: product.id, quantity: 1 }],
+      delivery_address: 'Av. Principal 123',
+      payment_method: 'CASH'
+    }
+  });
+  assert.equal(res.status, 403, JSON.stringify(res.json));
+});
+
+test('orders: un cliente no puede pedir en otra tienda', async () => {
+  const res = await req('POST', '/orders/place', {
+    token: client,
+    body: {
+      store_id: 2,
+      items: [{ product_id: product.id, quantity: 1 }],
+      delivery_address: 'Av. Principal 123',
+      payment_method: 'CASH'
+    }
+  });
+  assert.equal(res.status, 403, JSON.stringify(res.json));
+});
+
+test('orders: tienda inactiva no acepta pedidos', async () => {
+  const store = await prisma.store.create({
+    data: { name: `Inactive ${Date.now()}`, slug: `inactive-${Date.now()}`, is_active: false }
+  });
+  const inactiveUser = await prisma.user.create({
+    data: {
+      email: `inactive-${Date.now()}@example.com`,
+      phone: `03${String(Date.now()).slice(0, 9)}`,
+      store_id: store.id,
+      role: 'CLIENT'
+    }
+  });
+  try {
+    const res = await req('POST', '/orders/place', {
+      token: clientToken(inactiveUser.id, store.id),
+      body: {
+        store_id: store.id,
+        items: [{ product_id: product.id, quantity: 1 }],
+        delivery_address: 'Av. Principal 123',
+        payment_method: 'CASH'
+      }
+    });
+    assert.equal(res.status, 400, JSON.stringify(res.json));
+  } finally {
+    await prisma.user.delete({ where: { id: inactiveUser.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+  }
 });
 
 test('orders: sin auth da 401', async () => {

@@ -3,12 +3,18 @@
 > Documento vivo. Actualizar después de cada tarea.
 > Si se pierde la sesión: leer este archivo, revisar `git status` y `git log`, y continuar desde la primera casilla sin marcar.
 
-- **Última actualización:** 2026-11-01
+- **Última actualización:** 2026-11-03
 - **Rama actual:** `feature/security-hardening`
 - **Rama principal:** `main`
-- **Estado general:** F1-13 completada; siguiente F1-14
-- **Zona del piloto:** Puerto Ayacucho, Amazonas
-- **Segmento:** farmacias independientes y cadenas pequeñas
+- **Estrategia de despliegue y validación:**
+  1. **Hito 1 (Inmediato / En curso):** Sistema 100% listo, probado y validable en **Localhost** y en el entorno de pruebas existente en la nube (**Netlify** para frontend + **Render** para backend + **Neon** para PostgreSQL). Con esta base lista y pulida se realizarán las demostraciones presenciales y la validación comercial con negocios de comida rápida, víveres y farmacias de Puerto Ayacucho.
+  2. **Hito 2 (Final / Producción autónoma):** Migración y despliegue definitivo a **VPS propio** (PostgreSQL 16 local, Nginx, Let's Encrypt, backups automáticos). Los accesos SSH y credenciales del VPS se solicitarán al usuario en el momento exacto de ejecutar esta fase.
+- **Estado general:** F1-34 completada; prioridad activa inmediata: **Fase 1B (Ubicación y Geocodificación precisa del cliente)** y **Fase 2 (Bugs críticos de Admin, Flujo de Pago y Stock)**.
+- **Zona del piloto:** Puerto Ayacucho, Estado Amazonas
+- **Verticales comerciales prioritarias:**
+  1. **Comida Rápida:** Puestos de perros calientes, hamburgueserías, pizzerías y comida rápida nocturna (alta rotación de pedidos vespertinos/nocturnos, combos y necesidad de despacho express).
+  2. **Víveres y Bodegones:** Abastos, mini-mercados, bodegones familiares y venta de víveres/cesta básica (pedidos para el hogar, entrega de compras pesadas y actualización diaria a tasa BCV).
+  3. **Farmacias:** Farmacias independientes y cadenas locales (medicamentos OTC, analgésicos, fórmulas y cuidado personal).
 
 ---
 
@@ -41,21 +47,77 @@ git diff
 
 ## 2. Contexto del proyecto
 
-Plataforma de delivery y gestión de inventario multitenant para negocios venezolanos. El piloto se enfoca en farmacias de Puerto Ayacucho.
+Plataforma de delivery y gestión de inventario **multitenant** para negocios venezolanos, diseñada para resolver la caótica gestión de pedidos por WhatsApp en **Puerto Ayacucho, Estado Amazonas**, cubriendo tres necesidades comerciales críticas:
+1. **Comida Rápida:** Hamburgueserías, puestos de perros calientes, pizzerías y comida nocturna.
+2. **Víveres y Bodegones:** Abastos, mini-mercados familiares y venta de cesta básica con entrega a domicilio.
+3. **Farmacias:** Medicamentos de venta libre, cuidado personal y productos de salud.
 
-- **Frontend:** React 19 + TypeScript + Vite + Tailwind.
+- **Arquitectura:** Multitenant con **una sola base de datos PostgreSQL** y **una sola instancia de la app**. Cada tienda es un registro en la tabla `Store` con su `slug`, catálogo, industria (`PHARMACY`, `RESTAURANT`, `SUPERMARKET`), plantilla visual adaptada, usuarios, tasas, zonas de delivery y datos bancarios. Todos los datos se aíslan por `store_id`. No se crea un servidor ni una base de datos por cliente.
+- **Frontend:** React 19 + TypeScript + Vite + Tailwind (plantillas especializadas por industria: `RestaurantTemplate`, `SupermarketTemplate`, `PharmacyTemplate`).
 - **Backend:** Node.js + Express + Prisma + PostgreSQL + Socket.io.
+- **Entorno de Pruebas, Staging y Demostración:**
+  - **Frontend:** Netlify (`https://test.shop-mg.com` o URL asignada en Netlify).
+  - **Backend:** Render (`https://delivery-app-3ewq.onrender.com`).
+  - **Base de datos:** Neon (PostgreSQL serverless).
+  - **Objetivo de este entorno:** Permitir el desarrollo rápido en `localhost`, el testeo continuo en la nube y la **demostración presencial/remota a comerciantes reales de Puerto Ayacucho** (dueños de puestos de hamburguesas/perros, bodegones y farmacias) desde navegadores y teléfonos móviles sin barreras de infraestructura previa.
+- **Entorno de Producción Definitiva (Objetivo):**
+  - **Servidor:** VPS propio (Ubuntu 24.04 LTS con Nginx reverse proxy y SSL Let's Encrypt).
+  - **Base de datos:** PostgreSQL 16 local en el VPS (escuchando solo en `127.0.0.1`, backups automáticos diarios).
+  - **Objetivo de este entorno:** Salida a producción autónoma, sin costos recurrentes de PaaS, con máximo rendimiento y soberanía de los datos. Se activa tras la validación de la demo y los datos de acceso serán cargados al momento de iniciar dicho despliegue.
 - **Multimedia:** Cloudinary.
 - **Correo:** Resend.
 - **Autenticación:** JWT en cookie httpOnly, OTP por correo para clientes y usuario/contraseña para administradores.
-- **Producción actual documentada:** `https://test.shop-mg.com` con API en Render.
-- **Producción objetivo:** VPS propio con Nginx, frontend y API en el mismo dominio.
+
+### Arquitectura multitenant
+
+```
+Internet
+    │
+    ▼
+┌───────────────────────────────────────┐
+│        Nginx (Reverse Proxy)          │
+│  SSL/TLS (Let's Encrypt)              │
+│  /* → frontend/dist (estático)        │
+│  /api/* → Node.js :3000               │
+│  /socket.io/* → Node.js :3000 (WS)    │
+└──────────┬────────────────────────────┘
+           │
+    ┌──────▼──────────────┐
+    │  Node.js + Express  │
+    │  PM2 (auto-restart) │
+    │  Puerto 3000        │
+    │  Socket.io (tiempo  │
+    │  real)              │
+    └──────┬──────────────┘
+           │
+    ┌──────▼──────────────┐
+    │  PostgreSQL 16      │
+    │  LOCAL en el VPS     │
+    │  Puerto 5432        │
+    │  (solo 127.0.0.1)   │
+    │                     │
+    │  UNA sola DB:       │
+    │  delivery_db        │
+    │                     │
+    │  Tablas con         │
+    │  store_id (FK):     │
+    │  Store, User,       │
+    │  Product, Order,    │
+    │  Category, Driver,  │
+    │  DeliveryZone...    │
+    └─────────────────────┘
+```
+
+- **Slug = identidad pública de la tienda.** Catálogo en `https://dominio.com/<slug>`. Panel admin en `https://dominio.com/admin-login`.
+- **Un solo `DATABASE_URL`** apuntando a `localhost:5432`. PostgreSQL escucha solo en `127.0.0.1` (sin exposición externa).
+- **Aislamiento por `store_id`:** Todas las queries (productos, pedidos, usuarios, categorías, combos, drivers, zonas) filtran por `store_id`. La identidad del cliente ya es compuesta `@@unique([store_id, email])`.
 
 ### Estado real del repositorio
 
 - El núcleo funcional existe: catálogo, carrito, checkout, OTP, pedidos, dashboard, inventario, combos, motorizados, historial y SuperAdmin.
-- La rama `feature/security-hardening` tiene mejoras sin commitear: transiciones de estado, validaciones Zod de inventario y pruebas iniciales.
-- No existen migraciones Prisma; se usa `db push`.
+- La rama `feature/security-hardening` tiene mejoras sin commitear de F1-27/F1-28 (bloqueo de tiendas inactivas y admin como cliente).
+- Las migraciones Prisma ya tienen baseline; precios y totales usan `Decimal(12,2)` y las tasas `Decimal(14,6)`.
+- La base de datos actual es Neon (pruebas/staging); la de producción será PostgreSQL local en VPS.
 - No hay CI, healthchecks, backups automatizados ni pruebas E2E.
 - La documentación y los PDFs actuales prometen funciones que aún no están implementadas.
 - No existe un módulo de planes, suscripciones, límites ni cobros.
@@ -75,7 +137,10 @@ Plataforma de delivery y gestión de inventario multitenant para negocios venezo
 | Piloto | 60 días gratis, implementación incluida |
 | Después del piloto | 50% de descuento por 3 meses |
 | Indexación | Precios en USD; cobro en Bs al BCV del día; revisión trimestral |
-| Producción | VPS con Nginx, mismo dominio para frontend y API |
+| Arquitectura | Multitenant, una sola app y una sola BD PostgreSQL para todos los clientes |
+| Entorno de demo y pruebas | Netlify (frontend) + Render (API) + Neon (Postgres) para desarrollo, validación y demostraciones |
+| Base de datos producción | PostgreSQL 16 local en el VPS (no Neon, no RDS; se migra al desplegar producción) |
+| Producción definitiva | VPS propio con Nginx, PostgreSQL local, frontend y API en el mismo dominio (al concluir demostraciones) |
 | Clientes | Una cuenta por tienda; mismo correo puede existir en varias tiendas |
 | Ventas y soporte | El fundador |
 | Facturación fiscal | Se define con contador antes del primer cobro |
@@ -85,52 +150,82 @@ Plataforma de delivery y gestión de inventario multitenant para negocios venezo
 
 ## 4. Esquema de negocio
 
-### 4.1 Cliente ideal
+### 4.1 Clientes ideales (Tres verticales prioritarias en Puerto Ayacucho)
 
-Farmacia independiente o cadena pequeña de Puerto Ayacucho, con 1–3 sucursales, 500–3.000 productos, pedidos por WhatsApp y delivery propio o tercerizado. Dueño o gerente accesible.
+En Puerto Ayacucho, el comercio depende casi exclusivamente de pedidos por WhatsApp con atención manual, errores en transferencias y motorizados desorientados en la noche. TiendaFast atiende tres verticales con alta necesidad y sin solución local moderna:
+
+#### Vertical 1: Comida Rápida (Hamburgueserías, Perros Calientes, Pizzas y Comida Nocturna)
+- **Perfil:** Puestos de perros calientes, carritos, trailers y hamburgueserías en avenidas transitadas (Av. 23 de Enero, Av. Orinoco, Av. Aguerrevere) y negocios de comida nocturna.
+- **Operación:** Horario vespertino/nocturno (6:00 PM a 12:00 AM). Picos intensos de jueves a domingo.
+- **Problema en Puerto Ayacucho:** En horas pico el encargado de cocina no puede responder decenas de chats de WhatsApp, se pierden pedidos, se mezclan instrucciones ("sin cebolla", "salsa aparte"), clientes mandan comprobantes de Pago Móvil no verificados, y los motorizados dan vueltas buscando casas en sectores oscuros o sin números de calle.
+- **Solución con TiendaFast:** Plantilla `RESTAURANT`, combos de comida rápida (hamburguesa + papas + refresco con descuento automático de insumos), notas de preparación del pedido, validación de referencia de Pago Móvil antes de encender la plancha, y botón directo a Google Maps/Waze para el repartidor.
+
+#### Vertical 2: Víveres, Bodegones y Abastos (Cesta Básica y Mini-markets)
+- **Perfil:** Abastos de barrio, mini-mercados familiares y bodegones en zonas residenciales y comerciales.
+- **Operación:** Horario diurno (7:30 AM a 6:00 PM). Catálogo de 200 a 1.500 productos (harina, arroz, pasta, aceites, lácteos, embutidos, artículos de limpieza, licores y snacks).
+- **Problema en Puerto Ayacucho:** Variación diaria de precios en bolívares por cambio del dólar; clientes que consultan precios constantemente por chat; necesidad de despachar compras pesadas a domicilio para evitar que el cliente cargue bolsas bajo el calor extremo o haga filas.
+- **Solución con TiendaFast:** Plantilla `SUPERMARKET`, precios base en USD con conversión automática a tasa oficial BCV del día, catálogo estructurado por departamentos (Alimentos, Bebidas, Limpieza), cálculo de delivery por distancia/zona y control de stock para no vender lo agotado en mostrador.
+
+#### Vertical 3: Farmacias Independientes
+- **Perfil:** Farmacias independientes y pequeñas boticas de Puerto Ayacucho.
+- **Operación:** Horario continuo diurno o turnos de turno nocturno.
+- **Problema en Puerto Ayacucho:** Consultas repetitivas sobre disponibilidad y precio de medicamentos comunes (analgésicos, antipiréticos, pañales, vitaminas); pérdida de ventas por no contestar a tiempo.
+- **Solución con TiendaFast:** Plantilla `PHARMACY`, catálogo organizado de medicamentos OTC y cuidado personal, precios indexados a BCV y pedido seguro.
+
+---
 
 ### 4.2 Precios
 
-| Plan | Precio | Límites |
-|---|---:|---|
-| Implementación | $90 único | Configuración, catálogo, BCV, capacitación y salida en vivo |
-| Emprendedor | $9/mes | 1 tienda, 300 productos, 1 administrador |
-| Negocio | $19/mes | Productos ilimitados, combos, 3 administradores, reportes |
-| Pro | $35/mes | Dominio propio, administradores ilimitados, capacitación 1:1, soporte prioritario |
-| Anualidad | 10 meses por 12 | Implementación gratis y precio congelado |
-| Comisión por pedido | 0% | Sin porcentaje sobre ventas |
+| Plan | Precio | Límites | Adecuación por vertical |
+|---|---:|---|---|
+| Implementación | $90 único | Configuración, carga de catálogo/menú, BCV, capacitación y salida en vivo | Primeros 6 del piloto: $0 |
+| Emprendedor | $9/mes | 1 tienda, 300 productos, 1 administrador | Ideal para carritos de perros calientes y puestos individuales |
+| Negocio | $19/mes | Productos ilimitados, combos, 3 administradores, reportes | Ideal para hamburgueserías con cocina/caja y bodegones de víveres |
+| Pro | $35/mes | Dominio propio, administradores ilimitados, soporte prioritario | Cadenas locales, abastos grandes o farmacias con múltiples turnos |
+| Anualidad | 10 meses por 12 | Implementación gratis y precio congelado | Aplicable a cualquier plan |
+| Comisión por pedido | 0% | Sin porcentaje sobre ventas | 100% de la ganancia es del negocio |
 
-Cobro en bolívares a tasa BCV del día. Métodos: Pago Móvil, transferencia, efectivo, Zelle o USDT. Revisión trimestral con aviso de 30 días. Sin contratos largos; cancelación con 30 días de aviso.
+Cobro en bolívares a tasa BCV del día. Métodos: Pago Móvil, transferencia, efectivo, Zelle o USDT. Sin contratos de permanencia forzosa.
 
-### 4.3 Piloto en Puerto Ayacucho
+---
 
-- 60 días gratis, sin implementación.
-- Capacitación y soporte directo del fundador.
-- Tres sesiones de retroalimentación.
-- Permiso para usar métricas reales de forma anonimizada.
-- Continuidad con 50% de descuento por 3 meses.
+### 4.3 Piloto en Puerto Ayacucho (6 Negocios Representativos)
 
-Meta: lista de 15–20 farmacias, 8 contactos efectivos, 5 demos y 3 acuerdos firmados.
+El piloto de 60 días gratis se estructurará con **6 negocios** para validar el comportamiento en las tres verticales y en diferentes horarios:
+- **2 de Comida Rápida:** 1 puesto de perros calientes/hamburguesas de alto flujo nocturno + 1 local de pizzas o comida rápida mixta.
+- **2 de Víveres / Bodegones:** 1 abasto de víveres/cesta básica + 1 bodegón de productos importados/snacks.
+- **2 Farmacias:** 2 farmacias independientes de diferentes sectores (ej. Casco Central y San Enrique).
 
-Canales: visitas presenciales, referidos de distribuidores, visitadores médicos y motorizados, WhatsApp e Instagram local, grupos de dueños de farmacias y tienda demo.
+**Condiciones del piloto:**
+- 60 días gratis, costo de implementación $0.
+- Capacitación y soporte directo del fundador en sitio.
+- Tres sesiones de retroalimentación para afinar usabilidad.
+- Continuidad post-piloto con 50% de descuento por 3 meses.
 
-Criterios de selección: dueño o gerente con decisión, pedidos por WhatsApp, delivery, catálogo exportable y disposición a dar retroalimentación semanal.
+**Meta de prospección local:**
+- 15 negocios contactados en Puerto Ayacucho (5 de comida rápida, 5 de víveres, 5 farmacias).
+- 8 demostraciones presenciales en teléfono móvil con las tiendas demo de prueba.
+- 6 acuerdos de piloto firmados.
+
+---
 
 ### 4.4 Unit economics ilustrativos
 
-Supuesto: 30 clientes (15 Emprendedor, 10 Negocio, 5 Pro) y 2 implementaciones al mes.
+Supuesto: 30 clientes en Puerto Ayacucho (14 Comida Rápida, 10 Víveres/Bodegones, 6 Farmacias) distribuidos en: 15 Emprendedor ($9), 10 Negocio ($19), 5 Pro ($35) y 2 implementaciones al mes.
 
 | Concepto | Mensual |
 |---|---:|
-| MRR | $500 |
-| Implementaciones | $180 |
+| MRR (30 clientes) | $500 |
+| Implementaciones (2/mes) | $180 |
 | Infraestructura, correo y respaldo | $50–80 |
-| Soporte (20 h) | $100 |
+| Soporte y visitas (20 h) | $100 |
 | Comisiones de cobro (~2%) | $14 |
 | Margen bruto estimado | $480–500 |
-| Punto de equilibrio | 10–12 clientes |
+| Punto de equilibrio | 10–12 clientes (totalmente viable dentro de Puerto Ayacucho) |
 
-Escenarios de planificación, no proyecciones garantizadas. Puerto Ayacucho sirve para validar, no para escalar; el crecimiento posterior requiere otra ciudad.
+Al integrar comida rápida y víveres, el mercado potencial local se multiplica de inmediato, haciendo viable el punto de equilibrio dentro de Puerto Ayacucho sin depender de una expansión acelerada a otras ciudades.
+
+---
 
 ### 4.5 Fiscalidad
 
@@ -138,19 +233,19 @@ Escenarios de planificación, no proyecciones garantizadas. Puerto Ayacucho sirv
 - El piloto es gratuito: no se factura hasta tener la estructura definida.
 - No lanzar el cobro público sin resolución fiscal.
 
-### 4.6 Requisitos específicos de farmacia
+---
 
-El esquema actual no tiene recetas, lotes ni vencimientos.
+### 4.6 Matriz de requisitos por vertical
 
-| Requisito | Situación | Decisión |
-|---|---|---|
-| Receta médica | No implementado | Validar con 5 farmacias |
-| Lotes y vencimientos | No implementado | Validar con 5 farmacias |
-| Medicamentos controlados | No implementado | Excluir del piloto |
-| Factura fiscal con IVA | No implementado | Definir con contador |
-| Alertas de vencimiento | No implementado | Evaluar Fase 2C |
-
-Si 3 o más farmacias exigen recetas o lotes, agregar la Fase 2C (3–5 días).
+| Característica | Comida Rápida (Perros/Hamburguesas) | Víveres y Bodegones (Abarrotes) | Farmacias (Salud) |
+|---|---|---|---|
+| **Plantilla Frontend** | `RestaurantTemplate` (tema cálido / rojo / naranja) | `SupermarketTemplate` (tema verde / esmeralda) | `PharmacyTemplate` (tema azul / cian) |
+| **Combos** | Vital: Perro/Hamburguesa + Papas + Bebida | Vital: Combos Cesta Básica (Harina + Arroz + Aceite) | Opcional: Kits de primeros auxilios |
+| **Notas de preparación** | Sí ("sin cebolla", "salsas aparte", "término de carne") | Opcional ("marca preferida") | No |
+| **Horario clave** | Noche (6 PM a 12 AM) | Día (8 AM a 6 PM) | Todo el día / Guardias |
+| **Navegación GPS Motorizado** | Imprescindible (calles oscuras y sin número) | Alta (dirección exacta del hogar) | Alta (entrega urgente) |
+| **Actualización Tasa BCV** | Precios en USD indexados | Diario obligatorio (inflación en víveres) | Diario obligatorio |
+| **Control de Stock** | Por unidad de producto o combo | Por stock físico en anaquel | Por unidad / presentación |
 
 ---
 
@@ -173,7 +268,7 @@ Si 3 o más farmacias exigen recetas o lotes, agregar la Fase 2C (3–5 días).
 | A-04 | `markOrderViewed` sin validación de tienda | Media |
 | A-05 | No existen planes, suscripciones, límites ni cobros | Crítica |
 | P-01 | Multi-moneda incorrecta para base VES/COP | Alta |
-| P-02 | Sin migraciones, CI, healthchecks ni backups | Crítica |
+| P-02 | Sin CI de API, healthchecks ni backups automatizados; migraciones ya iniciadas | Crítica |
 | P-03 | Tiendas inactivas siguen operando | Alta |
 | P-04 | Sin pruebas E2E ni pruebas de carga | Media |
 | P-05 | Sin zonas ni tarifas de delivery configurables | Alta |
@@ -181,6 +276,7 @@ Si 3 o más farmacias exigen recetas o lotes, agregar la Fase 2C (3–5 días).
 | P-07 | Bundle principal de ~1 MB sin code splitting | Media |
 | P-08 | Las pruebas de API requieren esperar a que el servidor esté listo | Baja |
 | P-09 | Resend rechaza correos `example.com`; las pruebas usan el código de la DB | Baja |
+| C-06 | Búsqueda y geolocalización de cliente con token expuesto, viewbox fijo y sin reverse geocoding al mover el pin | Alta |
 
 ---
 
@@ -242,35 +338,64 @@ Si 3 o más farmacias exigen recetas o lotes, agregar la Fase 2C (3–5 días).
 
 #### Dinero y monedas
 
-- [ ] F1-14 Migrar precios y totales de `Float` a `Decimal` o centavos.
-- [ ] F1-15 Agregar al pedido: moneda, tasas, subtotal, delivery y total.
-- [ ] F1-16 Guardar snapshot de tasas para el historial.
-- [ ] F1-17 Corregir conversiones cuando la tienda base es VES o COP.
-- [ ] F1-18 Corregir formato de precios en COP.
-- [ ] F1-19 Integrar BCV desde backend con caché y endpoint de sincronización.
-- [ ] F1-20 Permitir override manual de tasas.
-- [ ] F1-21 Configurar zonas y tarifas de delivery.
+- [x] F1-14 Migrar precios y totales de `Float` a `Decimal` o centavos.
+- [x] F1-15 Agregar al pedido: moneda, tasas, subtotal, delivery y total.
+- [x] F1-16 Guardar snapshot de tasas para el historial.
+- [x] F1-17 Corregir conversiones cuando la tienda base es VES o COP.
+- [x] F1-18 Corregir formato de precios en COP.
+- [x] F1-19 Integrar BCV desde backend con caché y endpoint de sincronización.
+- [x] F1-20 Permitir override manual de tasas.
+- [x] F1-21 Configurar zonas y tarifas de delivery.
 
 #### Pagos y checkout
 
-- [ ] F1-22 Agregar datos bancarios por tienda al esquema.
-- [ ] F1-23 Eliminar datos bancarios hardcodeados de `Checkout.tsx`.
-- [ ] F1-24 Mostrar datos bancarios reales de la tienda.
-- [ ] F1-25 Validar referencia de Pago Móvil.
-- [ ] F1-26 Permitir cancelar pedidos `AWAITING_PAYMENT`.
-- [ ] F1-27 Bloquear compras en tiendas inactivas.
-- [ ] F1-28 Evitar que un administrador compre como cliente.
+- [x] F1-22 Agregar datos bancarios por tienda al esquema.
+- [x] F1-23 Eliminar datos bancarios hardcodeados de `Checkout.tsx`.
+- [x] F1-24 Mostrar datos bancarios reales de la tienda.
+- [x] F1-25 Validar referencia de Pago Móvil.
+- [x] F1-26 Permitir cancelar pedidos `AWAITING_PAYMENT`.
+- [x] F1-27 Bloquear compras en tiendas inactivas.
+- [x] F1-28 Evitar que un administrador compre como cliente.
 
 #### Identidad de clientes por tienda
 
-- [ ] F1-29 Quitar `@unique` global de `User.email` y `User.phone`.
-- [ ] F1-30 Agregar `@@unique([store_id, email])` y `@@unique([store_id, phone])`.
-- [ ] F1-31 Actualizar `checkEmail` y `verifyOtp` para buscar por `store_id + email`.
-- [ ] F1-32 Actualizar consultas que usan `findUnique({ where: { email } })`.
-- [ ] F1-33 Crear migración Prisma con respaldo previo.
-- [ ] F1-34 Probar que un mismo correo compra en dos tiendas sin mezclar datos.
+- [x] F1-29 Quitar `@unique` global de `User.email` y `User.phone`.
+- [x] F1-30 Agregar `@@unique([store_id, email])` y `@@unique([store_id, phone])`.
+- [x] F1-31 Actualizar `checkEmail` y `verifyOtp` para buscar por `store_id + email`.
+- [x] F1-32 Actualizar consultas que usan `findUnique({ where: { email } })`.
+- [x] F1-33 Crear migración Prisma con respaldo previo.
+- [x] F1-34 Probar que un mismo correo compra en dos tiendas sin mezclar datos.
 
 **Criterio de terminado:** compra segura, sin sobreventa, precios correctos y cuentas aisladas por tienda.
+
+---
+
+### Fase 1B — Ubicación, Geocodificación y Experiencia de Entrega (1.5 días)
+
+Optimización de la búsqueda y precisión de la dirección del cliente en el checkout:
+
+- [ ] F1B-01 **Input predictivo con autocompletado debounced (~350ms):**
+  - Búsqueda en tiempo real al escribir con sugerencias visuales desplegables.
+  - Centrado dinámico en las coordenadas de la tienda activa (`store.latitude`, `store.longitude`), eliminando el viewbox estático de Puerto Ayacucho.
+  - Al seleccionar una sugerencia: rellena el input, posiciona el pin del mapa (`flyTo`) y cotiza delivery automáticamente.
+- [ ] F1B-02 **Botón "Ubicar mi casa por GPS" con Reverse Geocoding automático:**
+  - Consulta al GPS del navegador/dispositivo con `enableHighAccuracy: true` y timeout de 15 s.
+  - Si el usuario autoriza: obtiene coordenadas exactas y ejecuta Geocodificación Inversa (Reverse Geocoding) inmediata para rellenar de forma legible la calle, sector y ciudad en el input sin requerir tipeo manual.
+  - Manejo amigable de permisos denegados o señales débiles con fallback a estimación por IP y aviso claro para ajustar el pin manualmente.
+- [ ] F1B-03 **Sincronización bidireccional mapa-input (Reverse Geocoding al interactuar con el mapa):**
+  - Al hacer clic o arrastrar el marcador (pin) en el mapa Leaflet, ejecutar Reverse Geocoding para actualizar el texto de la dirección en el input y no dejar inconsistencias entre el mapa y el texto.
+- [ ] F1B-04 **Validación de cobertura y bloqueo fuera de zona:**
+  - Validar contra las zonas activas de la tienda (`DeliveryZone`). Si las coordenadas del cliente superan el radio máximo de entrega, advertir de inmediato con alerta visual ("Tu ubicación está fuera del rango de entrega de esta tienda") y deshabilitar el botón de continuar al pago.
+- [ ] F1B-05 **Direcciones guardadas para clientes frecuentes:**
+  - Para usuarios identificados (post-OTP), ofrecer selector de "Direcciones anteriores" (ej. "Casa", "Trabajo") para comprar en 1 clic sin tener que buscar o geolocalizar desde cero.
+- [ ] F1B-06 **Despacho y navegación para repartidor y admin:**
+  - Guardar `latitude`, `longitude`, `address` y `address_details` (punto de referencia, color de casa) en el pedido.
+  - Generar botones directos en la vista de órdenes del Admin y del Motorizado para abrir la ruta en **Google Maps** y **Waze** (`https://www.google.com/maps/search/?api=1&query=lat,lng`).
+- [ ] F1B-07 **Seguridad, variables de entorno y contingencia:**
+  - Retirar token público de mapas del código fuente frontend y gestionarlo mediante variable de entorno (`VITE_LOCATIONIQ_KEY` o proxy backend).
+  - Implementar fallback transparente a OpenStreetMap (Nominatim) o ingreso manual asistido si la cuota de la API se agota o hay cortes de servicio.
+
+**Criterio de terminado:** el cliente ubica su casa en menos de 5 segundos (por GPS o texto predictivo), el mapa y la dirección quedan 100% sincronizados, se valida la cobertura de reparto y el repartidor recibe la ubicación exacta con enlace de navegación.
 
 ---
 
@@ -304,6 +429,7 @@ Si 3 o más farmacias exigen recetas o lotes, agregar la Fase 2C (3–5 días).
 - [ ] F2-18 Evitar stock negativo.
 - [ ] F2-19 Manejar eliminación de productos usados en combos.
 - [ ] F2-20 Agregar alertas de bajo stock.
+- [ ] F2-25 Restaurar stock al cancelar o eliminar pedidos (cliente, admin y lote).
 
 #### Historial y analytics
 
@@ -314,7 +440,7 @@ Si 3 o más farmacias exigen recetas o lotes, agregar la Fase 2C (3–5 días).
 
 #### Tiendas inactivas
 
-- [ ] F2-25 Bloquear catálogo y checkout de tiendas inactivas.
+- [ ] F2-25B Bloquear catálogo y checkout de tiendas inactivas.
 - [ ] F2-26 Bloquear recepción de pedidos en tiendas inactivas.
 - [ ] F2-27 Definir acceso del admin de tienda inactiva.
 - [ ] F2-28 Auditar activaciones y desactivaciones.
@@ -405,24 +531,111 @@ Solo si el discovery con 5 farmacias lo confirma.
 
 ---
 
-### Fase 4 — Producción en VPS (3 días)
+### Fase 3B — Validación y Despliegue en Staging (Netlify + Render + Neon) para Demostración Comercial (1 día)
 
-- [ ] F4-01 Crear migraciones Prisma reales.
-- [ ] F4-02 Dejar de usar `db push` en producción.
-- [ ] F4-03 Preparar VPS: Node 20, PostgreSQL, Nginx, PM2, UFW, Fail2Ban.
-- [ ] F4-04 Configurar frontend y API en el mismo dominio.
-- [ ] F4-05 SSL con Let's Encrypt y renovación automática.
-- [ ] F4-06 Configurar `NODE_ENV=production` y `ALLOWED_ORIGINS`.
-- [ ] F4-07 Backups diarios de PostgreSQL.
-- [ ] F4-08 Copiar backups fuera del VPS.
-- [ ] F4-09 Probar restauración.
-- [ ] F4-10 Crear `/health` y `/ready`.
-- [ ] F4-11 Logs con rotación.
-- [ ] F4-12 Monitoreo externo y alertas.
-- [ ] F4-13 Pipeline de despliegue y rollback.
-- [ ] F4-14 Índices de base de datos.
-- [ ] F4-15 Runbook de incidentes.
-- [ ] F4-16 Términos, privacidad y retención de datos.
+> **Objetivo:** Dejar la aplicación 100% operativa y probada en la nube actual para ejecutar demostraciones presenciales y pilotos con farmacias reales antes de la migración definitiva a VPS.
+
+- [ ] F3B-01 **Alineación de base de datos en Neon:**
+  - Ejecutar `npx prisma migrate deploy` contra la instancia de Neon para aplicar las migraciones de `money_decimal`, `user_identity_per_store`, delivery zones y datos bancarios sin tocar los datos existentes.
+- [ ] F3B-02 **Verificación del Backend en Render:**
+  - Comprobar que `ALLOWED_ORIGINS` en Render incluya el dominio de Netlify y `http://localhost:5173`.
+  - Probar healthcheck y conexión a Socket.io desde navegadores externos.
+  - Asegurar que el backend maneje adecuadamente cookies cross-site con `SameSite=None; Secure; Partitioned`.
+- [ ] F3B-03 **Verificación y Build del Frontend en Netlify:**
+  - Confirmar que `_redirects` o `netlify.toml` maneje correctamente las rutas del SPA (`/* /index.html 200`).
+  - Configurar variables de entorno en Netlify (`VITE_API_URL`, `VITE_SOCKET_URL`, `VITE_LOCATIONIQ_KEY`).
+  - Validar build de producción sin errores de TypeScript ni assets faltantes.
+- [ ] F3B-04 **Preparación de las 3 tiendas de demostración por vertical:**
+  - **Tienda 1 (`demo-comida`):** Hamburguesas, perros calientes, combos de comida rápida y bebidas frías. Configurada con plantilla `RESTAURANT` y tema `orange`/`red`.
+  - **Tienda 2 (`demo-viveres`):** Cesta básica (harina, arroz, pasta, aceite), lácteos, embutidos y artículos de limpieza. Configurada con plantilla `SUPERMARKET` y tema `emerald`.
+  - **Tienda 3 (`demo-farmacia`):** Medicamentos de venta libre (acetaminofén, sueros, vitaminas), cuidado personal y combos de primeros auxilios. Configurada con plantilla `PHARMACY` y tema `blue`.
+  - Todas con coordenadas reales en Puerto Ayacucho, tarifas de delivery por zona y datos de Pago Móvil de prueba.
+- [ ] F3B-05 **Validación integral en dispositivos móviles (Smartphone / 4G):**
+  - Probar flujo de cliente en móvil en cada plantilla:
+    - Comida rápida: pedir combo de hamburguesa/perro con notas especiales ("sin cebolla", "salsas aparte").
+    - Víveres: agregar múltiples productos de la cesta básica, verificando total en USD y Bs a tasa BCV.
+    - Farmacia: búsqueda rápida por nombre comercial.
+  - Probar geolocalización en las tres: GPS "Ubicar mi casa" o búsqueda predictiva con mapa.
+  - Probar panel de administración desde PC/Tablet: recepción instantánea por Socket.io, validación de Pago Móvil, cambio de estados.
+  - Probar rol de repartidor: apertura de ruta directa en Google Maps y Waze hacia la casa del cliente.
+- [ ] F3B-06 **Guiones de demostración comercial adaptados (10 min por vertical):**
+  - **Guion para Comida Rápida (dueño de hamburguesería/perros calientes):** Demostrar cómo atender 50 pedidos en horas pico sin colapsar el WhatsApp, evitar comprobantes falsos de Pago Móvil y enviar al motorizado directo por GPS sin perderse en la noche.
+  - **Guion para Víveres y Bodegones (dueño de abasto/bodegón):** Demostrar la actualización automática de precios en Bs según tasa BCV, cómo exhibir cientos de productos por pasillos y ofrecer delivery de compras pesadas a las casas de los clientes.
+  - **Guion para Farmacias:** Demostrar catálogo de medicamentos de alta rotación, stock visible y consulta rápida.
+
+---
+
+### Fase 4 — Producción Definitiva en VPS con PostgreSQL local (Diferida al despliegue final)
+
+> **Nota de ejecución:** Esta fase se mantiene completamente planificada y documentada con sus 45 sub-tareas. Se ejecutará una vez concluidas las demostraciones comerciales y validaciones del piloto en el entorno de pruebas actual (Netlify + Render + Neon). **Al momento de iniciar esta fase, el asistente solicitará al usuario la IP, accesos SSH y credenciales del VPS para proceder con el aprovisionamiento y migración.**
+
+#### 4A — Provisionamiento del VPS
+
+- [ ] F4-01 Contratar VPS (Hetzner/Contabo/DigitalOcean, mínimo 2 vCPU, 4 GB RAM, 80 GB NVMe, Ubuntu 24.04 LTS).
+- [ ] F4-02 Acceso SSH con clave pública; deshabilitar login con contraseña.
+- [ ] F4-03 Crear usuario no-root para la app (`adduser deploy`; desactivar login root por SSH).
+- [ ] F4-04 Configurar firewall UFW: abrir solo 22 (SSH), 80 (HTTP) y 443 (HTTPS).
+- [ ] F4-05 Instalar Fail2Ban y habilitar regla para SSH.
+- [ ] F4-06 Habilitar actualizaciones automáticas de seguridad (`unattended-upgrades`).
+
+#### 4B — PostgreSQL 16 local en el VPS
+
+- [ ] F4-07 Instalar PostgreSQL 16 (`apt install postgresql-16 postgresql-contrib`).
+- [ ] F4-08 Crear usuario `delivery_user` con contraseña segura (mín. 32 caracteres, generada con `openssl rand -base64 32`).
+- [ ] F4-09 Crear base de datos `delivery_db` con owner `delivery_user`.
+- [ ] F4-10 Configurar `pg_hba.conf`: solo conexiones locales (`127.0.0.1/32`), sin acceso remoto.
+- [ ] F4-11 Configurar `postgresql.conf`: `listen_addresses = 'localhost'`, ajustar `shared_buffers`, `work_mem` y `effective_cache_size` para 4 GB RAM.
+- [ ] F4-12 Verificar que PostgreSQL no escucha en interfaces públicas (`ss -tlnp | grep 5432`).
+
+#### 4C — Migración de datos Neon → VPS
+
+- [ ] F4-13 Exportar dump de la DB de Neon con `pg_dump` (schema + data de tiendas piloto, sin data de pruebas).
+- [ ] F4-14 Restaurar dump en PostgreSQL del VPS con `pg_restore` o `psql < dump.sql`.
+- [ ] F4-15 Ejecutar `npx prisma migrate deploy` para alinear el estado de migraciones.
+- [ ] F4-16 Verificar integridad: contar registros (stores, products, users, orders) y comparar con Neon.
+- [ ] F4-17 Actualizar `DATABASE_URL` en el `.env` del VPS para apuntar a `localhost:5432`.
+
+#### 4D — Node.js, Backend y Frontend
+
+- [ ] F4-18 Instalar Node.js 20 LTS (`nodesource` o `nvm`).
+- [ ] F4-19 Clonar repositorio en `/var/www/delivery-app`.
+- [ ] F4-20 Crear `.env` de producción: `NODE_ENV=production`, `DATABASE_URL=postgresql://delivery_user:PASS@localhost:5432/delivery_db`, `JWT_SECRET` de 128 caracteres, `ALLOWED_ORIGINS` con el dominio real.
+- [ ] F4-21 `npm ci` + `npx prisma generate` + `npx prisma migrate deploy` en backend.
+- [ ] F4-22 Crear `.env.production` en frontend con `VITE_API_URL` y `VITE_SOCKET_URL` apuntando al dominio real.
+- [ ] F4-23 `npm ci` + `npm run build` en frontend (o compilar en CI y subir `dist/`).
+- [ ] F4-24 Instalar PM2: `npm install -g pm2`; iniciar backend con `pm2 start server.js --name delivery-api`.
+- [ ] F4-25 Configurar `pm2 startup` + `pm2 save` para auto-reinicio tras reboot.
+- [ ] F4-26 Configurar `pm2-logrotate` para rotación de logs.
+
+#### 4E — Nginx, SSL y Dominio
+
+- [ ] F4-27 Instalar Nginx.
+- [ ] F4-28 Crear configuración del sitio: frontend estático en `/`, API proxy en `/api/*`, Socket.io en `/socket.io/*`, compresión gzip y headers de seguridad.
+- [ ] F4-29 Apuntar dominio (DNS A record) a la IP del VPS.
+- [ ] F4-30 SSL con Let's Encrypt: `certbot --nginx -d dominio.com -d www.dominio.com`.
+- [ ] F4-31 Verificar renovación automática: `certbot renew --dry-run`.
+- [ ] F4-32 Habilitar HSTS en Nginx.
+
+#### 4F — Backups y Recuperación (PostgreSQL local)
+
+- [ ] F4-33 Script de backup diario: `pg_dump delivery_db | gzip > /var/backups/delivery_$(date).sql.gz`.
+- [ ] F4-34 Cron: backup a las 2 AM diario + limpieza de backups > 30 días.
+- [ ] F4-35 Copiar backups fuera del VPS (S3, Backblaze B2 o segundo servidor) con `rclone` o `s3cmd`.
+- [ ] F4-36 Probar restauración completa: `pg_restore` en una DB temporal y verificar integridad.
+- [ ] F4-37 Documentar procedimiento de restauración de emergencia en el Runbook.
+
+#### 4G — Monitoreo, Healthchecks y Operaciones
+
+- [ ] F4-38 Crear endpoints `/api/health` (app viva) y `/api/ready` (DB conectada, migraciones OK).
+- [ ] F4-39 Monitoreo externo de uptime (UptimeRobot / BetterStack) con alertas por correo/Telegram.
+- [ ] F4-40 Crear índices en PostgreSQL: `Order(store_id, status)`, `Product(store_id, is_available)`, `User(store_id, email)`, `DeliveryZone(store_id)`.
+- [ ] F4-41 Script de deploy con rollback: `git pull`, `npm ci`, `prisma migrate deploy`, `pm2 restart`, validación de health; revert si falla.
+- [ ] F4-42 Crear Runbook de incidentes (caída, DB corrupta, disco lleno, certificado expirado).
+- [ ] F4-43 Configurar swap de 2 GB si la VPS tiene 4 GB RAM (seguridad ante picos).
+- [ ] F4-44 Desconectar la app de Neon/Render: eliminar la referencia a `test.shop-mg.com` y a la DB de Neon en código y documentación.
+- [ ] F4-45 Términos, privacidad y retención de datos.
+
+**Criterio de terminado:** la app opera 100% desde el VPS con PostgreSQL local, sin dependencia de Neon ni Render. Backups probados, SSL activo, monitoreo en línea y rollback automatizado.
 
 ---
 
@@ -481,9 +694,9 @@ Solo si el discovery con 5 farmacias lo confirma.
 
 ## 7. Puertas de lanzamiento
 
-- 3 farmacias usando el sistema durante 60 días.
-- Pedidos reales sin errores críticos.
-- Stock y vencimientos bajo control, si se implementan.
+- 6 negocios piloto en Puerto Ayacucho (2 de comida rápida/hamburguesas/perros, 2 de víveres/bodegones, 2 farmacias) usando el sistema activamente durante 60 días.
+- Pedidos reales en horario diurno y nocturno sin errores críticos de stock, cobro ni entrega.
+- Flujo de comprobantes de Pago Móvil y entrega con GPS funcionando con fluidez.
 - Facturación fiscal definida antes de cobrar.
 - Términos, privacidad y contrato listos.
 - Backups restaurados y monitoreo activo.
@@ -552,6 +765,8 @@ npm run build
 | Fecha | Backend unitario | Backend API | Frontend | Lint | Typecheck | Build | Notas |
 |---|---|---|---|---|---|---|---|
 | 2026-11-01 | 23/23 | 68/68 | 39/39 | 0 errores, 85 warnings | Correcto | Correcto | Fase 0 y F1-01–F1-13 completadas. Stock transaccional y combos. Bundle ~1 MB. |
+| 2026-11-02 | 33/33 | 77/77 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | F1-14–F1-26 y F1-27/F1-28. Decimal, tasas BCV, delivery por zonas, datos bancarios por tienda. Bundle ~1 MB. |
+| 2026-11-02 | 34/34 | 83/83 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | F1-29–F1-34. Identidad de clientes por tienda, mismo correo/teléfono en dos tiendas, compra aislada y timeout de transacción a 20 s. Bundle ~1 MB. |
 
 ---
 
@@ -575,8 +790,28 @@ npm run build
 | 2026-11-01 | F1-11 | Hecho | Descuento condicional dentro de `$transaction` |
 | 2026-11-01 | F1-12 | Hecho | Combos descuentan componentes agregados por producto |
 | 2026-11-01 | F1-13 | Hecho | `StockError` devuelve 400 con detalle y hace rollback |
-| 2026-11-01 | F1-14 | Pendiente | Migrar precios y totales de `Float` a `Decimal` o centavos |
-|  |  |  |  |
+| 2026-11-02 | F1-14 | Hecho | `Decimal(12,2)` para precios/totales y `Decimal(14,6)` para tasas; baseline de migraciones creado |
+| 2026-11-02 | F1-15 | Hecho | Pedido guarda moneda, subtotal, `delivery_fee` y total; `delivery_fee` inicia en 0 |
+| 2026-11-02 | F1-16 | Hecho | Snapshot de `currency`, `usd_rate`, `ves_rate` y `cop_rate` en cada pedido |
+| 2026-11-02 | F1-17 | Hecho | Conversiones con pivote USD; funciona con base USD, VES o COP |
+| 2026-11-02 | F1-18 | Hecho | COP sin decimales y con separador de miles es-CO |
+| 2026-11-02 | F1-19 | Hecho | Servicio BCV con caché 10 min, `GET /api/rates/bcv` y `POST /stores/:slug/rates/sync-bcv`; fallback a tasa stale |
+| 2026-11-02 | F1-20 | Hecho | Tasas VES/COP editables manualmente en Settings y persistidas con el resto de la configuración |
+| 2026-11-02 | F1-21 | Hecho | `DeliveryZone` por tienda, tarifa plana, cotización pública y cálculo de `delivery_fee` en el pedido |
+| 2026-11-02 | F1-22 | Hecho | Campos `bank_*` y `payment_note` en `Store` con migración |
+| 2026-11-02 | F1-23 | Hecho | Checkout sin banco/teléfono/cédula hardcodeados |
+| 2026-11-02 | F1-24 | Hecho | Settings edita y el catálogo público expone los datos bancarios de cada tienda |
+| 2026-11-02 | F1-25 | Hecho | Referencia de Pago Móvil numérica de 4 a 10 dígitos (backend y UI) |
+| 2026-11-02 | F1-26 | Hecho | Cliente puede cancelar pedidos `AWAITING_PAYMENT` y `PENDING` |
+| 2026-11-02 | F1-27 | Hecho | Catálogo, detalle y checkout rechazan tiendas inactivas |
+| 2026-11-02 | F1-28 | Hecho | Solo `CLIENT` puede crear pedidos; admin/superadmin reciben 403 |
+| 2026-11-02 | F1-29 | Hecho | `User.email` y `User.phone` dejaron de ser únicos globalmente |
+| 2026-11-02 | F1-30 | Hecho | `@@unique([store_id, email])` y `@@unique([store_id, phone])`; un mismo dato puede repetirse en tiendas distintas |
+| 2026-11-02 | F1-31 | Hecho | `checkEmail` y `verifyOtp` exigen `store_id`, validan tienda activa y buscan el usuario por tienda |
+| 2026-11-02 | F1-32 | Hecho | Consultas actualizadas a `findFirst({ email, store_id })` y updates por `id`; `VerificationCode` ahora incluye `store_id` |
+| 2026-11-02 | F1-33 | Hecho | Migración `20261103022000_user_identity_per_store`; respaldo previo de usuarios y códigos OTP |
+| 2026-11-02 | F1-34 | Hecho | Prueba: mismo correo y teléfono en dos tiendas, compra en tienda 2 y pedidos aislados por usuario |
+| 2026-11-02 | F1-29 extra | Hecho | Transacción de `placeOrder` con `timeout: 20000` y `maxWait: 10000`; P2028 responde 503 en vez de 500 |
 
 Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 
@@ -596,16 +831,39 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 
 ## 12. Punto de continuación
 
-**Fase 0 y F1-01–F1-13 completadas.** Continuar con **F1-14**.
+**Fase 0 y F1-01–F1-34 completadas.** Siguientes prioridades: **Fase 1B** (autocompletado, búsqueda predictiva y geolocalización de clientes) y **Fase 2** (**F2-25** restaurar stock al cancelar + **F2-01 a F2-05** aprobación/rechazo de pagos).
 
-### Primeros pasos de F1-14
+### Decisiones de F1-14
 
-1. Respaldar la base antes de tocar tipos monetarios.
-2. Decidir `Decimal(12,2)` en Prisma o centavos enteros; documentar la decisión.
-3. Migrar `Product.price`, `Order.total_amount`, `OrderItem.unit_price` y tasas relacionadas.
-4. Actualizar validaciones, cálculos, analytics y frontend para el nuevo tipo.
-5. Crear migración Prisma y probar pedidos, reportes y conversiones.
-6. Ejecutar backend unitario/API y frontend; registrar y commitear `F1-14`–`F1-18`.
+- Se usó `Decimal(12,2)` para dinero y `Decimal(14,6)` para tasas; no centavos enteros.
+- Un middleware serializa `Prisma.Decimal` como número en JSON para no romper el contrato del frontend.
+- Las tasas se interpretan como unidades de la moneda por 1 USD (`ves_rate` = Bs por USD, `cop_rate` = COP por USD).
+- Se creó baseline de migraciones y la migración `20261102120100_money_decimal`.
+
+### Decisiones de F1-29–F1-34
+
+- La identidad del cliente es por tienda: `@@unique([store_id, email])` y `@@unique([store_id, phone])`; un mismo correo o teléfono puede existir en tiendas distintas.
+- `User.username` de administración sigue siendo único global; el teléfono de admin ya no bloquea la creación de tiendas distintas.
+- `VerificationCode` incorporó `store_id` y su único pasó a `@@unique([store_id, email, code])`; los códigos antiguos quedan con `store_id = NULL`.
+- `checkEmail` exige `store_id`, valida que la tienda exista y esté activa, y limita el reenvío por tienda + correo.
+- `verifyOtp` valida el código contra la tienda, busca/crea al usuario por `store_id + email`, actualiza por `id` y devuelve 409 si el teléfono ya existe dentro de la misma tienda.
+- Migración aplicada: `20261103022000_user_identity_per_store`.
+- Respaldo previo: `C:\Users\Jesus\AppData\Local\Temp\opencode\users-backup-2026-11-03T02-18-39-374Z.json` (5 usuarios, 2 códigos OTP).
+- La transacción de `placeOrder` ahora usa `maxWait: 10000` y `timeout: 20000`; si expira (P2028) responde 503 “La operación tardó demasiado. Intenta de nuevo.”.
+
+### Siguiente bloque recomendado (Ruta a Demostración y Validación)
+
+1. **Fase 1B (Ubicación y Geocodificación del Cliente):** Autocompletado predictivo debounced (~350ms) centrado en tienda, geolocalización GPS "Ubicar mi casa", Reverse Geocoding bidireccional mapa-input, validación de zona de cobertura de delivery y botones Google Maps/Waze para el repartidor.
+2. **Fase 2 (Prioridades críticas de Admin y Stock):**
+   - **F2-25:** Devolución y restauración transaccional de stock al cancelar pedidos (productos y combos).
+   - **F2-01 a F2-05:** Bandeja y flujo de aprobación/rechazo de pagos por Pago Móvil y transferencia bancaria.
+   - **F2-08 a F2-13:** Edición completa de datos bancarios, WhatsApp, horarios y logo de tienda desde el panel.
+3. **Fase 3B (Validación en Staging Netlify + Render + Neon y Catálogo Demo):**
+   - Aplicar migraciones a Neon con `npx prisma migrate deploy`.
+   - Verificar build de frontend en Netlify y backend en Render.
+   - Preparar tienda `demo-farmacia` para realizar demostraciones en vivo desde teléfonos celulares y laptops frente a dueños de farmacias.
+4. **Fase 4 (Producción VPS Definitiva):**
+   - Una vez realizada y validada la demostración comercial con las farmacias, se pedirán al usuario las credenciales del VPS para la instalación de PostgreSQL 16 local, Nginx, SSL y automatización de backups.
 
 ### Cómo ejecutar las pruebas de API
 
@@ -618,13 +876,15 @@ Stop-Process -Id $p.Id -Force
 
 No ejecutar `npm run db:seed` sobre la base actual: borra pedidos, productos y categorías.
 
+El rate limiter de autenticación permite ~10 solicitudes por minuto e IP. Si se repite la suite muy seguido, reiniciar el servidor (el contador vive en memoria) antes de volver a correr `npm run test:api`.
+
 ### Bloqueos actuales
 
 - Ninguno técnico.
 - Facturación fiscal pendiente de contador, no bloquea el piloto gratuito.
 - Candidatos de piloto pendientes de prospección, no bloquean el desarrollo.
 - CI de pruebas de API pendiente para Fase 5.
-- Deuda de lint (89 advertencias) a reducir durante Fases 1–3.
+- Deuda de lint (85 advertencias) a reducir durante Fases 1–3.
 
 ---
 
@@ -632,7 +892,7 @@ No ejecutar `npm run db:seed` sobre la base actual: borra pedidos, productos y c
 
 | Riesgo | Mitigación |
 |---|---|
-| Mercado pequeño en Puerto Ayacucho | Validar y luego expandir a otra ciudad |
+| Mercado limitado en Puerto Ayacucho | Mitigado al expandir de solo farmacias a comida rápida (perros/hamburguesas/pizzas) y víveres/bodegones, multiplicando el volumen de pedidos diarios y clientes potenciales |
 | Conectividad irregular | Optimizar imágenes, VPS en US East, evitar dependencias pesadas |
 | Farmacias exigen recetas o lotes | Discovery temprano y Fase 2C condicional |
 | Facturación fiscal incierta | Contador en semana 1; piloto gratuito |

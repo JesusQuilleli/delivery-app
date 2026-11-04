@@ -32,9 +32,20 @@ const checkEmail = async (req, res) => {
       return res.status(400).json({ error: 'El correo electrónico es requerido' });
     }
 
+    const storeId = Number(store_id);
+    if (!storeId) {
+      return res.status(400).json({ error: 'La tienda es requerida' });
+    }
+
+    const store = await prisma.store.findUnique({ where: { id: storeId } });
+    if (!store || !store.is_active) {
+      return res.status(404).json({ error: 'Tienda no disponible' });
+    }
+
     // Rate Limiting Básico: Verificar si ya hay un código muy reciente (menos de 1 minuto)
     const recentCode = await prisma.verificationCode.findFirst({
       where: {
+        store_id: storeId,
         email,
         expires_at: {
           gt: new Date(Date.now() + 9 * 60 * 1000) // Si caduca en más de 9 minutos, se creó hace menos de 1 minuto
@@ -50,32 +61,28 @@ const checkEmail = async (req, res) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expires_at = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos de validez
 
-    // Borramos los códigos anteriores de este correo para evitar duplicidad
+    // Borramos los códigos anteriores de este correo en esta tienda para evitar duplicidad
     await prisma.verificationCode.deleteMany({
-      where: { email }
+      where: { store_id: storeId, email }
     });
 
     // Guardamos el nuevo código
     await prisma.verificationCode.create({
       data: {
+        store_id: storeId,
         email,
         code,
         expires_at
       }
     });
 
-    // Verificar si el usuario ya existe
-    const user = await prisma.user.findUnique({ where: { email } });
+    // Verificar si el usuario ya existe en esta tienda
+    const user = await prisma.user.findFirst({
+      where: { email, store_id: storeId }
+    });
     const is_registered = user && user.name ? true : false;
 
-    // Obtener nombre de la tienda
-    let storeName = 'TiendaFast';
-    if (store_id) {
-      const store = await prisma.store.findUnique({ where: { id: Number(store_id) } });
-      if (store && store.name) {
-        storeName = store.name;
-      }
-    }
+    const storeName = store.name || 'TiendaFast';
 
     // ENVÍO DE EMAIL MEDIANTE RESEND
     try {
@@ -130,9 +137,16 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ error: 'Faltan datos (email, code, store_id)' });
     }
 
-    // Validar que el código exista y no esté expirado
+    const storeId = Number(store_id);
+    const store = await prisma.store.findUnique({ where: { id: storeId } });
+    if (!store || !store.is_active) {
+      return res.status(404).json({ error: 'Tienda no disponible' });
+    }
+
+    // Validar que el código exista para esta tienda y no esté expirado
     const verification = await prisma.verificationCode.findFirst({
       where: {
+        store_id: storeId,
         email,
         code,
         expires_at: {
@@ -145,9 +159,9 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ error: 'Código inválido o ha expirado' });
     }
 
-    // Buscamos si el usuario ya existe por su correo
-    let user = await prisma.user.findUnique({
-      where: { email }
+    // Buscamos si el usuario ya existe por su correo dentro de esta tienda
+    let user = await prisma.user.findFirst({
+      where: { email, store_id: storeId }
     });
 
     if (!user) {
@@ -156,7 +170,7 @@ const verifyOtp = async (req, res) => {
           email,
           name: name || null,
           phone: phone || null,
-          store_id: Number(store_id)
+          store_id: storeId
         }
       });
     } else {
@@ -166,15 +180,15 @@ const verifyOtp = async (req, res) => {
 
       if (Object.keys(updateData).length > 0) {
         user = await prisma.user.update({
-          where: { email },
+          where: { id: user.id },
           data: updateData
         });
       }
     }
 
-    // Borramos el código para que no se re-utilice
+    // Borramos los códigos de este correo en esta tienda para que no se re-utilicen
     await prisma.verificationCode.deleteMany({
-      where: { email }
+      where: { store_id: storeId, email }
     });
 
     // Generar JWT
@@ -198,6 +212,11 @@ const verifyOtp = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    if (error.code === 'P2002') {
+      return res.status(409).json({
+        error: 'Ese teléfono ya está registrado en esta tienda. Usa otro número o ingresa con tu correo.'
+      });
+    }
     res.status(500).json({ error: 'Error interno al verificar OTP' });
   }
 };

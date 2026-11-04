@@ -23,6 +23,13 @@ interface StoreConfig {
   usd_rate?: number;
   ves_rate?: number;
   cop_rate?: number;
+  delivery_fee?: number;
+  bank_name?: string | null;
+  bank_code?: string | null;
+  bank_phone?: string | null;
+  bank_id_number?: string | null;
+  bank_holder?: string | null;
+  payment_note?: string | null;
 }
 
 // @ts-ignore
@@ -99,13 +106,34 @@ export default function Checkout() {
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
   const [orderId, setOrderId] = useState<number | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
+  const [deliveryFee, setDeliveryFee] = useState(0);
   const storeId = storeConfig?.id;
+  const grandTotal = total + deliveryFee;
+  const isTransferReferenceValid = /^\d{4,10}$/.test(paymentReference);
 
   useEffect(() => {
     api.get(`/stores/${slug}/products`).then(res => {
       setStoreConfig(res.data.store || null);
+      setDeliveryFee(Number(res.data.store?.delivery_fee) || 0);
     }).catch(console.error);
   }, [slug]);
+
+  useEffect(() => {
+    if (currentStep !== 4 || !slug) return;
+    let cancelled = false;
+
+    api.post(`/stores/${slug}/delivery-quote`, { latitude, longitude })
+      .then(res => {
+        if (!cancelled) setDeliveryFee(Number(res.data.delivery_fee) || 0);
+      })
+      .catch((err) => {
+        console.error('Error cotizando delivery', err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentStep, slug, latitude, longitude]);
 
   useEffect(() => {
     if (isInitializing) return;
@@ -367,7 +395,7 @@ export default function Checkout() {
         delivery_address: `${address} | Detalles: ${addressDetails || 'Sin detalles extra'}`,
         latitude: latitude,
         longitude: longitude,
-        total_amount: total,
+        total_amount: grandTotal,
         payment_method: paymentMethod,
         payment_reference: paymentMethod === 'TRANSFER' ? paymentReference : `Efectivo en ${cashCurrency}`
       });
@@ -609,6 +637,21 @@ export default function Checkout() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5 sm:p-8 space-y-5 sm:space-y-8">
+              <div className="rounded-2xl bg-gray-50 border border-gray-200 p-4 space-y-2 text-sm">
+                <div className="flex justify-between text-gray-600">
+                  <span>Productos</span>
+                  <span className="font-bold">{formatPrice(total, storeConfig?.currency)}</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Delivery</span>
+                  <span className="font-bold">{formatPrice(deliveryFee, storeConfig?.currency)}</span>
+                </div>
+                <div className="flex justify-between border-t border-gray-200 pt-2 text-base font-black text-gray-900">
+                  <span>Total</span>
+                  <span>{formatPrice(grandTotal, storeConfig?.currency)}</span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div 
                   onClick={() => setPaymentMethod('CASH')}
@@ -649,7 +692,7 @@ export default function Checkout() {
                   <div className="bg-white p-4 rounded-xl text-center border border-emerald-100 shadow-sm mt-4">
                     <span className="text-gray-500 text-sm">Monto a tener listo:</span><br/>
                     <strong className="text-2xl text-emerald-700 font-black">
-                      {cashCurrency === storeConfig?.currency ? formatPrice(total, cashCurrency) : getConversions(total, storeConfig)?.[cashCurrency]}
+                      {cashCurrency === storeConfig?.currency ? formatPrice(grandTotal, cashCurrency) : getConversions(grandTotal, storeConfig)?.[cashCurrency]}
                     </strong>
                   </div>
                 </div>
@@ -659,40 +702,82 @@ export default function Checkout() {
                 <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl border border-gray-200 shadow-inner space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
                   <p className="text-sm font-black text-gray-800 uppercase tracking-wider">Datos de Transferencia:</p>
                   <div className="text-sm text-gray-700 bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-2">
-                    <div className="flex justify-between border-b pb-2"><span className="text-gray-500">Banco:</span> <strong className="font-black">0102 - Venezuela</strong></div>
-                    <div className="flex justify-between border-b pb-2 pt-1"><span className="text-gray-500">Teléfono:</span> <strong className="font-black">0412-1234567</strong></div>
-                    <div className="flex justify-between border-b pb-2 pt-1"><span className="text-gray-500">Cédula:</span> <strong className="font-black">V-12345678</strong></div>
+                    {storeConfig?.bank_name || storeConfig?.bank_phone || storeConfig?.bank_id_number ? (
+                      <>
+                        {storeConfig?.bank_name && (
+                          <div className="flex justify-between border-b pb-2">
+                            <span className="text-gray-500">Banco:</span>
+                            <strong className="font-black">
+                              {storeConfig.bank_code ? `${storeConfig.bank_code} - ` : ''}{storeConfig.bank_name}
+                            </strong>
+                          </div>
+                        )}
+                        {storeConfig?.bank_phone && (
+                          <div className="flex justify-between border-b pb-2 pt-1">
+                            <span className="text-gray-500">Teléfono:</span>
+                            <strong className="font-black">{storeConfig.bank_phone}</strong>
+                          </div>
+                        )}
+                        {storeConfig?.bank_id_number && (
+                          <div className="flex justify-between border-b pb-2 pt-1">
+                            <span className="text-gray-500">Cédula/RIF:</span>
+                            <strong className="font-black">{storeConfig.bank_id_number}</strong>
+                          </div>
+                        )}
+                        {storeConfig?.bank_holder && (
+                          <div className="flex justify-between border-b pb-2 pt-1">
+                            <span className="text-gray-500">Titular:</span>
+                            <strong className="font-black">{storeConfig.bank_holder}</strong>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-gray-600">
+                        El comercio te confirmará los datos de pago al procesar tu pedido.
+                      </p>
+                    )}
                     <div className="flex justify-between pt-2 items-center">
                       <span className="text-gray-500">Monto:</span> 
                       <div className="text-right">
-                        <strong className="text-xl text-emerald-600 font-black">{formatPrice(total, storeConfig?.currency)}</strong>
+                        <strong className="text-xl text-emerald-600 font-black">{formatPrice(grandTotal, storeConfig?.currency)}</strong>
                         {storeConfig && storeConfig.currency !== 'VES' && (
                           <div className="text-xs font-bold text-gray-500 mt-1">
-                            Equivalente: {getConversions(total, storeConfig)?.VES}
+                            Equivalente: {getConversions(grandTotal, storeConfig)?.VES}
                           </div>
                         )}
                         {storeConfig && storeConfig.currency !== 'COP' && (
                           <div className="text-xs font-bold text-gray-500">
-                            Equivalente: {getConversions(total, storeConfig)?.COP}
+                            Equivalente: {getConversions(grandTotal, storeConfig)?.COP}
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
+                  {storeConfig?.payment_note && (
+                    <p className="text-xs font-semibold text-gray-600 bg-white/60 p-3 rounded-xl border border-gray-200">
+                      {storeConfig.payment_note}
+                    </p>
+                  )}
                   <Input 
-                    placeholder="Número de Referencia (últimos 6 dígitos)" 
+                    placeholder="Número de Referencia (4 a 10 dígitos)" 
                     value={paymentReference} 
-                    onChange={(e) => setPaymentReference(e.target.value)}
+                    onChange={(e) => setPaymentReference(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     className="h-14 rounded-xl font-bold tracking-widest text-center"
                     maxLength={10}
+                    inputMode="numeric"
                   />
+                  {paymentReference.length > 0 && !isTransferReferenceValid && (
+                    <p className="text-xs font-bold text-red-600 text-center">
+                      La referencia debe tener entre 4 y 10 dígitos.
+                    </p>
+                  )}
                 </div>
               )}
 
               <Button 
                 onClick={confirmOrder} 
-                className={`w-full h-16 text-lg rounded-2xl font-black text-white transition-all transform shadow-xl ${!paymentMethod || (paymentMethod === 'TRANSFER' && !paymentReference) || loading ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:scale-[1.02] hover:shadow-orange-500/30'}`}
-                disabled={!paymentMethod || (paymentMethod === 'TRANSFER' && !paymentReference) || loading}
+                className={`w-full h-16 text-lg rounded-2xl font-black text-white transition-all transform shadow-xl ${!paymentMethod || (paymentMethod === 'TRANSFER' && !isTransferReferenceValid) || loading ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:scale-[1.02] hover:shadow-orange-500/30'}`}
+                disabled={!paymentMethod || (paymentMethod === 'TRANSFER' && !isTransferReferenceValid) || loading}
               >
                 {loading ? 'Procesando Seguro...' : 'Confirmar y Pagar'} <CheckCircle2 className="ml-2" />
               </Button>

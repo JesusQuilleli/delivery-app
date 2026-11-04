@@ -74,6 +74,105 @@ test('store: actualizar settings admin', async () => {
   assert.equal(res.json.store.currency, 'USD');
 });
 
+test('store: sync BCV requiere ser admin de la tienda', async () => {
+  assert.equal((await req('POST', '/stores/demo-farmacia/rates/sync-bcv')).status, 401);
+  assert.equal((await req('POST', '/stores/demo-farmacia/rates/sync-bcv', { token: adminOtherStore })).status, 403);
+});
+
+test('store: CRUD de zonas y cotización de delivery', async () => {
+  const storeBefore = await prisma.store.findUnique({ where: { id: 1 } });
+  const original = {
+    latitude: storeBefore.latitude,
+    longitude: storeBefore.longitude,
+    delivery_fee: storeBefore.delivery_fee
+  };
+
+  await prisma.store.update({
+    where: { id: 1 },
+    data: { latitude: 5.6667, longitude: -67.6333, delivery_fee: 1.5 }
+  });
+
+  let zoneId = null;
+  try {
+    const created = await req('POST', '/stores/demo-farmacia/delivery-zones', {
+      token: admin,
+      body: { name: 'Centro Test', min_distance_km: 0, max_distance_km: 50, fee: 4 }
+    });
+    assert.equal(created.status, 200, JSON.stringify(created.json));
+    zoneId = created.json.zone.id;
+
+    const list = await req('GET', '/stores/demo-farmacia/delivery-zones', { token: admin });
+    assert.equal(list.status, 200, JSON.stringify(list.json));
+    assert.ok(list.json.zones.some(z => z.id === zoneId));
+
+    const quote = await req('POST', '/stores/demo-farmacia/delivery-quote', {
+      body: { latitude: 5.6667, longitude: -67.6333 }
+    });
+    assert.equal(quote.status, 200, JSON.stringify(quote.json));
+    assert.equal(Number(quote.json.delivery_fee), 4);
+    assert.equal(quote.json.zone.name, 'Centro Test');
+
+    const flat = await req('POST', '/stores/demo-farmacia/delivery-quote', { body: {} });
+    assert.equal(flat.status, 200, JSON.stringify(flat.json));
+    assert.equal(Number(flat.json.delivery_fee), 1.5);
+
+    const updated = await req('PUT', `/stores/demo-farmacia/delivery-zones/${zoneId}`, {
+      token: admin,
+      body: { fee: 6 }
+    });
+    assert.equal(updated.status, 200, JSON.stringify(updated.json));
+    assert.equal(Number(updated.json.zone.fee), 6);
+
+    const denied = await req('POST', '/stores/demo-farmacia/delivery-zones', {
+      token: adminOtherStore,
+      body: { name: 'Ajena', fee: 1 }
+    });
+    assert.equal(denied.status, 403);
+  } finally {
+    if (zoneId) await prisma.deliveryZone.delete({ where: { id: zoneId } }).catch(() => {});
+    await prisma.store.update({
+      where: { id: 1 },
+      data: { latitude: original.latitude, longitude: original.longitude, delivery_fee: original.delivery_fee }
+    });
+  }
+});
+
+test('store: guarda y expone datos bancarios de la tienda', async () => {
+  const before = await prisma.store.findUnique({ where: { id: 1 } });
+  const original = {
+    bank_name: before.bank_name,
+    bank_code: before.bank_code,
+    bank_phone: before.bank_phone,
+    bank_id_number: before.bank_id_number,
+    bank_holder: before.bank_holder,
+    payment_note: before.payment_note
+  };
+
+  try {
+    const res = await req('PUT', '/stores/demo-farmacia/settings', {
+      token: admin,
+      body: {
+        bank_name: 'Banco Test',
+        bank_code: '0102',
+        bank_phone: '0412-0000000',
+        bank_id_number: 'V-00000000',
+        bank_holder: 'Farmacia Test',
+        payment_note: 'Nota test'
+      }
+    });
+    assert.equal(res.status, 200, JSON.stringify(res.json));
+    assert.equal(res.json.store.bank_name, 'Banco Test');
+
+    const pub = await req('GET', '/stores/demo-farmacia/products?limit=1');
+    assert.equal(pub.status, 200, JSON.stringify(pub.json));
+    assert.equal(pub.json.store.bank_name, 'Banco Test');
+    assert.equal(pub.json.store.bank_code, '0102');
+    assert.equal(pub.json.store.payment_note, 'Nota test');
+  } finally {
+    await prisma.store.update({ where: { id: 1 }, data: original });
+  }
+});
+
 test('store: settings sin rol ADMIN da 403', async () => {
   const res = await req('PUT', '/stores/demo-farmacia/settings', {
     token: adminOtherStore,

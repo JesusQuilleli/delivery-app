@@ -11,6 +11,16 @@ const placeOrderSchema = z.object({
   longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
   payment_method: z.enum(['CASH', 'TRANSFER'], { errorMap: () => ({ message: 'Método de pago inválido' }) }),
   payment_reference: z.string().max(50).optional().nullable()
+}).superRefine((data, ctx) => {
+  if (data.payment_method !== 'TRANSFER') return;
+  const reference = (data.payment_reference || '').trim();
+  if (!/^\d{4,10}$/.test(reference)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['payment_reference'],
+      message: 'La referencia debe tener entre 4 y 10 dígitos'
+    });
+  }
 });
 
 const updateOrderStatusSchema = z.object({

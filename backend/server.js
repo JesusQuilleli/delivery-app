@@ -13,8 +13,10 @@ const orderRoutes = require('./routes/orderRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const superadminRoutes = require('./routes/superadminRoutes');
+const ratesRoutes = require('./routes/ratesRoutes');
 const { globalLimiter } = require('./middleware/rateLimiter');
 const { JWT_SECRET } = require('./middleware/authMiddleware');
+const serializeDecimals = require('./middleware/serialize');
 
 const app = express();
 const server = http.createServer(app);
@@ -118,6 +120,7 @@ app.use(helmet({
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
+app.use(serializeDecimals);
 app.use(globalLimiter);
 
 // Rutas API REST
@@ -127,6 +130,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/superadmin', superadminRoutes);
+app.use('/api/rates', ratesRoutes);
 
 // Ruta de prueba base
 app.get('/', (req, res) => {

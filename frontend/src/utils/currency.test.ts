@@ -11,8 +11,12 @@ describe('formatPrice', () => {
   it('formatea VES con separador de miles', () => {
     expect(formatPrice(1000.5, 'VES')).toBe('Bs. 1.000,50');
   });
-  it('formatea COP', () => {
+  it('formatea COP sin decimales', () => {
     expect(formatPrice(4000, 'COP')).toBe('$4.000 COP');
+    expect(formatPrice(4000.7, 'COP')).toBe('$4.001 COP');
+  });
+  it('acepta valores decimales serializados como texto', () => {
+    expect(formatPrice('12.50' as unknown as number, 'USD')).toBe('$12.50');
   });
   it('default a USD sin currency', () => {
     expect(formatPrice(7.99)).toBe('$7.99');
@@ -33,10 +37,17 @@ describe('getConversions', () => {
       COP: '$40.000 COP',
     });
   });
-  it('con base VES no incluye VES', () => {
+  it('con base VES convierte a USD y COP usando el pivote USD', () => {
     const conv = getConversions(36.5, { ...store, currency: 'VES' })!;
     expect(conv.VES).toBeUndefined();
-    expect(conv.USD).toBe('$36.50');
+    expect(conv.USD).toBe('$1.00');
+    expect(conv.COP).toBe('$4.000 COP');
+  });
+  it('con base COP convierte a USD y VES usando el pivote USD', () => {
+    const conv = getConversions(4000, { ...store, currency: 'COP' })!;
+    expect(conv.COP).toBeUndefined();
+    expect(conv.USD).toBe('$1.00');
+    expect(conv.VES).toBe('Bs. 36,50');
   });
   it('sin store devuelve null', () => {
     expect(getConversions(10, undefined)).toBeNull();

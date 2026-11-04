@@ -8,11 +8,15 @@ test('AUTH: checkEmailSchema acepta email válido', () => {
   assert.equal(r.success, true);
 });
 test('AUTH: checkEmailSchema rechaza email inválido', () => {
-  const r = checkEmailSchema.safeParse({ email: 'no-es-email' });
+  const r = checkEmailSchema.safeParse({ email: 'no-es-email', store_id: 5 });
   assert.equal(r.success, false);
 });
 test('AUTH: checkEmailSchema rechaza email vacío', () => {
-  const r = checkEmailSchema.safeParse({ email: '' });
+  const r = checkEmailSchema.safeParse({ email: '', store_id: 5 });
+  assert.equal(r.success, false);
+});
+test('AUTH: checkEmailSchema exige store_id', () => {
+  const r = checkEmailSchema.safeParse({ email: 'a@b.com' });
   assert.equal(r.success, false);
 });
 test('AUTH: verifyOtpSchema exige código de 6 dígitos', () => {
@@ -63,6 +67,19 @@ test('ORDER: placeOrderSchema rechaza dirección muy corta', () => {
     payment_method: 'CASH'
   };
   assert.equal(placeOrderSchema.safeParse(body).success, false);
+});
+test('ORDER: TRANSFER exige referencia numérica de 4 a 10 dígitos', () => {
+  const base = {
+    store_id: 1,
+    items: [{ product_id: 10, quantity: 1 }],
+    delivery_address: 'Calle falsa 123',
+    payment_method: 'TRANSFER'
+  };
+  assert.equal(placeOrderSchema.safeParse({ ...base, payment_reference: '1234' }).success, true);
+  assert.equal(placeOrderSchema.safeParse({ ...base, payment_reference: '1234567890' }).success, true);
+  assert.equal(placeOrderSchema.safeParse({ ...base, payment_reference: '123' }).success, false);
+  assert.equal(placeOrderSchema.safeParse({ ...base, payment_reference: 'ABC123' }).success, false);
+  assert.equal(placeOrderSchema.safeParse({ ...base, payment_reference: undefined }).success, false);
 });
 test('ORDER: updateOrderStatusSchema acepta estados válidos', () => {
   for (const s of ['PENDING', 'ACCEPTED', 'DISPATCHED', 'DELIVERED', 'CANCELLED']) {

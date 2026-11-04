@@ -2,7 +2,7 @@ const { z } = require('zod');
 
 const checkEmailSchema = z.object({
   email: z.string().min(1, 'El correo es requerido').email('Formato de correo inválido'),
-  store_id: z.coerce.number().int().positive().optional()
+  store_id: z.coerce.number().int().positive('Tienda requerida')
 });
 
 const verifyOtpSchema = z.object({

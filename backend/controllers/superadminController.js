@@ -42,11 +42,12 @@ const createStore = async (req, res) => {
     const existingStore = await prisma.store.findUnique({ where: { slug } });
     if (existingStore) return res.status(400).json({ error: 'El slug o URL ya está en uso' });
     
-    // Check if user exists
-    const existingUser = await prisma.user.findFirst({
-      where: { OR: [{ username: adminUsername }, { phone: adminPhone }] }
+    // El usuario de administración sigue siendo único global.
+    // El teléfono ahora es único por tienda, y esta tienda es nueva.
+    const existingUser = await prisma.user.findUnique({
+      where: { username: adminUsername }
     });
-    if (existingUser) return res.status(400).json({ error: 'El usuario o teléfono ya existe' });
+    if (existingUser) return res.status(400).json({ error: 'El usuario ya existe' });
 
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
 

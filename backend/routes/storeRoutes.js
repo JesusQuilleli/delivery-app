@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getStoreProducts, getStoreOrders, getStoreHistory, getStoreProductDetails, updateStoreSettings, getStoreAnalytics, getStoreCustomers, updateStoreCustomer, deleteStoreCustomer, getStoreDrivers, createStoreDriver, updateStoreDriver, deleteStoreDriver } = require('../controllers/storeController');
+const { getStoreProducts, getStoreOrders, getStoreHistory, getStoreProductDetails, updateStoreSettings, syncStoreBcvRate, getStoreDeliveryZones, createStoreDeliveryZone, updateStoreDeliveryZone, deleteStoreDeliveryZone, quoteStoreDelivery, getStoreAnalytics, getStoreCustomers, updateStoreCustomer, deleteStoreCustomer, getStoreDrivers, createStoreDriver, updateStoreDriver, deleteStoreDriver } = require('../controllers/storeController');
 const { requireStoreAdmin } = require('../middleware/authMiddleware');
 const { adminLimiter } = require('../middleware/rateLimiter');
 
@@ -10,6 +10,12 @@ router.get('/:slug/orders', adminLimiter, requireStoreAdmin, getStoreOrders);
 router.get('/:slug/history', adminLimiter, requireStoreAdmin, getStoreHistory);
 router.get('/:slug/analytics', adminLimiter, requireStoreAdmin, getStoreAnalytics);
 router.put('/:slug/settings', adminLimiter, requireStoreAdmin, updateStoreSettings);
+router.post('/:slug/rates/sync-bcv', adminLimiter, requireStoreAdmin, syncStoreBcvRate);
+router.post('/:slug/delivery-quote', quoteStoreDelivery); // Public
+router.get('/:slug/delivery-zones', adminLimiter, requireStoreAdmin, getStoreDeliveryZones);
+router.post('/:slug/delivery-zones', adminLimiter, requireStoreAdmin, createStoreDeliveryZone);
+router.put('/:slug/delivery-zones/:zoneId', adminLimiter, requireStoreAdmin, updateStoreDeliveryZone);
+router.delete('/:slug/delivery-zones/:zoneId', adminLimiter, requireStoreAdmin, deleteStoreDeliveryZone);
 router.get('/:slug/customers', adminLimiter, requireStoreAdmin, getStoreCustomers);
 router.put('/:slug/customers/:id', adminLimiter, requireStoreAdmin, updateStoreCustomer);
 router.delete('/:slug/customers/:id', adminLimiter, requireStoreAdmin, deleteStoreCustomer);

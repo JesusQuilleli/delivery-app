@@ -1,4 +1,6 @@
+const { Prisma } = require('@prisma/client');
 const prisma = require('../prismaClient');
+const { resolveDeliveryFee } = require('../services/deliveryService');
 
 const validTransitions = {
   'AWAITING_PAYMENT': ['PENDING', 'CANCELLED'],
@@ -52,26 +54,22 @@ const placeOrder = async (req, res) => {
 
     const storeId = Number(store_id);
 
+    if (user.role !== 'CLIENT') {
+      return res.status(403).json({ error: 'Solo los clientes pueden realizar pedidos.' });
+    }
+
+    if (user.store_id && Number(user.store_id) !== storeId) {
+      return res.status(403).json({ error: 'La sesión no pertenece a esta tienda.' });
+    }
+
     // 2.5 Verificar la tienda y calcular distancia/tiempo
     const store = await prisma.store.findUnique({ where: { id: storeId } });
-    if (!store) {
-      return res.status(400).json({ error: 'Tienda no encontrada' });
+    if (!store || !store.is_active) {
+      return res.status(400).json({ error: 'Tienda no disponible' });
     }
 
-    let distance_km = null;
-    let estimated_minutes = null;
-
-    if (store.latitude && store.longitude && latitude && longitude) {
-      const latNum = parseFloat(latitude);
-      const lonNum = parseFloat(longitude);
-      const R = 6371;
-      const dLat = (latNum - store.latitude) * (Math.PI / 180);
-      const dLon = (lonNum - store.longitude) * (Math.PI / 180);
-      const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(store.latitude*(Math.PI/180))*Math.cos(latNum*(Math.PI/180))*Math.sin(dLon/2)*Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      distance_km = R * c * 1.4;
-      estimated_minutes = Math.round((distance_km / 25) * 60) + 15;
-    }
+    const delivery = await resolveDeliveryFee({ store, latitude, longitude });
+    const { distance_km, estimated_minutes } = delivery;
 
     // 3. Normalizar cantidades y productos solicitados
     const requested = new Map();
@@ -148,18 +146,22 @@ const placeOrder = async (req, res) => {
       }
     }
 
-    // 6. Calcular total real en el servidor
-    let total_amount = 0;
+    // 6. Calcular total real en el servidor con aritmética decimal exacta
+    const currency = store.currency || 'USD';
+    const delivery_fee = delivery.delivery_fee;
+    let subtotal = new Prisma.Decimal(0);
     const verifiedItems = productIds.map((productId) => {
       const product = productById.get(productId);
       const qty = requested.get(productId);
-      total_amount += product.price * qty;
+      const unit_price = new Prisma.Decimal(product.price);
+      subtotal = subtotal.add(unit_price.mul(qty));
       return {
         product_id: productId,
         quantity: qty,
-        unit_price: product.price
+        unit_price
       };
     });
+    const total_amount = subtotal.add(delivery_fee);
 
     // 7. Descontar stock y crear la orden en una sola transacción
     const order = await prisma.$transaction(async (tx) => {
@@ -193,6 +195,12 @@ const placeOrder = async (req, res) => {
           longitude: longitude ? parseFloat(longitude) : null,
           distance_km,
           estimated_minutes,
+          currency,
+          usd_rate: store.usd_rate,
+          ves_rate: store.ves_rate,
+          cop_rate: store.cop_rate,
+          subtotal,
+          delivery_fee,
           total_amount,
           payment_method,
           payment_reference: payment_reference || null,
@@ -214,7 +222,7 @@ const placeOrder = async (req, res) => {
           user: true
         }
       });
-    });
+    }, { maxWait: 10000, timeout: 20000 });
 
     // 8. Emitir el evento de WebSockets usando 'io'
     const io = req.app.get('io');
@@ -231,6 +239,9 @@ const placeOrder = async (req, res) => {
   } catch (error) {
     if (error instanceof StockError) {
       return res.status(400).json({ error: error.message, details: error.details });
+    }
+    if (error.code === 'P2028') {
+      return res.status(503).json({ error: 'La operación tardó demasiado. Intenta de nuevo.' });
     }
     console.error('Error al procesar pedido:', error);
     res.status(500).json({ error: 'Error interno al procesar el pedido' });
@@ -422,8 +433,8 @@ const cancelOrderClient = async (req, res) => {
       return res.status(403).json({ error: 'No tienes permiso para cancelar este pedido' });
     }
 
-    if (existingOrder.status !== 'PENDING') {
-      return res.status(400).json({ error: 'Solo se pueden cancelar pedidos pendientes' });
+    if (!['PENDING', 'AWAITING_PAYMENT'].includes(existingOrder.status)) {
+      return res.status(400).json({ error: 'Solo se pueden cancelar pedidos pendientes de pago o de aprobación' });
     }
 
     const order = await prisma.order.update({

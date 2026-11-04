@@ -1,4 +1,13 @@
 const prisma = require('../prismaClient');
+const { getBcvRate } = require('../services/ratesService');
+const { resolveDeliveryFee } = require('../services/deliveryService');
+
+const cleanOptionalText = (value, max = 120) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const text = String(value).trim();
+  return text ? text.slice(0, max) : null;
+};
 
 const getStoreProducts = async (req, res) => {
   try {
@@ -15,8 +24,8 @@ const getStoreProducts = async (req, res) => {
       }
     });
 
-    if (!store) {
-      return res.status(404).json({ error: 'Tienda no encontrada' });
+    if (!store || !store.is_active) {
+      return res.status(404).json({ error: 'Tienda no disponible' });
     }
 
     let whereClause = { 
@@ -79,6 +88,13 @@ const getStoreProducts = async (req, res) => {
         usd_rate: store.usd_rate,
         ves_rate: store.ves_rate,
         cop_rate: store.cop_rate,
+        delivery_fee: store.delivery_fee,
+        bank_name: store.bank_name,
+        bank_code: store.bank_code,
+        bank_phone: store.bank_phone,
+        bank_id_number: store.bank_id_number,
+        bank_holder: store.bank_holder,
+        payment_note: store.payment_note,
         industry: store.industry,
         theme_color: store.theme_color
       },
@@ -164,7 +180,7 @@ const getStoreProductDetails = async (req, res) => {
     const { slug, productId } = req.params;
     
     const store = await prisma.store.findUnique({ where: { slug } });
-    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+    if (!store || !store.is_active) return res.status(404).json({ error: 'Tienda no disponible' });
 
     const product = await prisma.product.findFirst({
       where: {
@@ -223,7 +239,14 @@ const getStoreProductDetails = async (req, res) => {
         currency: store.currency,
         usd_rate: store.usd_rate,
         ves_rate: store.ves_rate,
-        cop_rate: store.cop_rate
+        cop_rate: store.cop_rate,
+        delivery_fee: store.delivery_fee,
+        bank_name: store.bank_name,
+        bank_code: store.bank_code,
+        bank_phone: store.bank_phone,
+        bank_id_number: store.bank_id_number,
+        bank_holder: store.bank_holder,
+        payment_note: store.payment_note
       }
     });
   } catch (error) {
@@ -235,7 +258,22 @@ const getStoreProductDetails = async (req, res) => {
 const updateStoreSettings = async (req, res) => {
   try {
     const { slug } = req.params;
-    const { name, latitude, longitude, currency, usd_rate, ves_rate, cop_rate } = req.body;
+    const {
+      name,
+      latitude,
+      longitude,
+      currency,
+      usd_rate,
+      ves_rate,
+      cop_rate,
+      delivery_fee,
+      bank_name,
+      bank_code,
+      bank_phone,
+      bank_id_number,
+      bank_holder,
+      payment_note
+    } = req.body;
     const user = req.user;
 
     // Verificar si el usuario es ADMIN
@@ -248,6 +286,14 @@ const updateStoreSettings = async (req, res) => {
       return res.status(404).json({ error: 'Tienda no encontrada' });
     }
 
+    let parsedDeliveryFee;
+    if (delivery_fee !== undefined) {
+      parsedDeliveryFee = Number(delivery_fee);
+      if (!Number.isFinite(parsedDeliveryFee) || parsedDeliveryFee < 0) {
+        return res.status(400).json({ error: 'La tarifa de delivery debe ser un número mayor o igual a 0.' });
+      }
+    }
+
     const updatedStore = await prisma.store.update({
       where: { id: store.id },
       data: {
@@ -258,6 +304,13 @@ const updateStoreSettings = async (req, res) => {
         usd_rate: usd_rate !== undefined ? parseFloat(usd_rate) : undefined,
         ves_rate: ves_rate !== undefined ? parseFloat(ves_rate) : undefined,
         cop_rate: cop_rate !== undefined ? parseFloat(cop_rate) : undefined,
+        delivery_fee: parsedDeliveryFee,
+        bank_name: cleanOptionalText(bank_name),
+        bank_code: cleanOptionalText(bank_code, 20),
+        bank_phone: cleanOptionalText(bank_phone, 30),
+        bank_id_number: cleanOptionalText(bank_id_number, 30),
+        bank_holder: cleanOptionalText(bank_holder),
+        payment_note: cleanOptionalText(payment_note, 300),
       }
     });
 
@@ -265,6 +318,210 @@ const updateStoreSettings = async (req, res) => {
   } catch (error) {
     console.error('Error actualizando configuración:', error);
     res.status(500).json({ error: 'Error interno actualizando configuración' });
+  }
+};
+
+const syncStoreBcvRate = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const force = req.body?.force === true;
+    const rate = await getBcvRate({ force });
+
+    const updatedStore = await prisma.store.update({
+      where: { id: store.id },
+      data: { ves_rate: rate.ves_rate }
+    });
+
+    res.json({
+      message: 'Tasa BCV actualizada',
+      source: rate.source,
+      ves_rate: rate.ves_rate,
+      fetched_at: new Date(rate.fetched_at).toISOString(),
+      cached: rate.cached,
+      stale: rate.stale || false,
+      store: updatedStore
+    });
+  } catch (error) {
+    console.error('Error sincronizando tasa BCV:', error.message);
+    res.status(502).json({ error: 'No se pudo obtener la tasa BCV. Ingresa la tasa manualmente.' });
+  }
+};
+
+const normalizeZoneNumber = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : NaN;
+};
+
+const getStoreDeliveryZones = async (req, res) => {
+  try {
+    const store = await prisma.store.findUnique({ where: { slug: req.params.slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const zones = await prisma.deliveryZone.findMany({
+      where: { store_id: store.id },
+      orderBy: { min_distance_km: 'asc' }
+    });
+
+    res.json({ zones });
+  } catch (error) {
+    console.error('Error obteniendo zonas de delivery:', error);
+    res.status(500).json({ error: 'Error interno obteniendo zonas de delivery' });
+  }
+};
+
+const createStoreDeliveryZone = async (req, res) => {
+  try {
+    const store = await prisma.store.findUnique({ where: { slug: req.params.slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+    if (!name) return res.status(400).json({ error: 'El nombre de la zona es obligatorio.' });
+
+    const rawMin = normalizeZoneNumber(req.body.min_distance_km);
+    const min = rawMin === null ? 0 : rawMin;
+    const max = normalizeZoneNumber(req.body.max_distance_km);
+    const fee = normalizeZoneNumber(req.body.fee);
+
+    if (!Number.isFinite(min) || min < 0) {
+      return res.status(400).json({ error: 'La distancia mínima debe ser un número mayor o igual a 0.' });
+    }
+    if (max !== null && (!Number.isFinite(max) || max < min)) {
+      return res.status(400).json({ error: 'La distancia máxima debe ser mayor o igual a la mínima.' });
+    }
+    if (!Number.isFinite(fee) || fee < 0) {
+      return res.status(400).json({ error: 'La tarifa debe ser un número mayor o igual a 0.' });
+    }
+
+    const zone = await prisma.deliveryZone.create({
+      data: {
+        store_id: store.id,
+        name,
+        min_distance_km: min,
+        max_distance_km: max,
+        fee,
+        is_active: req.body.is_active === undefined ? true : Boolean(req.body.is_active)
+      }
+    });
+
+    res.json({ message: 'Zona creada', zone });
+  } catch (error) {
+    console.error('Error creando zona de delivery:', error);
+    res.status(500).json({ error: 'Error interno creando zona de delivery' });
+  }
+};
+
+const updateStoreDeliveryZone = async (req, res) => {
+  try {
+    const store = await prisma.store.findUnique({ where: { slug: req.params.slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const zoneId = Number(req.params.zoneId);
+    if (!Number.isInteger(zoneId)) return res.status(400).json({ error: 'Zona inválida' });
+
+    const zone = await prisma.deliveryZone.findFirst({
+      where: { id: zoneId, store_id: store.id }
+    });
+    if (!zone) return res.status(404).json({ error: 'Zona no encontrada' });
+
+    const data = {};
+    if (req.body.name !== undefined) {
+      const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+      if (!name) return res.status(400).json({ error: 'El nombre de la zona es obligatorio.' });
+      data.name = name;
+    }
+    if (req.body.min_distance_km !== undefined) {
+      const min = normalizeZoneNumber(req.body.min_distance_km);
+      if (!Number.isFinite(min) || min < 0) {
+        return res.status(400).json({ error: 'La distancia mínima debe ser un número mayor o igual a 0.' });
+      }
+      data.min_distance_km = min;
+    }
+    if (req.body.max_distance_km !== undefined) {
+      const max = normalizeZoneNumber(req.body.max_distance_km);
+      if (max !== null && (!Number.isFinite(max) || max < 0)) {
+        return res.status(400).json({ error: 'La distancia máxima debe ser un número mayor o igual a 0.' });
+      }
+      data.max_distance_km = max;
+    }
+    if (req.body.fee !== undefined) {
+      const fee = normalizeZoneNumber(req.body.fee);
+      if (!Number.isFinite(fee) || fee < 0) {
+        return res.status(400).json({ error: 'La tarifa debe ser un número mayor o igual a 0.' });
+      }
+      data.fee = fee;
+    }
+    if (req.body.is_active !== undefined) {
+      data.is_active = Boolean(req.body.is_active);
+    }
+
+    const nextMin = data.min_distance_km ?? Number(zone.min_distance_km);
+    const nextMax = data.max_distance_km !== undefined
+      ? data.max_distance_km
+      : normalizeZoneNumber(zone.max_distance_km);
+    if (nextMax !== null && nextMax < nextMin) {
+      return res.status(400).json({ error: 'La distancia máxima debe ser mayor o igual a la mínima.' });
+    }
+
+    const updated = await prisma.deliveryZone.update({
+      where: { id: zone.id },
+      data
+    });
+
+    res.json({ message: 'Zona actualizada', zone: updated });
+  } catch (error) {
+    console.error('Error actualizando zona de delivery:', error);
+    res.status(500).json({ error: 'Error interno actualizando zona de delivery' });
+  }
+};
+
+const deleteStoreDeliveryZone = async (req, res) => {
+  try {
+    const store = await prisma.store.findUnique({ where: { slug: req.params.slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const zoneId = Number(req.params.zoneId);
+    if (!Number.isInteger(zoneId)) return res.status(400).json({ error: 'Zona inválida' });
+
+    const zone = await prisma.deliveryZone.findFirst({
+      where: { id: zoneId, store_id: store.id }
+    });
+    if (!zone) return res.status(404).json({ error: 'Zona no encontrada' });
+
+    await prisma.deliveryZone.delete({ where: { id: zone.id } });
+    res.json({ message: 'Zona eliminada' });
+  } catch (error) {
+    console.error('Error eliminando zona de delivery:', error);
+    res.status(500).json({ error: 'Error interno eliminando zona de delivery' });
+  }
+};
+
+const quoteStoreDelivery = async (req, res) => {
+  try {
+    const store = await prisma.store.findUnique({ where: { slug: req.params.slug } });
+    if (!store || !store.is_active) {
+      return res.status(404).json({ error: 'Tienda no disponible' });
+    }
+
+    const quote = await resolveDeliveryFee({
+      store,
+      latitude: req.body?.latitude,
+      longitude: req.body?.longitude
+    });
+
+    res.json({
+      distance_km: quote.distance_km,
+      estimated_minutes: quote.estimated_minutes,
+      delivery_fee: quote.delivery_fee,
+      zone: quote.zone ? { id: quote.zone.id, name: quote.zone.name } : null,
+      currency: store.currency
+    });
+  } catch (error) {
+    console.error('Error calculando cotización de delivery:', error);
+    res.status(500).json({ error: 'Error interno calculando el delivery' });
   }
 };
 
@@ -298,14 +555,15 @@ const getStoreAnalytics = async (req, res) => {
     let totalOrders = deliveredOrders.length;
 
     for (const order of deliveredOrders) {
-      totalSales += order.total_amount;
-      
+      const amount = Number(order.total_amount);
+      totalSales += amount;
+
       const orderDate = new Date(order.createdAt);
       if (orderDate >= startOfMonth) {
-        monthSales += order.total_amount;
+        monthSales += amount;
       }
       if (orderDate >= startOfToday) {
-        todaySales += order.total_amount;
+        todaySales += amount;
       }
     }
 
@@ -533,6 +791,12 @@ module.exports = {
   getStoreHistory, 
   getStoreProductDetails, 
   updateStoreSettings, 
+  syncStoreBcvRate,
+  getStoreDeliveryZones,
+  createStoreDeliveryZone,
+  updateStoreDeliveryZone,
+  deleteStoreDeliveryZone,
+  quoteStoreDelivery,
   getStoreAnalytics, 
   getStoreCustomers, 
   updateStoreCustomer, 
