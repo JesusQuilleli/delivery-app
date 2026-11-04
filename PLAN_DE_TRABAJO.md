@@ -403,13 +403,13 @@ Optimización de la búsqueda y precisión de la dirección del cliente en el ch
 
 #### Pagos y pedidos
 
-- [ ] F2-01 Crear pestaña o filtro real para `AWAITING_PAYMENT`.
-- [ ] F2-02 Aprobar pago: `AWAITING_PAYMENT` → `PENDING`.
-- [ ] F2-03 Rechazar pago: `AWAITING_PAYMENT` → `CANCELLED`.
-- [ ] F2-04 Soportar aprobación/rechazo por lote.
-- [ ] F2-05 Corregir acciones que aceptan pedidos sin pago aprobado.
+- [x] F2-01 Crear pestaña o filtro real para `AWAITING_PAYMENT`.
+- [x] F2-02 Aprobar pago: `AWAITING_PAYMENT` → `PENDING`.
+- [x] F2-03 Rechazar pago: `AWAITING_PAYMENT` → `CANCELLED`.
+- [x] F2-04 Soportar aprobación/rechazo por lote.
+- [x] F2-05 Corregir acciones que aceptan pedidos sin pago aprobado.
 - [ ] F2-06 Agregar paginación y filtros server-side en pedidos.
-- [ ] F2-07 Validar pertenencia de tienda en `markOrderViewed`.
+- [x] F2-07 Validar pertenencia de tienda en `markOrderViewed`.
 
 #### Configuración de tienda
 
@@ -429,7 +429,7 @@ Optimización de la búsqueda y precisión de la dirección del cliente en el ch
 - [ ] F2-18 Evitar stock negativo.
 - [ ] F2-19 Manejar eliminación de productos usados en combos.
 - [ ] F2-20 Agregar alertas de bajo stock.
-- [ ] F2-25 Restaurar stock al cancelar o eliminar pedidos (cliente, admin y lote).
+- [x] F2-25 Restaurar stock al cancelar o eliminar pedidos (cliente, admin y lote).
 
 #### Historial y analytics
 
@@ -768,6 +768,7 @@ npm run build
 | 2026-11-02 | 33/33 | 77/77 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | F1-14–F1-26 y F1-27/F1-28. Decimal, tasas BCV, delivery por zonas, datos bancarios por tienda. Bundle ~1 MB. |
 | 2026-11-02 | 34/34 | 83/83 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | F1-29–F1-34. Identidad de clientes por tienda, mismo correo/teléfono en dos tiendas, compra aislada y timeout de transacción a 20 s. Bundle ~1 MB. |
 | 2026-11-03 | 45/45 | 84/84 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | Fase 1B. Autocompletado, GPS, reverse geocoding, cobertura, direcciones guardadas, `address_details` y navegación Google Maps/Waze. Bundle ~1 MB. |
+| 2026-11-03 | 45/45 | 89/89 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | F2-01–F2-05, F2-07 y F2-25. Pestaña de pagos, aprobación/rechazo individual y por lote, bloqueo de aceptación sin pago, pertenencia en `markOrderViewed` y restauración idempotente de stock. Bundle ~1 MB. |
 
 ---
 
@@ -820,6 +821,13 @@ npm run build
 | 2026-11-03 | F1B-05 | Hecho | `GET /orders/my-addresses`; chips de direcciones anteriores en checkout |
 | 2026-11-03 | F1B-06 | Hecho | `address_details` en `Order`; botones Google Maps/Waze en Dashboard y OrderDetails |
 | 2026-11-03 | F1B-07 | Hecho | Proxy backend LocationIQ con fallback Nominatim; token retirado del frontend |
+| 2026-11-03 | F2-01 | Hecho | Pestaña independiente "Por Validar" (`AWAITING_PAYMENT`) con contador y selección |
+| 2026-11-03 | F2-02 | Hecho | Aprobar pago mueve `AWAITING_PAYMENT` → `PENDING` desde tarjeta, alerta y detalle |
+| 2026-11-03 | F2-03 | Hecho | Rechazar pago mueve `AWAITING_PAYMENT` → `CANCELLED` y restaura stock |
+| 2026-11-03 | F2-04 | Hecho | Acciones masivas contextuales: aprobar pagos o aceptar pedidos según la pestaña |
+| 2026-11-03 | F2-05 | Hecho | `AWAITING_PAYMENT` → `ACCEPTED` responde 409; requiere aprobación previa |
+| 2026-11-03 | F2-07 | Hecho | `markOrderViewed` valida `store_id` y devuelve 403 para admins de otra tienda |
+| 2026-11-03 | F2-25 | Hecho | `stock_breakdown` y `stock_restored` en `Order`; restauración transaccional al cancelar/eliminar (cliente, admin y lote) sin duplicar |
 
 Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 
@@ -839,7 +847,7 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 
 ## 12. Punto de continuación
 
-**Fase 0, F1-01–F1-34 y Fase 1B completadas.** Siguiente prioridad: **Fase 2** (**F2-25** restaurar stock al cancelar + **F2-01 a F2-05** aprobación/rechazo de pagos).
+**Fase 0, F1-01–F1-34, Fase 1B y bloque crítico de Fase 2 completados.** Siguiente prioridad: **Fase 2 restante** (paginación/filtros server-side, configuración de tienda, inventario/combos, analytics y tiendas inactivas).
 
 ### Decisiones de F1-14
 
@@ -869,12 +877,24 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 - El pedido se rechaza con 400 si `delivery.in_range === false`; el frontend además deshabilita el botón de continuar.
 - Migración aplicada: `20261103120000_order_address_details`.
 
+### Decisiones de Fase 2 (bloque crítico)
+
+- `AWAITING_PAYMENT` tiene pestaña propia y sus acciones no permiten saltar a `ACCEPTED`; primero debe pasar por `PENDING`.
+- Las acciones masivas reutilizan `/orders/batch-status` y respetan las transiciones válidas; el frontend cambia las etiquetas según la pestaña activa.
+- El stock se restaura dentro de la misma transacción que cancela o elimina el pedido.
+- `Order.stock_breakdown` guarda el snapshot de productos/componentes descontados y `Order.stock_restored` evita restauraciones duplicadas.
+- Los pedidos `DELIVERED` no restauran stock al eliminarse para no inflar inventario; los cancelados sí, una sola vez.
+- Migración aplicada: `20261103130000_order_stock_restore`.
+
 ### Siguiente bloque recomendado (Ruta a Demostración y Validación)
 
-1. **Fase 2 (Prioridades críticas de Admin y Stock):**
-   - **F2-25:** Devolución y restauración transaccional de stock al cancelar pedidos (productos y combos).
-   - **F2-01 a F2-05:** Bandeja y flujo de aprobación/rechazo de pagos por Pago Móvil y transferencia bancaria.
-2. **Fase 2 restante:** paginación/filtros server-side, validación de pertenencia en `markOrderViewed`, edición de configuración y demás bugs del administrador.
+1. **Fase 2 restante:**
+   - **F2-06:** paginación y filtros server-side en pedidos.
+   - **F2-08 a F2-13:** edición completa de configuración, contraseña y cierre de sesiones.
+   - **F2-14 a F2-20:** validaciones de categorías/combos, stock de combos, stock negativo y alertas.
+   - **F2-21 a F2-24:** fechas, ventas netas, analytics y reportes.
+   - **F2-25B a F2-28:** tiendas inactivas y auditoría.
+2. **Fase 3:** seguridad de Socket.io, cookies/CSRF, OTP, validación y uploads.
    - **F2-08 a F2-13:** Edición completa de datos bancarios, WhatsApp, horarios y logo de tienda desde el panel.
 3. **Fase 3B (Validación en Staging Netlify + Render + Neon y Catálogo Demo):**
    - Aplicar migraciones a Neon con `npx prisma migrate deploy`.

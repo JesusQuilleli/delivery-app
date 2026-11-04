@@ -1,6 +1,7 @@
 const { Prisma } = require('@prisma/client');
 const prisma = require('../prismaClient');
 const { resolveDeliveryFee } = require('../services/deliveryService');
+const { buildStockBreakdown, restoreOrderStock } = require('../services/orderStockService');
 
 const validTransitions = {
   'AWAITING_PAYMENT': ['PENDING', 'CANCELLED'],
@@ -211,6 +212,7 @@ const placeOrder = async (req, res) => {
           subtotal,
           delivery_fee,
           total_amount,
+          stock_breakdown: buildStockBreakdown(requiredStock),
           payment_method,
           payment_reference: payment_reference || null,
           status: payment_method === 'TRANSFER' ? 'AWAITING_PAYMENT' : 'PENDING',
@@ -281,18 +283,34 @@ const updateOrderStatus = async (req, res) => {
       return res.status(409).json({ error: `No se puede cambiar de ${existingOrder.status} a ${status}. Estado actual ya fue modificado.` });
     }
 
-    const order = await prisma.order.update({
-      where: { id: Number(id), status: existingOrder.status },
-      data: {
-        status,
-        cancel_reason: cancel_reason || undefined,
-        driver_id: driver_id ? Number(driver_id) : undefined
-      },
-      include: {
-        user: true,
-        items: { include: { product: true } },
-        driver: true
+    const order = await prisma.$transaction(async (tx) => {
+      const updated = await tx.order.updateMany({
+        where: { id: Number(id), status: existingOrder.status },
+        data: {
+          status,
+          cancel_reason: cancel_reason || undefined,
+          driver_id: driver_id ? Number(driver_id) : undefined
+        }
+      });
+
+      if (updated.count !== 1) {
+        const conflict = new Error('El pedido fue modificado por otro admin.');
+        conflict.code = 'P2025';
+        throw conflict;
       }
+
+      if (status === 'CANCELLED') {
+        await restoreOrderStock(tx, id);
+      }
+
+      return tx.order.findUnique({
+        where: { id: Number(id) },
+        include: {
+          user: true,
+          items: { include: { product: true } },
+          driver: true
+        }
+      });
     });
 
     const io = req.app.get('io');
@@ -322,10 +340,17 @@ const deleteOrder = async (req, res) => {
       return res.status(403).json({ error: 'No tienes permisos sobre este pedido' });
     }
 
-    await prisma.orderItem.deleteMany({ where: { order_id: Number(id) } });
-    await prisma.order.delete({ where: { id: Number(id) } });
+    const restored = await prisma.$transaction(async (tx) => {
+      const result = await restoreOrderStock(tx, id);
+      await tx.orderItem.deleteMany({ where: { order_id: Number(id) } });
+      await tx.order.delete({ where: { id: Number(id) } });
+      return result;
+    });
 
-    res.json({ message: 'Orden eliminada exitosamente' });
+    res.json({
+      message: 'Orden eliminada exitosamente',
+      stock_restored: restored.restored
+    });
   } catch (error) {
     console.error('Error al eliminar orden:', error);
     res.status(500).json({ error: 'Error interno al eliminar la orden' });
@@ -491,10 +516,24 @@ const cancelOrderClient = async (req, res) => {
       return res.status(400).json({ error: 'Solo se pueden cancelar pedidos pendientes de pago o de aprobación' });
     }
 
-    const order = await prisma.order.update({
-      where: { id: Number(id) },
-      data: { status: 'CANCELLED', cancel_reason: cancel_reason || null },
-      include: { user: true, items: { include: { product: true } } }
+    const order = await prisma.$transaction(async (tx) => {
+      const updated = await tx.order.updateMany({
+        where: { id: Number(id), status: existingOrder.status },
+        data: { status: 'CANCELLED', cancel_reason: cancel_reason || null }
+      });
+
+      if (updated.count !== 1) {
+        const conflict = new Error('El pedido fue modificado mientras se cancelaba.');
+        conflict.code = 'P2025';
+        throw conflict;
+      }
+
+      await restoreOrderStock(tx, id);
+
+      return tx.order.findUnique({
+        where: { id: Number(id) },
+        include: { user: true, items: { include: { product: true } } }
+      });
     });
 
     const io = req.app.get('io');
@@ -503,6 +542,9 @@ const cancelOrderClient = async (req, res) => {
 
     res.json({ message: 'Pedido cancelado', order });
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(409).json({ error: 'El pedido fue modificado mientras se cancelaba. Recarga e intenta de nuevo.' });
+    }
     console.error('Error al cancelar pedido:', error);
     res.status(500).json({ error: 'Error interno al cancelar pedido' });
   }
@@ -538,13 +580,32 @@ const batchUpdateStatus = async (req, res) => {
       return res.status(409).json({ error: 'Ninguno de los pedidos puede cambiar a ese estado', updated: 0, failed: [...deniedIds, ...invalidTransitionIds] });
     }
 
-    const result = await prisma.order.updateMany({
-      where: { id: { in: transitionAllowedIds } },
-      data: {
-        status,
-        cancel_reason: cancel_reason || undefined
+    const ordersById = new Map(validForStore.map((order) => [order.id, order]));
+    const result = await prisma.$transaction(async (tx) => {
+      let count = 0;
+
+      for (const orderId of transitionAllowedIds) {
+        const current = ordersById.get(orderId);
+        if (!current) continue;
+
+        const updated = await tx.order.updateMany({
+          where: { id: orderId, status: current.status },
+          data: {
+            status,
+            cancel_reason: cancel_reason || undefined
+          }
+        });
+
+        if (updated.count !== 1) continue;
+        count += 1;
+
+        if (status === 'CANCELLED') {
+          await restoreOrderStock(tx, orderId);
+        }
       }
-    });
+
+      return { count };
+    }, { maxWait: 10000, timeout: 20000 });
 
     const io = req.app.get('io');
     const updatedOrders = await prisma.order.findMany({
@@ -567,14 +628,18 @@ const batchUpdateStatus = async (req, res) => {
 const markOrderViewed = async (req, res) => {
   try {
     const { id } = req.params;
+    const user = req.user;
 
     const existing = await prisma.order.findUnique({
       where: { id: Number(id) },
-      select: { id: true }
+      select: { id: true, store_id: true }
     });
 
     if (!existing) {
       return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+    if (user.role !== 'SUPERADMIN' && existing.store_id !== user.store_id) {
+      return res.status(403).json({ error: 'No tienes permisos sobre este pedido' });
     }
 
     await prisma.order.update({

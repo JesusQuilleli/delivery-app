@@ -158,6 +158,25 @@ test('orders: TRANSFER con referencia queda AWAITING_PAYMENT', async () => {
   testOrderIds.push(res.json.order_id);
 });
 
+test('orders: pago pendiente exige aprobación antes de aceptar (F2-05)', async () => {
+  const created = await placeOrder({ payment_method: 'TRANSFER', payment_reference: '123456' });
+  assert.equal(created.status, 200, JSON.stringify(created.json));
+  testOrderIds.push(created.json.order_id);
+
+  const invalid = await req('PUT', `/orders/${created.json.order_id}/status`, {
+    token: admin,
+    body: { status: 'ACCEPTED' }
+  });
+  assert.equal(invalid.status, 409, JSON.stringify(invalid.json));
+
+  const approved = await req('PUT', `/orders/${created.json.order_id}/status`, {
+    token: admin,
+    body: { status: 'PENDING' }
+  });
+  assert.equal(approved.status, 200, JSON.stringify(approved.json));
+  assert.equal(approved.json.order.status, 'PENDING');
+});
+
 test('orders: TRANSFER con referencia no numérica da 400', async () => {
   const res = await placeOrder({ payment_method: 'TRANSFER', payment_reference: 'ABC123' });
   assert.equal(res.status, 400, JSON.stringify(res.json));
@@ -350,6 +369,18 @@ test('orders: getOrderById de admin', async () => {
 test('orders: markOrderViewed con id inexistente debe dar 404 (BUG?)', async () => {
   const res = await req('PUT', '/orders/999999999/viewed', { token: admin });
   assert.equal(res.status, 404, `BUG: markOrderViewed con id inexistente devolvió ${res.status} (esperado 404)`);
+});
+
+test('orders: admin de otra tienda no puede marcar visto el pedido', async () => {
+  const created = await placeOrder();
+  assert.equal(created.status, 200, JSON.stringify(created.json));
+  testOrderIds.push(created.json.order_id);
+
+  const res = await req('PUT', `/orders/${created.json.order_id}/viewed`, { token: adminOtherStore });
+  assert.equal(res.status, 403, JSON.stringify(res.json));
+
+  const ok = await req('PUT', `/orders/${created.json.order_id}/viewed`, { token: admin });
+  assert.equal(ok.status, 200, JSON.stringify(ok.json));
 });
 
 test('orders: deleteOrder de admin', async () => {

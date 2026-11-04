@@ -111,17 +111,18 @@ export default function Dashboard() {
   // IDs de pedidos pendientes ya alertados (evita duplicar alertas en re-fetch)
   const alertedPendingIds = useRef<Set<number>>(new Set());
 
-  // 3 columnas simplificadas: Nuevas (AWAITING_PAYMENT + PENDING), Preparando (ACCEPTED), En Camino (DISPATCHED)
+  // 4 columnas: Por Validar (AWAITING_PAYMENT), Nuevas (PENDING), Preparando (ACCEPTED), En Camino (DISPATCHED)
   const columns = [
+    { title: 'Por Validar', status: 'AWAITING_PAYMENT', icon: Clock, headerClass: 'bg-amber-50/50 text-amber-950 border-amber-100', badgeClass: 'bg-amber-100 text-amber-700', color: 'amber' },
     { title: 'Nuevas', status: 'PENDING', icon: Bell, headerClass: 'bg-orange-50/50 text-orange-950 border-orange-100', badgeClass: 'bg-orange-100 text-orange-700', color: 'orange' },
     { title: 'Preparando', status: 'ACCEPTED', icon: Utensils, headerClass: 'bg-blue-50/50 text-blue-950 border-blue-100', badgeClass: 'bg-blue-100 text-blue-700', color: 'blue' },
     { title: 'En Camino', status: 'DISPATCHED', icon: Truck, headerClass: 'bg-purple-50/50 text-purple-950 border-purple-100', badgeClass: 'bg-purple-100 text-purple-700', color: 'purple' }
   ];
 
-  // Unificar AWAITING_PAYMENT y PENDING como "Nuevas"
   const isNuevas = (status: string) => status === 'PENDING' || status === 'AWAITING_PAYMENT';
 
-  const pendingUnread = orders.filter(o => isNuevas(o.status) && !o.viewed).length;
+  const awaitingUnread = orders.filter(o => o.status === 'AWAITING_PAYMENT' && !o.viewed).length;
+  const pendingUnread = orders.filter(o => o.status === 'PENDING' && !o.viewed).length;
 
   useEffect(() => {
     const interval = setInterval(() => setTick(t => t + 1), 30000);
@@ -299,9 +300,8 @@ export default function Dashboard() {
     if (audioRef.current) audioRef.current.currentTime = 0;
     urgentAudioRef.current?.pause();
     if (urgentAudioRef.current) urgentAudioRef.current.currentTime = 0;
-    await changeStatus(orderId, 'ACCEPTED');
+    await handleQuickApprove(orderId);
     setAlertQueue(prev => prev.filter(o => o.id !== orderId));
-    toast.success("Pedido aceptado → Preparando");
   };
 
   const handleRejectFromAlert = async (reason: string) => {
@@ -317,8 +317,14 @@ export default function Dashboard() {
   };
 
   const handleQuickApprove = async (orderId: number) => {
+    const order = orders.find(o => o.id === orderId) || alertQueue.find(o => o.id === orderId);
+    if (order?.status === 'AWAITING_PAYMENT') {
+      await changeStatus(orderId, 'PENDING');
+      toast.success("Pago aprobado ��' Pedido listo para preparar");
+      return;
+    }
     await changeStatus(orderId, 'ACCEPTED');
-    toast.success("Pedido aceptado → Preparando");
+    toast.success("Pedido aceptado ��' Preparando");
   };
 
   const handleQuickReject = (order: Order) => {
@@ -377,10 +383,6 @@ export default function Dashboard() {
   };
 
   const getOrdersForColumn = (status: string) => {
-    if (status === 'PENDING') {
-      // "Nuevas" incluye AWAITING_PAYMENT y PENDING
-      return orders.filter(o => isNuevas(o.status));
-    }
     return orders.filter(o => o.status === status);
   };
 
@@ -498,20 +500,30 @@ export default function Dashboard() {
           <div className="flex gap-2 flex-wrap justify-center">
             <Button variant="outline" size="sm" onClick={() => { setSelectMode(false); setSelectedIds([]); }}>Cancelar</Button>
             <Button variant="destructive" size="sm" className="font-bold" onClick={() => handleBatchAction('CANCELLED')}>
-              <Trash2 size={14} className="mr-1" /> Rechazar
+              <Trash2 size={14} className="mr-1" /> {activeTab === 'AWAITING_PAYMENT' ? 'Rechazar pagos' : 'Rechazar'}
             </Button>
-            <Button size="sm" className="font-bold bg-emerald-600 hover:bg-emerald-700" onClick={() => handleBatchAction('ACCEPTED')}>
-              <CheckCircle size={14} className="mr-1" /> Aceptar
-            </Button>
+            {activeTab === 'AWAITING_PAYMENT' ? (
+              <Button size="sm" className="font-bold bg-blue-600 hover:bg-blue-700" onClick={() => handleBatchAction('PENDING')}>
+                <CheckCircle size={14} className="mr-1" /> Aprobar pagos
+              </Button>
+            ) : (
+              <Button size="sm" className="font-bold bg-emerald-600 hover:bg-emerald-700" onClick={() => handleBatchAction('ACCEPTED')}>
+                <CheckCircle size={14} className="mr-1" /> Aceptar
+              </Button>
+            )}
           </div>
         </div>
       )}
 
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setCurrentPage(1); }} className="w-full mt-4">
-        <TabsList className="grid w-full grid-cols-3 h-16 md:h-14 bg-muted/40 rounded-xl p-1.5 gap-1 shadow-inner overflow-x-auto">
+        <TabsList className="grid w-full grid-cols-4 h-16 md:h-14 bg-muted/40 rounded-xl p-1.5 gap-1 shadow-inner overflow-x-auto">
           {columns.map(col => {
             const count = getOrdersForColumn(col.status).length;
-            const unreadCount = col.status === 'PENDING' ? pendingUnread : 0;
+            const unreadCount = col.status === 'PENDING'
+              ? pendingUnread
+              : col.status === 'AWAITING_PAYMENT'
+                ? awaitingUnread
+                : 0;
             return (
               <TabsTrigger
                 key={col.status}
@@ -544,7 +556,7 @@ export default function Dashboard() {
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow className="hover:bg-transparent">
-                      {selectMode && col.status === 'PENDING' && (
+                      {selectMode && (col.status === 'PENDING' || col.status === 'AWAITING_PAYMENT') && (
                         <TableHead className="w-10">
                           <Checkbox checked={tabIds.length > 0 && tabIds.every(id => selectedIds.includes(id))} onCheckedChange={() => toggleSelectAll(tabIds)} />
                         </TableHead>
@@ -580,7 +592,7 @@ export default function Dashboard() {
                           } ${isCritical ? 'border-l-4 border-l-red-500 bg-red-50/30' : isUrgent ? 'border-l-4 border-l-orange-400 bg-orange-50/20' : ''}`}
                           onClick={() => { markViewed(order.id); }}
                         >
-                          {selectMode && col.status === 'PENDING' && (
+                          {selectMode && (col.status === 'PENDING' || col.status === 'AWAITING_PAYMENT') && (
                             <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
                               <Checkbox checked={selectedIds.includes(order.id)} onCheckedChange={() => toggleSelect(order.id)} />
                             </TableCell>
@@ -639,7 +651,17 @@ export default function Dashboard() {
                           </TableCell>
                           <TableCell className="text-right align-top py-3">
                             <div className="flex items-center justify-end gap-1.5">
-                              {isNuevas(order.status) && (
+                              {order.status === 'AWAITING_PAYMENT' && (
+                                <>
+                                  <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 font-bold rounded-lg h-8 px-2" onClick={(e) => { e.stopPropagation(); handleQuickReject(order); }}>
+                                    <XCircle size={14} />
+                                  </Button>
+                                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 font-bold rounded-lg h-8 px-3 text-xs" onClick={(e) => { e.stopPropagation(); handleQuickApprove(order.id); }}>
+                                    <CheckCircle size={14} className="mr-1" /> Aprobar Pago
+                                  </Button>
+                                </>
+                              )}
+                              {order.status === 'PENDING' && (
                                 <>
                                   <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 font-bold rounded-lg h-8 px-2" onClick={(e) => { e.stopPropagation(); handleQuickReject(order); }}>
                                     <XCircle size={14} />
@@ -699,7 +721,7 @@ export default function Dashboard() {
 
             {/* VISTA MÓVIL */}
             <div className="md:hidden space-y-3 pb-6">
-              {col.status === 'PENDING' && paginatedOrders.length > 0 && (
+              {(col.status === 'PENDING' || col.status === 'AWAITING_PAYMENT') && paginatedOrders.length > 0 && (
                 <div className="flex items-center justify-between">
                   <Button variant="outline" size="sm" className="font-bold" onClick={() => { setSelectMode(!selectMode); if (selectMode) setSelectedIds([]); }}>
                     {selectMode ? <XCircle size={14} className="mr-1" /> : <CheckSquare size={14} className="mr-1" />}
@@ -723,7 +745,7 @@ export default function Dashboard() {
                       {/* Header: ID + Tiempo + Urgencia */}
                       <div className="flex justify-between items-start">
                         <div className="flex items-start gap-2">
-                          {selectMode && col.status === 'PENDING' && (
+                          {selectMode && (col.status === 'PENDING' || col.status === 'AWAITING_PAYMENT') && (
                             <Checkbox checked={selectedIds.includes(order.id)} onCheckedChange={() => toggleSelect(order.id)} className="mt-1" />
                           )}
                           <div>
@@ -817,7 +839,16 @@ export default function Dashboard() {
                       </div>
                     </CardContent>
                     <CardFooter className="p-3 bg-muted/30 border-t border-border">
-                      {isNuevas(order.status) ? (
+                      {order.status === 'AWAITING_PAYMENT' ? (
+                        <div className="flex gap-2 w-full">
+                          <Button variant="outline" size="sm" className="flex-1 font-bold text-red-600 border-red-200 hover:bg-red-50 rounded-lg" onClick={() => handleQuickReject(order)}>
+                            <XCircle size={14} className="mr-1" /> Rechazar
+                          </Button>
+                          <Button size="sm" className="flex-[2] font-bold bg-blue-600 hover:bg-blue-700 rounded-lg" onClick={() => handleQuickApprove(order.id)}>
+                            <CheckCircle size={14} className="mr-1" /> Aprobar Pago
+                          </Button>
+                        </div>
+                      ) : order.status === 'PENDING' ? (
                         <div className="flex gap-2 w-full">
                           <Button variant="outline" size="sm" className="flex-1 font-bold text-red-600 border-red-200 hover:bg-red-50 rounded-lg" onClick={() => handleQuickReject(order)}>
                             <XCircle size={14} className="mr-1" /> Rechazar
