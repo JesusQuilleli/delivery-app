@@ -78,7 +78,7 @@ export default function Inventory() {
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
   const [newProductDesc, setNewProductDesc] = useState('');
-  //const [newProductStock, setNewProductStock] = useState('');
+  const [newProductStock, setNewProductStock] = useState('');
   const [newProductImage, setNewProductImage] = useState('');
   const [newProductCategoryId, setNewProductCategoryId] = useState<number | ''>('');
 
@@ -97,7 +97,7 @@ export default function Inventory() {
   const [editProductName, setEditProductName] = useState('');
   const [editProductPrice, setEditProductPrice] = useState('');
   const [editProductDesc, setEditProductDesc] = useState('');
-  //const [editProductStock, setEditProductStock] = useState('');
+  const [editProductStock, setEditProductStock] = useState('');
   const [editProductImage, setEditProductImage] = useState('');
   const [editProductCategoryId, setEditProductCategoryId] = useState<number | ''>('');
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
@@ -228,8 +228,9 @@ export default function Inventory() {
       await api.delete(`/inventory/products/${id}`);
       setProducts(products.filter(p => p.id !== id));
       toast.success("Producto eliminado exitosamente");
-    } catch (e) {
-      toast.error("No se puede eliminar porque está asociado a pedidos.");
+    } catch (e: any) {
+      const msg = e.response?.data?.error || "No se puede eliminar porque está asociado a pedidos u otros recursos.";
+      toast.error(msg);
     }
   };
 
@@ -240,6 +241,7 @@ export default function Inventory() {
         name: newProductName,
         price: parseFloat(newProductPrice),
         description: newProductDesc,
+        stock: newProductStock !== '' ? parseInt(newProductStock) : null,
         image_url: newProductImage,
         is_available: true,
         category_id: newProductCategoryId ? Number(newProductCategoryId) : null
@@ -248,11 +250,12 @@ export default function Inventory() {
       setProducts([res.data.product, ...products]);
       setIsAddProductOpen(false);
       // Reset
-      setNewProductName(''); setNewProductPrice(''); setNewProductDesc(''); setNewProductImage(''); setNewProductCategoryId('');
+      setNewProductName(''); setNewProductPrice(''); setNewProductDesc(''); setNewProductStock(''); setNewProductImage(''); setNewProductCategoryId('');
       toast.success("Producto creado exitosamente");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Error al crear producto");
+      const msg = error.response?.data?.error || "Error al crear producto";
+      toast.error(msg);
     }
   };
 
@@ -277,9 +280,10 @@ export default function Inventory() {
       // Reset
       setNewComboName(''); setNewComboPrice(''); setNewComboDesc(''); setNewComboImage(''); setSelectedComboItems([]);
       toast.success("Combo creado exitosamente");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Error al crear combo");
+      const msg = error.response?.data?.error || "Error al crear combo";
+      toast.error(msg);
     }
   };
 
@@ -335,6 +339,7 @@ export default function Inventory() {
     setEditProductName(p.name);
     setEditProductPrice(p.price.toString());
     setEditProductDesc(p.description || '');
+    setEditProductStock(p.stock !== null && p.stock !== undefined ? p.stock.toString() : '');
     setEditProductImage(p.image_url || '');
     setEditProductCategoryId(p.category_id || '');
     setIsEditProductOpen(true);
@@ -348,6 +353,7 @@ export default function Inventory() {
         name: editProductName,
         price: parseFloat(editProductPrice),
         description: editProductDesc,
+        stock: editProductStock !== '' ? parseInt(editProductStock) : null,
         image_url: editProductImage,
         category_id: editProductCategoryId ? Number(editProductCategoryId) : null
       };
@@ -355,9 +361,10 @@ export default function Inventory() {
       setProducts(products.map(p => p.id === editingProduct.id ? res.data.product : p));
       setIsEditProductOpen(false);
       toast.success("Producto actualizado exitosamente");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Error al actualizar producto");
+      const msg = error.response?.data?.error || "Error al actualizar producto";
+      toast.error(msg);
     }
   };
 
@@ -555,17 +562,21 @@ export default function Inventory() {
                     <Label className="font-bold text-gray-700">Nombre del Producto</Label>
                     <Input required value={newProductName} onChange={e => setNewProductName(e.target.value)} placeholder="Ej. Paracetamol 500mg" className="rounded-xl bg-gray-50 border-gray-200" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <Label className="font-bold text-gray-700">Precio{storeConfig?.currency ? ` (${storeConfig.currency})` : ''}</Label>
-                      <Input required type="number" step="0.01" value={newProductPrice} onChange={e => setNewProductPrice(e.target.value)} placeholder="Ej. 2.50" className="rounded-xl bg-gray-50 border-gray-200" />
+                      <Input required type="number" step="0.01" min="0" value={newProductPrice} onChange={e => setNewProductPrice(e.target.value)} placeholder="Ej. 2.50" className="rounded-xl bg-gray-50 border-gray-200" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="font-bold text-gray-700">Stock (Uds)</Label>
+                      <Input type="number" min="0" step="1" value={newProductStock} onChange={e => setNewProductStock(e.target.value)} placeholder="Ilimitado" className="rounded-xl bg-gray-50 border-gray-200" />
                     </div>
                     <div className="space-y-1">
                       <Label className="font-bold text-gray-700">Categoría</Label>
                       <select
                         value={newProductCategoryId}
                         onChange={e => setNewProductCategoryId(e.target.value ? Number(e.target.value) : '')}
-                        className="flex h-10 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-xl border border-gray-200 bg-gray-50 px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Sin categoría</option>
                         {allCategories.map(c => (
@@ -614,17 +625,21 @@ export default function Inventory() {
                     <Label className="font-bold text-gray-700">Nombre del Producto</Label>
                     <Input required value={editProductName} onChange={e => setEditProductName(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <Label className="font-bold text-gray-700">Precio{storeConfig?.currency ? ` (${storeConfig.currency})` : ''}</Label>
-                      <Input required type="number" step="0.01" value={editProductPrice} onChange={e => setEditProductPrice(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200" />
+                      <Input required type="number" step="0.01" min="0" value={editProductPrice} onChange={e => setEditProductPrice(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="font-bold text-gray-700">Stock (Uds)</Label>
+                      <Input type="number" min="0" step="1" value={editProductStock} onChange={e => setEditProductStock(e.target.value)} placeholder="Ilimitado" className="rounded-xl bg-gray-50 border-gray-200" />
                     </div>
                     <div className="space-y-1">
                       <Label className="font-bold text-gray-700">Categoría</Label>
                       <select
                         value={editProductCategoryId}
                         onChange={e => setEditProductCategoryId(e.target.value ? Number(e.target.value) : '')}
-                        className="flex h-10 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full rounded-xl border border-gray-200 bg-gray-50 px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Sin categoría</option>
                         {allCategories.map(c => (
@@ -690,6 +705,15 @@ export default function Inventory() {
                       ) : (
                         <span className="text-xs text-gray-400 font-bold">-</span>
                       )}
+                      {p.stock === null ? (
+                        <span className="text-xs font-semibold text-gray-400">Stock: Ilimitado</span>
+                      ) : p.stock <= 0 ? (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs font-bold">Agotado (0)</Badge>
+                      ) : p.stock <= 5 ? (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs font-bold">Bajo stock ({p.stock})</Badge>
+                      ) : (
+                        <span className="text-xs font-semibold text-gray-600">Stock: {p.stock}</span>
+                      )}
                       <button
                         onClick={() => toggleAvailability(p.id, p.is_available)}
                         className={`px-2.5 py-1 text-xs font-bold rounded-full transition-colors ${p.is_available ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
@@ -719,6 +743,7 @@ export default function Inventory() {
                   <TableHead className="font-black text-gray-900">Nombre</TableHead>
                   <TableHead className="font-black text-gray-900">Categoría</TableHead>
                   <TableHead className="font-black text-gray-900">Precio</TableHead>
+                  <TableHead className="font-black text-gray-900">Stock</TableHead>
                   <TableHead className="font-black text-gray-900 text-center">Estado</TableHead>
                   <TableHead className="font-black text-gray-900 text-right">Acciones</TableHead>
                 </TableRow>
@@ -744,6 +769,17 @@ export default function Inventory() {
                       )}
                     </TableCell>
                     <TableCell className="font-black text-blue-600">{formatPrice(p.price, storeConfig?.currency)}</TableCell>
+                    <TableCell>
+                      {p.stock === null ? (
+                        <span className="text-xs font-medium text-gray-400">Ilimitado</span>
+                      ) : p.stock <= 0 ? (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 font-bold">Agotado (0)</Badge>
+                      ) : p.stock <= 5 ? (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 font-bold">Bajo stock ({p.stock})</Badge>
+                      ) : (
+                        <span className="font-semibold text-gray-700">{p.stock} unid.</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-center">
                       <button
                         onClick={() => toggleAvailability(p.id, p.is_available)}
@@ -891,7 +927,16 @@ export default function Inventory() {
                         </Badge>
                       ))}
                     </div>
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      {c.stock === null ? (
+                        <span className="text-xs font-semibold text-gray-400">Preparable: Ilimitado</span>
+                      ) : c.stock <= 0 ? (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs font-bold">Agotado (0)</Badge>
+                      ) : c.stock <= 5 ? (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs font-bold">Bajo stock ({c.stock} combos)</Badge>
+                      ) : (
+                        <span className="text-xs font-semibold text-purple-700">Stock: {c.stock} combos</span>
+                      )}
                       <button
                         onClick={() => toggleAvailability(c.id, c.is_available)}
                         className={`px-2.5 py-1 text-xs font-bold rounded-full transition-colors ${c.is_available ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
@@ -916,6 +961,7 @@ export default function Inventory() {
                   <TableHead className="font-black text-gray-900">Nombre de Combo</TableHead>
                   <TableHead className="font-black text-gray-900">Productos Incluidos</TableHead>
                   <TableHead className="font-black text-gray-900">Precio Especial</TableHead>
+                  <TableHead className="font-black text-gray-900">Stock Preparable</TableHead>
                   <TableHead className="font-black text-gray-900 text-center">Estado</TableHead>
                   <TableHead className="font-black text-gray-900 text-right">Acciones</TableHead>
                 </TableRow>
@@ -943,6 +989,17 @@ export default function Inventory() {
                       </div>
                     </TableCell>
                     <TableCell className="font-black text-purple-600">{formatPrice(c.price, storeConfig?.currency)}</TableCell>
+                    <TableCell>
+                      {c.stock === null ? (
+                        <span className="text-xs font-medium text-gray-400">Ilimitado</span>
+                      ) : c.stock <= 0 ? (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 font-bold">Agotado (0)</Badge>
+                      ) : c.stock <= 5 ? (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 font-bold">Bajo stock ({c.stock})</Badge>
+                      ) : (
+                        <span className="font-semibold text-purple-700">{c.stock} combos</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-center">
                       <button
                         onClick={() => toggleAvailability(c.id, c.is_available)}

@@ -426,13 +426,13 @@ Optimización de la búsqueda y precisión de la dirección del cliente en el ch
 
 #### Inventario y combos
 
-- [ ] F2-14 Validar que `category_id` pertenezca a la tienda.
-- [ ] F2-15 Validar que los componentes de un combo pertenezcan a la tienda.
-- [ ] F2-16 Calcular stock de combo como mínimo de `stock_componente / cantidad`.
-- [ ] F2-17 Mostrar stock de combo en catálogo y checkout.
-- [ ] F2-18 Evitar stock negativo.
-- [ ] F2-19 Manejar eliminación de productos usados en combos.
-- [ ] F2-20 Agregar alertas de bajo stock.
+- [x] F2-14 Validar que `category_id` pertenezca a la tienda.
+- [x] F2-15 Validar que los componentes de un combo pertenezcan a la tienda.
+- [x] F2-16 Calcular stock de combo como mínimo de `stock_componente / cantidad`.
+- [x] F2-17 Mostrar stock de combo en catálogo y checkout.
+- [x] F2-18 Evitar stock negativo.
+- [x] F2-19 Manejar eliminación de productos usados en combos.
+- [x] F2-20 Agregar alertas de bajo stock.
 - [x] F2-25 Restaurar stock al cancelar o eliminar pedidos (cliente, admin y lote).
 
 #### Historial y analytics
@@ -797,6 +797,7 @@ npm run build
 | 2026-11-03 | 45/45 | 84/84 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | Fase 1B. Autocompletado, GPS, reverse geocoding, cobertura, direcciones guardadas, `address_details` y navegación Google Maps/Waze. Bundle ~1 MB. |
 | 2026-11-03 | 45/45 | 89/89 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | F2-01–F2-05, F2-07 y F2-25. Pestaña de pagos, aprobación/rechazo individual y por lote, bloqueo de aceptación sin pago, pertenencia en `markOrderViewed` y restauración idempotente de stock. Bundle ~1 MB. |
 | 2026-11-05 | 53/53 | 89/89 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | C-07/C-08/C-09 corregidos; C-10 verificado (200 en productos). Demo seed de 3 tiendas. API: auth/inventory/stock/store/superadmin 63/63 + orders 26/26 aislado; el run conjunto de 89 sufrió caída de conexión de Neon en el `before` de orders, no fallo de código. Se elevó el timeout de transacciones de cancelar/eliminar/actualizar a 20 s. Bundle 1,050.56 kB. |
+| 2026-11-05 | 62/62 | 95/95 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | F2-14 a F2-20. Validación pertenencia categoría/combos, stock dinámico combo min(componente/qty), rechazo stock negativo, bloqueo eliminación si está en combo y stock visible en catálogo/admin. Bundle 1,053.67 kB. |
 
 ---
 
@@ -867,6 +868,7 @@ npm run build
 | 2026-11-05 | Timeout transacciones | Hecho | `cancelOrderClient`, `deleteOrder` y `updateOrderStatus` con `maxWait: 10000` y `timeout: 20000`; corrige P2028 en cancelación AWAITING_PAYMENT |
 | 2026-11-05 | Frontend build/lint/typecheck | Hecho | Build OK (1,050.56 kB); lint 0 errores / 86 warnings; typecheck OK |
 | 2026-11-05 | PDF de accesos (F3B-07, F6-23..26) | Hecho | Creado docs/demo/accesos-demo.html, scripts/generate-pdfs.ps1 y compilado Accesos_Demo_TiendaFast.pdf con Edge headless (540 KB) |
+| 2026-11-05 | F2-14 a F2-20 (Inventario y Combos) | Hecho | Validadas categorías/combos por tienda, stock de combo dinámico en catálogo y admin, rechazo stock negativo, guard de eliminación en combo y stock editable en admin |
 
 Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 

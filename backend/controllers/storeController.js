@@ -1,6 +1,7 @@
 const prisma = require('../prismaClient');
 const { getBcvRate } = require('../services/ratesService');
 const { resolveDeliveryFee } = require('../services/deliveryService');
+const { formatProductWithStock } = require('../utils/inventory');
 
 const cleanOptionalText = (value, max = 120) => {
   if (value === undefined) return undefined;
@@ -58,7 +59,10 @@ const getStoreProducts = async (req, res) => {
         prisma.product.count({ where: whereClause }),
         prisma.product.findMany({
           where: whereClause,
-          include: { category: true },
+          include: {
+            category: true,
+            comboItems: { include: { product: true } }
+          },
           skip,
           take: parsedLimit,
           orderBy: { id: 'desc' }
@@ -71,11 +75,16 @@ const getStoreProducts = async (req, res) => {
     } else {
       products = await prisma.product.findMany({
         where: whereClause,
-        include: { category: true },
+        include: {
+          category: true,
+          comboItems: { include: { product: true } }
+        },
         orderBy: { id: 'desc' }
       });
       totalProducts = products.length;
     }
+
+    const formattedProducts = products.map(formatProductWithStock);
 
     res.json({
       store: {
@@ -98,7 +107,7 @@ const getStoreProducts = async (req, res) => {
         industry: store.industry,
         theme_color: store.theme_color
       },
-      products,
+      products: formattedProducts,
       categories: store.categories,
       pagination: {
         currentPage,
@@ -230,8 +239,8 @@ const getStoreProductDetails = async (req, res) => {
     }
 
     res.json({ 
-      product, 
-      relatedProducts,
+      product: formatProductWithStock(product), 
+      relatedProducts: relatedProducts.map(formatProductWithStock),
       store: {
         id: store.id,
         name: store.name,

@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { cloudinary } = require('../config/cloudinary');
+const { formatProductWithStock } = require('../utils/inventory');
 
 // Función auxiliar para extraer el public_id de una URL de Cloudinary
 const getPublicIdFromUrl = (url) => {
@@ -99,10 +100,13 @@ const getInventory = async (req, res) => {
       });
     }
 
+    const formattedProducts = products.map(formatProductWithStock);
+    const lowStockCount = formattedProducts.filter(p => p.is_low_stock).length;
+
     res.json({ 
-      products, 
+      products: formattedProducts, 
       categories, 
-      pagination: { currentPage, totalPages, totalItems } 
+      pagination: { currentPage, totalPages, totalItems, lowStockCount } 
     });
   } catch (error) {
     console.error('Error obteniendo inventario:', error);
@@ -119,6 +123,19 @@ const createProduct = async (req, res) => {
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
 
+    if (stock !== undefined && stock !== null && Number(stock) < 0) {
+      return res.status(400).json({ error: 'El stock no puede ser negativo.' });
+    }
+
+    if (category_id !== undefined && category_id !== null && category_id !== '') {
+      const cat = await prisma.category.findFirst({
+        where: { id: Number(category_id), store_id: store.id }
+      });
+      if (!cat) {
+        return res.status(400).json({ error: 'La categoría no existe o no pertenece a esta tienda.' });
+      }
+    }
+
     const product = await prisma.product.create({
       data: {
         store_id: store.id,
@@ -134,7 +151,7 @@ const createProduct = async (req, res) => {
       include: { category: true }
     });
 
-    res.json({ message: 'Producto creado exitosamente', product });
+    res.json({ message: 'Producto creado exitosamente', product: formatProductWithStock(product) });
   } catch (error) {
     console.error('Error creando producto:', error);
     res.status(500).json({ error: 'Error interno creando producto' });
@@ -153,6 +170,25 @@ const createProductsBulk = async (req, res) => {
 
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    // F2-14: Validar categorías si se especificaron
+    const categoryIds = [...new Set(products.map(p => p.category_id).filter(id => id !== undefined && id !== null && id !== ''))].map(Number);
+    if (categoryIds.length > 0) {
+      const existingCategories = await prisma.category.findMany({
+        where: { id: { in: categoryIds }, store_id: store.id },
+        select: { id: true }
+      });
+      if (existingCategories.length !== categoryIds.length) {
+        return res.status(400).json({ error: 'Una o más categorías no existen o no pertenecen a esta tienda.' });
+      }
+    }
+
+    // F2-18: Validar que no haya stocks negativos
+    for (const p of products) {
+      if (p.stock !== undefined && p.stock !== null && p.stock !== '' && Number(p.stock) < 0) {
+        return res.status(400).json({ error: `El producto "${p.name}" tiene un stock negativo inválido.` });
+      }
+    }
 
     // Mapear los productos
     const dataToInsert = products.map(p => ({
@@ -185,6 +221,24 @@ const updateProduct = async (req, res) => {
     const { name, price, description, stock, image_url, is_available, category_id } = req.body;
 
     const oldProduct = await prisma.product.findUnique({ where: { id: Number(id) } });
+    if (!oldProduct) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    // F2-18: Evitar stock negativo
+    if (stock !== undefined && stock !== null && Number(stock) < 0) {
+      return res.status(400).json({ error: 'El stock no puede ser negativo.' });
+    }
+
+    // F2-14: Validar pertenencia de categoría a la tienda
+    if (category_id !== undefined && category_id !== null && category_id !== '') {
+      const cat = await prisma.category.findFirst({
+        where: { id: Number(category_id), store_id: oldProduct.store_id }
+      });
+      if (!cat) {
+        return res.status(400).json({ error: 'La categoría especificada no existe o no pertenece a esta tienda.' });
+      }
+    }
 
     const dataToUpdate = {};
     if (name !== undefined) dataToUpdate.name = name;
@@ -212,7 +266,7 @@ const updateProduct = async (req, res) => {
       }
     }
 
-    res.json({ message: 'Producto actualizado exitosamente', product: updatedProduct });
+    res.json({ message: 'Producto actualizado exitosamente', product: formatProductWithStock(updatedProduct) });
   } catch (error) {
     console.error('Error actualizando producto:', error);
     res.status(500).json({ error: 'Error interno actualizando producto' });
@@ -232,6 +286,24 @@ const createCombo = async (req, res) => {
 
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    // F2-15: Validar que todos los componentes pertenezcan a la tienda y no sean combos
+    const componentIds = combo_items.map(item => Number(item.product_id));
+    const uniqueComponentIds = [...new Set(componentIds)];
+    const components = await prisma.product.findMany({
+      where: {
+        id: { in: uniqueComponentIds },
+        store_id: store.id
+      }
+    });
+
+    if (components.length !== uniqueComponentIds.length) {
+      return res.status(400).json({ error: 'Uno o más componentes del combo no existen o no pertenecen a esta tienda.' });
+    }
+
+    if (components.some(c => c.is_combo)) {
+      return res.status(400).json({ error: 'Un combo no puede contener otro combo como componente.' });
+    }
 
     // Se crea el producto padre con is_combo = true
     const comboProduct = await prisma.product.create({
@@ -255,7 +327,7 @@ const createCombo = async (req, res) => {
       }
     });
 
-    res.json({ message: 'Combo creado exitosamente', product: comboProduct });
+    res.json({ message: 'Combo creado exitosamente', product: formatProductWithStock(comboProduct) });
   } catch (error) {
     console.error('Error creando combo:', error);
     res.status(500).json({ error: 'Error interno creando combo' });
@@ -266,23 +338,38 @@ const createCombo = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
+    const productId = Number(id);
     
     // Obtener producto para borrar su imagen de Cloudinary
-    const product = await prisma.product.findUnique({ where: { id: Number(id) } });
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
 
-    // Primero eliminar comboItems relacionados si es un combo (o si es parte de un combo)
-    await prisma.comboItem.deleteMany({
-      where: {
-        OR: [
-          { combo_id: Number(id) },
-          { product_id: Number(id) }
-        ]
+    // F2-19: Si es un producto normal y forma parte de un combo activo, bloquear eliminación
+    if (!product.is_combo) {
+      const usedInCombos = await prisma.comboItem.findMany({
+        where: { product_id: productId },
+        include: { combo: true }
+      });
+      if (usedInCombos.length > 0) {
+        const comboNames = usedInCombos.map(ci => ci.combo?.name || `#${ci.combo_id}`).join(', ');
+        return res.status(400).json({
+          error: `No se puede eliminar el producto porque forma parte de los combos: ${comboNames}. Elimina o edita los combos primero.`
+        });
       }
-    });
+    }
+
+    // Si es un combo, eliminar comboItems relacionados
+    if (product.is_combo) {
+      await prisma.comboItem.deleteMany({
+        where: { combo_id: productId }
+      });
+    }
 
     // Luego borrar el producto
     await prisma.product.delete({
-      where: { id: Number(id) }
+      where: { id: productId }
     });
 
     // Borrar imagen de Cloudinary

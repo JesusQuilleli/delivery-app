@@ -161,3 +161,108 @@ test('inventory: eliminar producto de otra tienda da 403', async () => {
   const del = await req('DELETE', `/inventory/products/${id}`, { token: adminOtherStore });
   assert.equal(del.status, 403, JSON.stringify(del.json));
 });
+
+test('F2-14: rechazar categoría de otra tienda al crear producto (400)', async () => {
+  // Crear categoría en tienda 36 (demo-comida)
+  const otherCat = await prisma.category.create({
+    data: { name: `TEST-INV-othercat-${Date.now()}`, store_id: 36 }
+  });
+  createdCategoryIds.push(otherCat.id);
+
+  const res = await req('POST', '/inventory/demo-farmacia/products', {
+    token: admin,
+    body: { name: `TEST-INV-alien-${Date.now()}`, price: 4.5, category_id: otherCat.id }
+  });
+  assert.equal(res.status, 400, JSON.stringify(res.json));
+});
+
+test('F2-15: rechazar componentes de combo que pertenecen a otra tienda (400)', async () => {
+  const alienProduct = await prisma.product.create({
+    data: { name: `TEST-INV-alienprod-${Date.now()}`, price: 5, store_id: 36, is_available: true }
+  });
+  createdProductIds.push(alienProduct.id);
+
+  const res = await req('POST', '/inventory/demo-farmacia/combos', {
+    token: admin,
+    body: {
+      name: `TEST-INV-badcombo-${Date.now()}`,
+      price: 15,
+      combo_items: [{ product_id: alienProduct.id, quantity: 1 }]
+    }
+  });
+  assert.equal(res.status, 400, JSON.stringify(res.json));
+});
+
+test('F2-16 & F2-17: calcular stock dinámico de combo según componentes', async () => {
+  const prodA = await req('POST', '/inventory/demo-farmacia/products', {
+    token: admin,
+    body: { name: `TEST-INV-compA-${Date.now()}`, price: 2, stock: 10, is_available: true }
+  });
+  const prodB = await req('POST', '/inventory/demo-farmacia/products', {
+    token: admin,
+    body: { name: `TEST-INV-compB-${Date.now()}`, price: 3, stock: 6, is_available: true }
+  });
+  createdProductIds.push(prodA.json.product.id, prodB.json.product.id);
+
+  // Combo requiere 1 prodA y 2 prodB -> stock disponible = floor(6 / 2) = 3
+  const comboRes = await req('POST', '/inventory/demo-farmacia/combos', {
+    token: admin,
+    body: {
+      name: `TEST-INV-calc-combo-${Date.now()}`,
+      price: 6,
+      combo_items: [
+        { product_id: prodA.json.product.id, quantity: 1 },
+        { product_id: prodB.json.product.id, quantity: 2 }
+      ]
+    }
+  });
+  assert.equal(comboRes.status, 200, JSON.stringify(comboRes.json));
+  assert.equal(comboRes.json.product.stock, 3);
+  createdComboId.push(comboRes.json.product.id);
+
+  // Verificar que el catálogo público de la tienda también calcule el stock
+  const pubRes = await req('GET', '/stores/demo-farmacia/products');
+  assert.equal(pubRes.status, 200);
+  const foundCombo = pubRes.json.products.find(p => p.id === comboRes.json.product.id);
+  assert.ok(foundCombo, 'El combo debe estar en el catálogo');
+  assert.equal(foundCombo.stock, 3, 'El stock calculado del combo debe ser 3');
+});
+
+test('F2-18: rechazar producto con stock negativo (400)', async () => {
+  const res = await req('POST', '/inventory/demo-farmacia/products', {
+    token: admin,
+    body: { name: `TEST-INV-negstock-${Date.now()}`, price: 5, stock: -1 }
+  });
+  assert.equal(res.status, 400, JSON.stringify(res.json));
+});
+
+test('F2-19: bloquear eliminación de producto que es parte de un combo activo (400)', async () => {
+  const comp = await req('POST', '/inventory/demo-farmacia/products', {
+    token: admin,
+    body: { name: `TEST-INV-usedcomp-${Date.now()}`, price: 4, stock: 20, is_available: true }
+  });
+  const compId = comp.json.product.id;
+  createdProductIds.push(compId);
+
+  const combo = await req('POST', '/inventory/demo-farmacia/combos', {
+    token: admin,
+    body: {
+      name: `TEST-INV-guardcombo-${Date.now()}`,
+      price: 10,
+      combo_items: [{ product_id: compId, quantity: 1 }]
+    }
+  });
+  const comboId = combo.json.product.id;
+  createdComboId.push(comboId);
+
+  // Intentar eliminar el componente mientras el combo existe
+  const delComp = await req('DELETE', `/inventory/products/${compId}`, { token: admin });
+  assert.equal(delComp.status, 400, 'Debe devolver 400 al intentar borrar componente de combo');
+
+  // Si se elimina el combo primero, luego sí se puede eliminar el componente
+  const delCombo = await req('DELETE', `/inventory/products/${comboId}`, { token: admin });
+  assert.equal(delCombo.status, 200, 'Eliminación del combo debe tener éxito');
+
+  const delCompAfter = await req('DELETE', `/inventory/products/${compId}`, { token: admin });
+  assert.equal(delCompAfter.status, 200, 'Eliminación del componente debe tener éxito tras borrar el combo');
+});
