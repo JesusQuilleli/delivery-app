@@ -10,8 +10,19 @@ let clientUser = null;
 let client = null;
 let testOrderIds = [];
 let product = null;
+let originalDeliveryFee = null;
+let zonesToRestore = [];
 
 before(async () => {
+  const store = await prisma.store.findUnique({ where: { id: 1 } });
+  originalDeliveryFee = store.delivery_fee;
+  zonesToRestore = await prisma.deliveryZone.findMany({
+    where: { store_id: 1, is_active: true },
+    select: { id: true }
+  });
+  await prisma.store.update({ where: { id: 1 }, data: { delivery_fee: 0 } });
+  await prisma.deliveryZone.updateMany({ where: { store_id: 1, is_active: true }, data: { is_active: false } });
+
   product = await prisma.product.create({
     data: {
       store_id: 1,
@@ -40,6 +51,15 @@ after(async () => {
   }
   if (clientUser) await prisma.user.delete({ where: { id: clientUser.id } }).catch(() => {});
   if (product) await prisma.product.delete({ where: { id: product.id } }).catch(() => {});
+  if (zonesToRestore.length) {
+    await prisma.deliveryZone.updateMany({
+      where: { id: { in: zonesToRestore.map((zone) => zone.id) } },
+      data: { is_active: true }
+    });
+  }
+  if (originalDeliveryFee !== null) {
+    await prisma.store.update({ where: { id: 1 }, data: { delivery_fee: originalDeliveryFee } });
+  }
 });
 
 async function placeOrder(extra = {}) {

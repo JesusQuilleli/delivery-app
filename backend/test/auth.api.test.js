@@ -151,9 +151,11 @@ test('F1-34: el mismo correo compra en dos tiendas sin mezclar pedidos', async (
 });
 
 test('DB: teléfono duplicado dentro de la misma tienda se rechaza (P2002)', async () => {
+  const existing = await prisma.user.findUnique({ where: { id: createdUserIds[0] } });
+  assert.ok(existing?.phone, 'el usuario de prueba debe tener teléfono normalizado');
   await assert.rejects(
     prisma.user.create({
-      data: { store_id: firstStoreId, email: EMAIL_DUP, phone: PHONE, name: 'Duplicate Phone' }
+      data: { store_id: firstStoreId, email: EMAIL_DUP, phone: existing.phone, name: 'Duplicate Phone' }
     }),
     (error) => error.code === 'P2002'
   );
@@ -165,7 +167,8 @@ test('admin-login: 401 con contraseña incorrecta', async () => {
 });
 
 test('admin-login: 200 con credenciales válidas', async () => {
-  const res = await req('POST', '/auth/admin-login', { body: { username: 'admin_demo', password: 'password123' } });
+  const demoPassword = process.env.DEMO_PASSWORD || 'TiendaFast2026!';
+  const res = await req('POST', '/auth/admin-login', { body: { username: 'admin_demo', password: demoPassword } });
   assert.equal(res.status, 200, JSON.stringify(res.json));
   assert.equal(res.json.user.role, 'ADMIN');
   assert.equal(res.json.user.store.slug, 'demo-farmacia');

@@ -15,6 +15,7 @@ import RejectOrderDialog from '../components/RejectOrderDialog';
 import ConnectionStatus from '../components/ConnectionStatus';
 import { toast } from 'sonner';
 import { formatPrice } from '../utils/currency';
+import { buildGoogleMapsUrl, buildWazeUrl } from '../utils/navigation';
 
 interface OrderItem {
   id: number;
@@ -40,12 +41,6 @@ interface Order {
   user: { name: string | null; phone: string };
   driver?: { id: number; name: string; phone: string; vehicle_plate: string | null } | null;
 }
-
-const googleMapsUrl = (order: Order) =>
-  `https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`;
-
-const wazeUrl = (order: Order) =>
-  `https://waze.com/ul?ll=${order.latitude},${order.longitude}&navigate=yes`;
 
 interface Driver {
   id: number;
@@ -92,6 +87,11 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [storeId, setStoreId] = useState<number | null>(null);
   const [storeConfig, setStoreConfig] = useState<any>(null);
+  const storeOrigin = storeConfig?.latitude != null && storeConfig?.longitude != null
+    ? { latitude: storeConfig.latitude, longitude: storeConfig.longitude }
+    : null;
+  const googleMapsUrl = (order: Order) => buildGoogleMapsUrl(order, storeOrigin) || '#';
+  const wazeUrl = (order: Order) => buildWazeUrl(order) || '#';
   const [orders, setOrders] = useState<Order[]>([]);
   const [alertQueue, setAlertQueue] = useState<Order[]>([]);
   const [rejectTarget, setRejectTarget] = useState<Order | null>(null);

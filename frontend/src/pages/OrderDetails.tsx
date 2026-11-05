@@ -9,6 +9,7 @@ import { Button } from '../components/ui/button';
 import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { formatPrice } from '../utils/currency';
+import { buildDriverMessage, buildGoogleMapsUrl, buildWazeUrl } from '../utils/navigation';
 import { toast } from 'sonner';
 
 interface OrderItem {
@@ -189,6 +190,13 @@ export default function OrderDetails() {
     );
   }
 
+  const storeOrigin = storeData?.latitude != null && storeData?.longitude != null
+    ? { latitude: storeData.latitude as number | string, longitude: storeData.longitude as number | string }
+    : null;
+  const googleMapsUrl = buildGoogleMapsUrl(order, storeOrigin);
+  const wazeUrl = buildWazeUrl(order);
+  const driverWhatsAppUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(buildDriverMessage(order, storeOrigin))}`;
+
   return (
     <div className="min-h-screen bg-gray-50 pb-28 md:pb-32 font-sans animate-in fade-in duration-300">
 
@@ -268,7 +276,7 @@ export default function OrderDetails() {
 
                 <div className="grid grid-cols-2 gap-2 mt-4">
                   <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`}
+                    href={googleMapsUrl || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm font-black text-blue-700 hover:bg-blue-100 transition-colors"
@@ -276,7 +284,7 @@ export default function OrderDetails() {
                     <MapPin size={18} /> Google Maps
                   </a>
                   <a
-                    href={`https://waze.com/ul?ll=${order.latitude},${order.longitude}&navigate=yes`}
+                    href={wazeUrl || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3 text-sm font-black text-cyan-700 hover:bg-cyan-100 transition-colors"
@@ -296,7 +304,7 @@ export default function OrderDetails() {
                 )}
 
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Hola! Nuevo pedido para entregar.\n\n👤 *Cliente:* ${order.user.name || 'Sin nombre'}\n📞 *Teléfono:* ${order.user.phone}\n🏠 *Dirección:* ${order.delivery_address.split(' | Link GMaps:')[0]}\n\n📍 *Iniciar Navegación GPS:*\nhttps://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`)}`}
+                  href={driverWhatsAppUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1da851] text-white p-3.5 md:p-4 rounded-xl font-black mt-4 transition-transform hover:scale-[1.02] shadow-xl shadow-green-500/20 text-base md:text-lg"

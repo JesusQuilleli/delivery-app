@@ -6,9 +6,10 @@ export function getSocketURL(): string {
 
 // Crea un socket con reconexión automática (backoff exponencial) para que un
 // connect_error puntual no deje al cliente "mudo" permanentemente.
-export function createSocket(path: string = '/') {
+// No se debe sobrescribir `path`: Socket.io usa `/socket.io/` por defecto.
+export function createSocket() {
   return io(getSocketURL(), {
-    path,
+    withCredentials: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,

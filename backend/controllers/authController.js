@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
 const { Resend } = require('resend');
+const { splitPhone } = require('../utils/phone');
 
 // Configuración de cookies compartida
 // `Partitioned` permite que Safari/iOS (ITP) acepte y envíe la cookie en contexto
@@ -117,11 +118,15 @@ const checkEmail = async (req, res) => {
       console.error('Error enviando Email:', emailErr);
     }
 
+    const registeredPhone = user && user.phone ? splitPhone(user.phone) : null;
+
     res.json({
       message: 'Código generado exitosamente.',
       is_registered,
       user_name: user ? user.name : null,
-      user_phone: user ? user.phone : null
+      user_phone: registeredPhone?.isValid ? registeredPhone.e164 : user?.phone || null,
+      user_phone_country_code: registeredPhone?.isValid ? registeredPhone.countryCode : null,
+      user_phone_number: registeredPhone?.isValid ? registeredPhone.nationalNumber : null
     });
   } catch (error) {
     console.error(error);
@@ -135,6 +140,11 @@ const verifyOtp = async (req, res) => {
 
     if (!email || !code || !store_id) {
       return res.status(400).json({ error: 'Faltan datos (email, code, store_id)' });
+    }
+
+    const normalizedPhone = phone ? splitPhone(phone) : null;
+    if (phone && !normalizedPhone.isValid) {
+      return res.status(400).json({ error: 'El número de teléfono no es válido. Verifica el país y el número.' });
     }
 
     const storeId = Number(store_id);
@@ -169,14 +179,16 @@ const verifyOtp = async (req, res) => {
         data: {
           email,
           name: name || null,
-          phone: phone || null,
+          phone: normalizedPhone?.isValid ? normalizedPhone.e164 : null,
           store_id: storeId
         }
       });
     } else {
       const updateData = {};
       if (name && (!user.name || name !== user.name)) updateData.name = name;
-      if (phone && (!user.phone || phone !== user.phone)) updateData.phone = phone;
+      if (normalizedPhone?.isValid && normalizedPhone.e164 !== splitPhone(user.phone).e164) {
+        updateData.phone = normalizedPhone.e164;
+      }
 
       if (Object.keys(updateData).length > 0) {
         user = await prisma.user.update({

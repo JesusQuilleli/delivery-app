@@ -311,7 +311,7 @@ const updateOrderStatus = async (req, res) => {
           driver: true
         }
       });
-    });
+    }, { maxWait: 10000, timeout: 20000 });
 
     const io = req.app.get('io');
     io.to(`client_${order.user_id}`).emit('estado_actualizado', order);
@@ -345,7 +345,7 @@ const deleteOrder = async (req, res) => {
       await tx.orderItem.deleteMany({ where: { order_id: Number(id) } });
       await tx.order.delete({ where: { id: Number(id) } });
       return result;
-    });
+    }, { maxWait: 10000, timeout: 20000 });
 
     res.json({
       message: 'Orden eliminada exitosamente',
@@ -534,7 +534,7 @@ const cancelOrderClient = async (req, res) => {
         where: { id: Number(id) },
         include: { user: true, items: { include: { product: true } } }
       });
-    });
+    }, { maxWait: 10000, timeout: 20000 });
 
     const io = req.app.get('io');
     io.to(`client_${order.user_id}`).emit('estado_actualizado', order);

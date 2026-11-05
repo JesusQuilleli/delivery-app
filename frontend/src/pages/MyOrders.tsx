@@ -9,10 +9,11 @@ import { ArrowLeft, Clock, MapPin, Package, X, Store, CreditCard, Star, XCircle,
 
 import { toast } from 'sonner';
 import { formatPrice } from '../utils/currency';
-import { createSocket } from '../lib/socket';
+import { useClientRealtime } from '../context/RealtimeContext';
 
 export default function MyOrders() {
   const { token, user, isInitializing } = useContext(AuthContext);
+  const { subscribe } = useClientRealtime();
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<any[]>([]);
@@ -78,18 +79,15 @@ export default function MyOrders() {
     fetchOrders();
   }, [token, isInitializing, navigate, slug]);
 
-  // Sockets para actualización en tiempo real en todo el historial
+  // Actualización en tiempo real compartida para todo el historial.
+  // Las notificaciones (toast, sonido y nativa) las emite RealtimeProvider.
   useEffect(() => {
-    if (user?.id) {
-      const socket = createSocket();
-      socket.on('connect', () => socket.emit('join_client', user.id));
-      socket.on('estado_actualizado', (updatedOrder) => {
-        setOrders(prev => prev.map((o: any) => o.id === updatedOrder.id ? updatedOrder : o));
-        setSelectedOrder((prev: any) => prev?.id === updatedOrder.id ? updatedOrder : prev);
-      });
-      return () => { socket.disconnect(); };
-    }
-  }, [user?.id]);
+    if (!user?.id) return;
+    return subscribe((updatedOrder) => {
+      setOrders(prev => prev.map((o: any) => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o));
+      setSelectedOrder((prev: any) => prev?.id === updatedOrder.id ? { ...prev, ...updatedOrder } : prev);
+    });
+  }, [user?.id, subscribe]);
 
   const timelineSteps = [
     { status: 'PENDING', title: 'Pedido Recibido', desc: 'Confirmando tu orden.', icon: '📦' },

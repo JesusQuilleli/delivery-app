@@ -4,7 +4,9 @@ import api from '../api';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { formatPrice, getConversions } from '../utils/currency';
-import { createSocket } from '../lib/socket';
+import { parsePhone } from '../utils/phone';
+import { useClientRealtime } from '../context/RealtimeContext';
+import { requestNotificationPermission } from '../lib/notifications';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -82,6 +84,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { cart, total, clearCart } = useContext(CartContext);
   const { token, login, user, isInitializing } = useContext(AuthContext);
+  const { subscribe } = useClientRealtime();
 
   const [step, setStep] = useState(token ? 3 : 1);
   const currentStep = token && step === 1 ? 3 : step;
@@ -90,7 +93,10 @@ export default function Checkout() {
   const [rawPhone, setRawPhone] = useState('');
   
   const cleanRaw = rawPhone.replace(/\D/g, '');
-  const phone = `${countryCode}${cleanRaw.startsWith('0') && countryCode === '+58' ? cleanRaw.substring(1) : cleanRaw}`;
+  const parsedPhone = parsePhone(`${countryCode}${cleanRaw}`);
+  const phone = parsedPhone.isValid
+    ? parsedPhone.e164
+    : `${countryCode}${cleanRaw.startsWith('0') && countryCode === '+58' ? cleanRaw.substring(1) : cleanRaw}`;
   
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
@@ -171,7 +177,7 @@ export default function Checkout() {
   useEffect(() => {
     if (isInitializing) return;
     if (currentStep === 5 && user?.id) {
-      // 1. Carga el estado REAL desde la BD al entrar (no depender solo del socket)
+      // Carga el estado REAL desde la BD al entrar (no depender solo del socket)
       const syncFromDb = async () => {
         try {
           const res = await api.get('/orders/my-orders');
@@ -188,14 +194,17 @@ export default function Checkout() {
         }
       };
       syncFromDb();
-
-      // 2. Socket en tiempo real para actualizaciones posteriores
-      const socket = createSocket();
-      socket.on('connect', () => socket.emit('join_client', user.id));
-      socket.on('estado_actualizado', (order) => setOrderStatus(order.status));
-      return () => { socket.disconnect(); };
     }
   }, [currentStep, isInitializing, user?.id, orderId]);
+
+  useEffect(() => {
+    if (currentStep !== 5 || !user?.id) return;
+    return subscribe((order) => {
+      if (orderId && order.id !== orderId) return;
+      setOrderStatus(order.status);
+      if (order.estimated_minutes) setEstimatedMinutes(order.estimated_minutes);
+    });
+  }, [currentStep, user?.id, orderId, subscribe]);
 
   // Búsqueda predictiva con debounce de 350 ms, centrada en la tienda activa.
   useEffect(() => {
@@ -367,16 +376,19 @@ export default function Checkout() {
       const res = await api.post('/auth/check-email', { email, store_id: storeId });
       setIsRegistered(res.data.is_registered);
       if (res.data.user_name) setName(res.data.user_name);
-      if (res.data.user_phone) {
-        const p = res.data.user_phone;
-        const match = p.match(/^(\+\d{1,3})(\d+)$/);
-        if (match) {
-          setCountryCode(match[1]);
-          setRawPhone(match[2]);
-        } else {
-          setRawPhone(p);
-        }
+
+      const registeredPhone = parsePhone(
+        res.data.user_phone_country_code && res.data.user_phone_number
+          ? `${res.data.user_phone_country_code}${res.data.user_phone_number}`
+          : res.data.user_phone
+      );
+      if (registeredPhone.isValid) {
+        setCountryCode(registeredPhone.countryCode);
+        setRawPhone(registeredPhone.nationalNumber);
+      } else if (res.data.user_phone) {
+        setRawPhone(String(res.data.user_phone).replace(/\D/g, ''));
       }
+
       setStep(2);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
@@ -423,6 +435,7 @@ export default function Checkout() {
       toast.error('Cargando información de la tienda. Intenta de nuevo.');
       return;
     }
+    requestNotificationPermission();
     if (deliveryQuote?.in_range === false) {
       toast.error('Tu ubicación está fuera del rango de entrega de esta tienda.');
       return;
@@ -522,14 +535,13 @@ export default function Checkout() {
 
               <div className="mb-4 bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
                 <label className="text-sm font-bold text-orange-900 mb-2 flex items-center gap-2">
-                  <Phone size={16} /> {isRegistered && rawPhone ? 'Tu teléfono registrado' : 'Número de Teléfono (Para el delivery)'}
+                  <Phone size={16} /> {isRegistered && rawPhone ? 'Tu teléfono registrado (puedes corregirlo)' : 'Número de Teléfono (Para el delivery)'}
                 </label>
                 <div className="flex gap-2">
                   <select
                     value={countryCode}
                     onChange={(e) => setCountryCode(e.target.value)}
-                    disabled={isRegistered && !!rawPhone}
-                    className={`h-14 px-2 text-lg font-bold rounded-xl border border-orange-200 transition-all ${(isRegistered && !!rawPhone) ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500 cursor-pointer outline-none'}`}
+                    className="h-14 px-2 text-lg font-bold rounded-xl border border-orange-200 transition-all bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500 cursor-pointer outline-none"
                   >
                     <option value="+58">🇻🇪 +58</option>
                     <option value="+57">🇨🇴 +57</option>
@@ -546,8 +558,7 @@ export default function Checkout() {
                     placeholder="Ej: 4120000000" 
                     value={rawPhone} 
                     onChange={(e) => setRawPhone(e.target.value)}
-                    disabled={isRegistered && !!rawPhone}
-                    className={`flex-1 min-w-0 h-14 text-lg rounded-xl transition-all ${(isRegistered && !!rawPhone) ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'bg-white focus:border-orange-500 focus:ring-orange-500'}`}
+                    className="flex-1 min-w-0 h-14 text-lg rounded-xl transition-all bg-white focus:border-orange-500 focus:ring-orange-500"
                   />
                 </div>
               </div>
@@ -564,7 +575,7 @@ export default function Checkout() {
                 />
               </div>
 
-              <Button onClick={verifyOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 shadow-xl shadow-orange-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={otp.length < 6 || ((!isRegistered || !name) && name.length < 3) || ((!isRegistered || !rawPhone) && rawPhone.length < 7) || loading}>
+              <Button onClick={verifyOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 shadow-xl shadow-orange-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={otp.length < 6 || ((!isRegistered || !name) && name.length < 3) || !parsedPhone.isValid || loading}>
                 {loading ? 'Verificando...' : 'Validar y Continuar'} <ChevronRight className="ml-2" />
               </Button>
               

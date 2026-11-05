@@ -92,6 +92,12 @@ test('store: CRUD de zonas y cotización de delivery', async () => {
     data: { latitude: 5.6667, longitude: -67.6333, delivery_fee: 1.5 }
   });
 
+  const zonesBefore = await prisma.deliveryZone.findMany({
+    where: { store_id: 1, is_active: true },
+    select: { id: true }
+  });
+  await prisma.deliveryZone.updateMany({ where: { store_id: 1, is_active: true }, data: { is_active: false } });
+
   let zoneId = null;
   try {
     const created = await req('POST', '/stores/demo-farmacia/delivery-zones', {
@@ -139,6 +145,12 @@ test('store: CRUD de zonas y cotización de delivery', async () => {
     assert.equal(denied.status, 403);
   } finally {
     if (zoneId) await prisma.deliveryZone.delete({ where: { id: zoneId } }).catch(() => {});
+    if (zonesBefore.length) {
+      await prisma.deliveryZone.updateMany({
+        where: { id: { in: zonesBefore.map((zone) => zone.id) } },
+        data: { is_active: true }
+      });
+    }
     await prisma.store.update({
       where: { id: 1 },
       data: { latitude: original.latitude, longitude: original.longitude, delivery_fee: original.delivery_fee }

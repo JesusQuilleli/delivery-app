@@ -3,13 +3,13 @@
 > Documento vivo. Actualizar después de cada tarea.
 > Si se pierde la sesión: leer este archivo, revisar `git status` y `git log`, y continuar desde la primera casilla sin marcar.
 
-- **Última actualización:** 2026-11-03
+- **Última actualización:** 2026-11-05
 - **Rama actual:** `feature/security-hardening`
 - **Rama principal:** `main`
 - **Estrategia de despliegue y validación:**
   1. **Hito 1 (Inmediato / En curso):** Sistema 100% listo, probado y validable en **Localhost** y en el entorno de pruebas existente en la nube (**Netlify** para frontend + **Render** para backend + **Neon** para PostgreSQL). Con esta base lista y pulida se realizarán las demostraciones presenciales y la validación comercial con negocios de comida rápida, víveres y farmacias de Puerto Ayacucho.
   2. **Hito 2 (Final / Producción autónoma):** Migración y despliegue definitivo a **VPS propio** (PostgreSQL 16 local, Nginx, Let's Encrypt, backups automáticos). Los accesos SSH y credenciales del VPS se solicitarán al usuario en el momento exacto de ejecutar esta fase.
-- **Estado general:** F1-34 y Fase 1B completadas; prioridad activa inmediata: **Fase 2 (Bugs críticos de Admin, Flujo de Pago y Stock)**.
+- **Estado general:** F1-34, Fase 1B y bugs C-07/C-08/C-09 corregidos; C-10 verificado como incidencia transitoria (Render responde 200). Las 3 tiendas demo están creadas y las credenciales verificadas. Pendiente inmediato: PDF de accesos, despliegue de los fixes al frontend/backend live y cierre documental. Después continúa la Fase 2 restante.
 - **Zona del piloto:** Puerto Ayacucho, Estado Amazonas
 - **Verticales comerciales prioritarias:**
   1. **Comida Rápida:** Puestos de perros calientes, hamburgueserías, pizzerías y comida rápida nocturna (alta rotación de pedidos vespertinos/nocturnos, combos y necesidad de despacho express).
@@ -272,11 +272,15 @@ Al integrar comida rápida y víveres, el mercado potencial local se multiplica 
 | P-03 | Tiendas inactivas siguen operando | Alta |
 | P-04 | Sin pruebas E2E ni pruebas de carga | Media |
 | P-05 | Sin zonas ni tarifas de delivery configurables | Alta |
-| P-06 | Lint con 85 advertencias: `any`, efectos con setState y exports de UI | Media |
+| P-06 | Lint con 86 advertencias: `any`, efectos con setState y exports de UI | Media |
 | P-07 | Bundle principal de ~1 MB sin code splitting | Media |
 | P-08 | Las pruebas de API requieren esperar a que el servidor esté listo | Baja |
 | P-09 | Resend rechaza correos `example.com`; las pruebas usan el código de la DB | Baja |
 | C-06 | Búsqueda y geolocalización de cliente con token expuesto, viewbox fijo y sin reverse geocoding al mover el pin | Alta |
+| C-07 | Al cargar un usuario ya registrado, el teléfono se muestra con código de país inválido (regex codiciosa) y puede guardarse corrupto — **resuelto 2026-11-05** | Alta |
+| C-08 | El cliente no percibe aceptación/preparación en tiempo real porque `createSocket` usa `path: '/'` en vez de `/socket.io/` — **resuelto 2026-11-05** | Crítica |
+| C-09 | La ruta enviada al motorizado por Google Maps no incluye origen y no parte de la tienda — **resuelto 2026-11-05** | Alta |
+| C-10 | El backend de Render responde 503 y bloquea la demo en la nube — **verificado 2026-11-05: 503 transitorio; productos responde 200** | Crítica |
 
 ---
 
@@ -445,7 +449,14 @@ Optimización de la búsqueda y precisión de la dirección del cliente en el ch
 - [ ] F2-27 Definir acceso del admin de tienda inactiva.
 - [ ] F2-28 Auditar activaciones y desactivaciones.
 
-**Criterio de terminado:** operación completa sin estados inconsistentes ni accesos cruzados.
+#### Demo, realtime y navegación (bugs reportados 2026-11-05)
+
+- [x] F2-29 **(C-07)** Normalizar teléfono en backend/frontend, separar país y número sin regex codiciosa, permitir editar el teléfono de un usuario registrado y no sobrescribirlo si no cambió. Pruebas con `+58`, `0412`, `+58 412-...`, `+57` y `+593`. Implementado en `backend/utils/phone.js`, `backend/controllers/authController.js`, `frontend/src/utils/phone.ts` y `Checkout.tsx`.
+- [x] F2-30 **(C-08)** Corregir `frontend/src/lib/socket.ts` (quitar `path: '/'`, usar `/socket.io/` y `withCredentials: true`), crear socket global de cliente, reconectar y re-unir a `client_{id}`, mostrar toast/sonido/notificación nativa ante `estado_actualizado` y agregar polling de respaldo. Implementado con `RealtimeContext.tsx`, `notifications.ts`, `Checkout.tsx` y `MyOrders.tsx`.
+- [x] F2-31 **(C-09)** Crear helper único de navegación con `origin=<tienda>` + `destination=<cliente>` + `travelmode=driving`; aplicarlo en `Dashboard.tsx`, `OrderDetails.tsx` y el WhatsApp “Enviar Ruta al Motorizado”. Implementado en `frontend/src/utils/navigation.ts`.
+- [x] F2-32 **(C-10)** Recuperar el backend en Render, validar `/api/health`, variables de entorno y conexión Socket.io desde Netlify. Verificado: `/api/stores/demo-farmacia/products` responde 200; `/api/health` no existe (404). Falta validar Socket.io live después del despliegue del fix.
+
+**Criterio de terminado:** operación completa sin estados inconsistentes ni accesos cruzados; cliente recibe el cambio de estado en menos de 2 s sin recargar; el teléfono se precarga correcto; el enlace de Google Maps abre la ruta tienda→cliente; el backend responde 200 en Render.
 
 ---
 
@@ -535,6 +546,10 @@ Solo si el discovery con 5 farmacias lo confirma.
 
 > **Objetivo:** Dejar la aplicación 100% operativa y probada en la nube actual para ejecutar demostraciones presenciales y pilotos con farmacias reales antes de la migración definitiva a VPS.
 
+- [x] F3B-00 **Verificación previa obligatoria del backend en Render:**
+  - Confirmado 2026-11-05: `GET /api/stores/demo-farmacia/products?limit=1` responde `200`; el `503` era transitorio. `GET /api/health` devuelve `404` porque no existe.
+  - Variables y CORS ya estaban operativos; no fue necesario redeploy para esta verificación.
+  - Contingencia de backend local contra Neon disponible si Render vuelve a fallar.
 - [ ] F3B-01 **Alineación de base de datos en Neon:**
   - Ejecutar `npx prisma migrate deploy` contra la instancia de Neon para aplicar las migraciones de `money_decimal`, `user_identity_per_store`, delivery zones y datos bancarios sin tocar los datos existentes.
 - [ ] F3B-02 **Verificación del Backend en Render:**
@@ -545,11 +560,12 @@ Solo si el discovery con 5 farmacias lo confirma.
   - Confirmar que `_redirects` o `netlify.toml` maneje correctamente las rutas del SPA (`/* /index.html 200`).
   - Configurar variables de entorno en Netlify (`VITE_API_URL`, `VITE_SOCKET_URL`, `VITE_LOCATIONIQ_KEY`).
   - Validar build de producción sin errores de TypeScript ni assets faltantes.
-- [ ] F3B-04 **Preparación de las 3 tiendas de demostración por vertical:**
-  - **Tienda 1 (`demo-comida`):** Hamburguesas, perros calientes, combos de comida rápida y bebidas frías. Configurada con plantilla `RESTAURANT` y tema `orange`/`red`.
-  - **Tienda 2 (`demo-viveres`):** Cesta básica (harina, arroz, pasta, aceite), lácteos, embutidos y artículos de limpieza. Configurada con plantilla `SUPERMARKET` y tema `emerald`.
-  - **Tienda 3 (`demo-farmacia`):** Medicamentos de venta libre (acetaminofén, sueros, vitaminas), cuidado personal y combos de primeros auxilios. Configurada con plantilla `PHARMACY` y tema `blue`.
-  - Todas con coordenadas reales en Puerto Ayacucho, tarifas de delivery por zona y datos de Pago Móvil de prueba.
+- [x] F3B-04 **Preparación de las 3 tiendas de demostración por vertical:**
+  - **Tienda 1 (`demo-comida`, ID 36):** 6 productos, 4 categorías, plantilla `RESTAURANT`, tema `orange`; incluye combo hamburguesa + papas + refresco.
+  - **Tienda 2 (`demo-viveres`, ID 37):** 8 productos, 4 categorías, plantilla `SUPERMARKET`, tema `emerald`.
+  - **Tienda 3 (`demo-farmacia`, ID 1):** 8 productos demo + catálogo previo, 4 categorías, plantilla `PHARMACY`, tema `blue`.
+  - Las 3 con coordenadas de Puerto Ayacucho, 2 zonas de delivery, motorizado y datos de Pago Móvil de prueba. Creadas con `backend/scripts/seed-demo-stores.js` (idempotente).
+  - Credenciales reseteadas y verificadas contra Render: `superadmin`, `admin_comida`, `admin_viveres`, `admin_demo` con `TiendaFast2026!`.
 - [ ] F3B-05 **Validación integral en dispositivos móviles (Smartphone / 4G):**
   - Probar flujo de cliente en móvil en cada plantilla:
     - Comida rápida: pedir combo de hamburguesa/perro con notas especiales ("sin cebolla", "salsas aparte").
@@ -562,6 +578,10 @@ Solo si el discovery con 5 farmacias lo confirma.
   - **Guion para Comida Rápida (dueño de hamburguesería/perros calientes):** Demostrar cómo atender 50 pedidos en horas pico sin colapsar el WhatsApp, evitar comprobantes falsos de Pago Móvil y enviar al motorizado directo por GPS sin perderse en la noche.
   - **Guion para Víveres y Bodegones (dueño de abasto/bodegón):** Demostrar la actualización automática de precios en Bs según tasa BCV, cómo exhibir cientos de productos por pasillos y ofrecer delivery de compras pesadas a las casas de los clientes.
   - **Guion para Farmacias:** Demostrar catálogo de medicamentos de alta rotación, stock visible y consulta rápida.
+- [ ] F3B-07 **PDF de accesos y guion de demostración:**
+  - Generar `Accesos_Demo_TiendaFast.pdf` con URLs de las 3 tiendas, login admin, dashboards y SuperAdmin.
+  - Incluir credenciales demo (`superadmin` y 3 administradores), guion de 10–15 min, checklist previo y contingencias.
+  - No incluir claves de producción, JWT ni credenciales de base de datos.
 
 ---
 
@@ -690,6 +710,13 @@ Solo si el discovery con 5 farmacias lo confirma.
 - [ ] F6-21 Actualizar `README.md` y documentación técnica.
 - [ ] F6-22 Archivar PDFs antiguos.
 
+#### PDF de accesos demo (2026-11-05)
+
+- [ ] F6-23 Crear `docs/demo/accesos-demo.html` con estilos A4, tabla de credenciales y guion.
+- [ ] F6-24 Generar `Accesos_Demo_TiendaFast.pdf` con Edge headless.
+- [ ] F6-25 Revisar que el PDF no exponga claves de producción y que las URLs/credenciales sean las demo.
+- [ ] F6-26 Verificar apertura y contenido del PDF generado.
+
 ---
 
 ## 7. Puertas de lanzamiento
@@ -769,6 +796,7 @@ npm run build
 | 2026-11-02 | 34/34 | 83/83 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | F1-29–F1-34. Identidad de clientes por tienda, mismo correo/teléfono en dos tiendas, compra aislada y timeout de transacción a 20 s. Bundle ~1 MB. |
 | 2026-11-03 | 45/45 | 84/84 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | Fase 1B. Autocompletado, GPS, reverse geocoding, cobertura, direcciones guardadas, `address_details` y navegación Google Maps/Waze. Bundle ~1 MB. |
 | 2026-11-03 | 45/45 | 89/89 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | F2-01–F2-05, F2-07 y F2-25. Pestaña de pagos, aprobación/rechazo individual y por lote, bloqueo de aceptación sin pago, pertenencia en `markOrderViewed` y restauración idempotente de stock. Bundle ~1 MB. |
+| 2026-11-05 | 53/53 | 89/89 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | C-07/C-08/C-09 corregidos; C-10 verificado (200 en productos). Demo seed de 3 tiendas. API: auth/inventory/stock/store/superadmin 63/63 + orders 26/26 aislado; el run conjunto de 89 sufrió caída de conexión de Neon en el `before` de orders, no fallo de código. Se elevó el timeout de transacciones de cancelar/eliminar/actualizar a 20 s. Bundle 1,050.56 kB. |
 
 ---
 
@@ -828,6 +856,17 @@ npm run build
 | 2026-11-03 | F2-05 | Hecho | `AWAITING_PAYMENT` → `ACCEPTED` responde 409; requiere aprobación previa |
 | 2026-11-03 | F2-07 | Hecho | `markOrderViewed` valida `store_id` y devuelve 403 para admins de otra tienda |
 | 2026-11-03 | F2-25 | Hecho | `stock_breakdown` y `stock_restored` en `Order`; restauración transaccional al cancelar/eliminar (cliente, admin y lote) sin duplicar |
+| 2026-11-05 | Plan demo | Hecho | Agregados C-07..C-10, F2-29..F2-32, F3B-00, F3B-07 y F6-23..F6-26. Decisiones: 3 tiendas demo y contraseña única `TiendaFast2026!` (demo) |
+| 2026-11-05 | Base de datos | Verificado | Neon accesible; solo existe `demo-farmacia`, `admin_demo` y `superadmin` antes de crear las tiendas demo |
+| 2026-11-05 | F2-29 (C-07) | Hecho | Utilidades de teléfono backend/frontend, normalización en auth y teléfono editable en Checkout; pruebas unitarias y typecheck OK |
+| 2026-11-05 | F2-30 (C-08) | Hecho | Socket sin `path`, `withCredentials`, `RealtimeProvider`, reconexión/rejoin, toast/sonido/notificación nativa y polling de respaldo |
+| 2026-11-05 | F2-31 (C-09) | Hecho | `navigation.ts` con origen de tienda, `travelmode=driving` y `dir_action=navigate`; aplicado en Dashboard, OrderDetails y WhatsApp |
+| 2026-11-05 | F2-32 (C-10) | Verificado | Render productos 200; `/api/health` 404 por inexistente; Socket.io live pendiente de despliegue |
+| 2026-11-05 | F3B-04 Demo | Hecho | `demo-comida` (36), `demo-viveres` (37), `demo-farmacia` (1) activas; 6/8/8 productos demo, zonas, motorizados y Pago Móvil; credenciales verificadas contra Render |
+| 2026-11-05 | Pruebas API | Hecho | Auth/inventory/stock/store/superadmin 63/63; orders 26/26 aislado. Se aislaron zonas/tarifas demo en tests y se actualizó la prueba de login demo |
+| 2026-11-05 | Timeout transacciones | Hecho | `cancelOrderClient`, `deleteOrder` y `updateOrderStatus` con `maxWait: 10000` y `timeout: 20000`; corrige P2028 en cancelación AWAITING_PAYMENT |
+| 2026-11-05 | Frontend build/lint/typecheck | Hecho | Build OK (1,050.56 kB); lint 0 errores / 86 warnings; typecheck OK |
+| 2026-11-05 | PDF de accesos | En curso | Pendiente generar `docs/demo/accesos-demo.html` y `Accesos_Demo_TiendaFast.pdf` |
 
 Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 
@@ -886,22 +925,43 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 - Los pedidos `DELIVERED` no restauran stock al eliminarse para no inflar inventario; los cancelados sí, una sola vez.
 - Migración aplicada: `20261103130000_order_stock_restore`.
 
+### Decisiones de la demo (2026-11-05)
+
+- **Objetivo:** demostración comercial en la nube y PDF de accesos listo para usar en cualquier sesión.
+- **Tiendas:** `demo-comida` (`RESTAURANT`), `demo-viveres` (`SUPERMARKET`) y `demo-farmacia` (`PHARMACY`), todas en Puerto Ayacucho.
+- **Administradores:** `admin_comida`, `admin_viveres` y `admin_demo`.
+- **SuperAdmin:** `superadmin`.
+- **Contraseña demo única:** `TiendaFast2026!` (solo demo; rotar después del evento).
+- **URLs base:** `https://test.shop-mg.com` (frontend) y `https://delivery-app-3ewq.onrender.com/api` (backend).
+- **Causa raíz del bug de tiempo real:** `createSocket` usaba `path: '/'`; se corrige a `/socket.io/`.
+- **Causa raíz del bug de teléfono:** regex `^(\+\d{1,3})(\d+)$` codiciosa; se reemplaza por normalización y split explícito.
+- **Causa raíz del bug de ruta:** enlaces de Google Maps sin `origin`; se agrega origen desde la tienda.
+- **No usar `npm run db:seed`** sobre la base actual porque borra pedidos, productos y categorías. La demo se crea con un script idempotente.
+
 ### Siguiente bloque recomendado (Ruta a Demostración y Validación)
 
-1. **Fase 2 restante:**
+1. **Bugs reportados 2026-11-05 (prioridad inmediata):**
+   - **F2-29 (C-07):** teléfono del usuario registrado.
+   - **F2-30 (C-08):** Socket.io del cliente y notificaciones en tiempo real.
+   - **F2-31 (C-09):** ruta de Google Maps con origen en la tienda.
+   - **F2-32 (C-10):** backend Render en `503`.
+2. **Preparación de la demo:**
+   - **F3B-00:** verificar Render antes de cualquier otra acción.
+   - **F3B-01:** aplicar migraciones a Neon.
+   - **F3B-04:** crear `demo-comida`, `demo-viveres` y `demo-farmacia`.
+   - **F3B-07 / F6-23 a F6-26:** generar `Accesos_Demo_TiendaFast.pdf`.
+3. **Fase 2 restante:**
    - **F2-06:** paginación y filtros server-side en pedidos.
    - **F2-08 a F2-13:** edición completa de configuración, contraseña y cierre de sesiones.
    - **F2-14 a F2-20:** validaciones de categorías/combos, stock de combos, stock negativo y alertas.
    - **F2-21 a F2-24:** fechas, ventas netas, analytics y reportes.
    - **F2-25B a F2-28:** tiendas inactivas y auditoría.
-2. **Fase 3:** seguridad de Socket.io, cookies/CSRF, OTP, validación y uploads.
-   - **F2-08 a F2-13:** Edición completa de datos bancarios, WhatsApp, horarios y logo de tienda desde el panel.
-3. **Fase 3B (Validación en Staging Netlify + Render + Neon y Catálogo Demo):**
-   - Aplicar migraciones a Neon con `npx prisma migrate deploy`.
+4. **Fase 3:** seguridad de Socket.io, cookies/CSRF, OTP, validación y uploads.
+5. **Fase 3B (Validación en Staging Netlify + Render + Neon y Catálogo Demo):**
    - Verificar build de frontend en Netlify y backend en Render.
-   - Preparar tienda `demo-farmacia` para realizar demostraciones en vivo desde teléfonos celulares y laptops frente a dueños de farmacias.
-4. **Fase 4 (Producción VPS Definitiva):**
-   - Una vez realizada y validada la demostración comercial con las farmacias, se pedirán al usuario las credenciales del VPS para la instalación de PostgreSQL 16 local, Nginx, SSL y automatización de backups.
+   - Validar las 3 tiendas demo en teléfonos y laptops.
+6. **Fase 4 (Producción VPS Definitiva):**
+   - Una vez realizada y validada la demostración comercial, se pedirán al usuario las credenciales del VPS para la instalación de PostgreSQL 16 local, Nginx, SSL y automatización de backups.
 
 ### Cómo ejecutar las pruebas de API
 
@@ -918,7 +978,8 @@ El rate limiter de autenticación permite ~10 solicitudes por minuto e IP. Si se
 
 ### Bloqueos actuales
 
-- Ninguno técnico.
+- **C-10:** el backend en Render responde `503` (verificado 2026-11-05); bloquea la demo en la nube hasta redeploy/verificación.
+- **C-07/C-08/C-09:** bugs en corrección; el cliente no recibe eventos reales hasta desplegar el fix de Socket.io.
 - Facturación fiscal pendiente de contador, no bloquea el piloto gratuito.
 - Candidatos de piloto pendientes de prospección, no bloquean el desarrollo.
 - CI de pruebas de API pendiente para Fase 5.
