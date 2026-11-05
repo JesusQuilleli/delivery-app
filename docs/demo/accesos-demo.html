@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>TiendaFast — Guía de Accesos Demo y Protocolo Comercial</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap');
+
+  :root {
+    --orange: #f97316;
+    --orange-dark: #ea580c;
+    --amber: #fbbf24;
+    --emerald: #10b981;
+    --emerald-dark: #059669;
+    --blue: #0284c7;
+    --blue-dark: #0369a1;
+    --violet: #7c3aed;
+    --ink: #0f172a;
+    --ink-light: #334155;
+    --muted: #64748b;
+    --paper: #ffffff;
+    --bg-card: #f8fafc;
+    --border: #e2e8f0;
+    --tag-bg: #f1f5f9;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'Manrope', Arial, sans-serif; color: var(--ink); background: #e2e8f0; }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+    background: var(--paper);
+    padding: 16mm 16mm 14mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo-box {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--orange), #f43f5e);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+  }
+  .logo-box svg { width: 22px; height: 22px; color: #fff; fill: currentColor; }
+  .brand-text h2 { font-family: 'Sora', sans-serif; font-size: 19px; font-weight: 800; letter-spacing: -0.5px; }
+  .brand-text h2 span { color: var(--orange); }
+  .brand-text p { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .header-badge {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  /* TYPOGRAPHY */
+  h1 { font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -0.6px; line-height: 1.2; margin-bottom: 6px; }
+  h3 { font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--ink); }
+  p.lead { font-size: 12.5px; line-height: 1.5; color: var(--ink-light); margin-bottom: 12px; }
+
+  /* ALERT BOX */
+  .alert-warning {
+    background: #fffbeb;
+    border-left: 4px solid var(--amber);
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: #92400e;
+    margin-bottom: 14px;
+  }
+  .alert-warning b { color: #78350f; font-weight: 700; }
+
+  /* CARDS GRID */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .demo-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    padding: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    position: relative;
+    border-top-width: 4px;
+  }
+  .demo-card.food { border-top-color: var(--orange); }
+  .demo-card.market { border-top-color: var(--emerald); }
+  .demo-card.pharma { border-top-color: var(--blue); }
+
+  .card-tag {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 3px 7px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+  }
+  .food .card-tag { background: #ffedd5; color: #c2410c; }
+  .market .card-tag { background: #d1fae5; color: #047857; }
+  .pharma .card-tag { background: #e0f2fe; color: #0369a1; }
+
+  .card-title { font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 800; margin-bottom: 4px; }
+  .card-desc { font-size: 10.5px; color: var(--muted); margin-bottom: 8px; line-height: 1.35; }
+
+  .cred-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 6px; }
+  .cred-table td { padding: 3px 0; border-bottom: 1px dashed #f1f5f9; }
+  .cred-table td.label { color: var(--muted); font-weight: 600; width: 42%; }
+  .cred-table td.val { color: var(--ink); font-weight: 700; font-family: 'Courier New', Courier, monospace; }
+  .cred-table tr:last-child td { border-bottom: none; }
+
+  .url-badge {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 4px 6px;
+    border-radius: 5px;
+    font-size: 9.5px;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 600;
+    color: #1e293b;
+    word-break: break-all;
+    display: block;
+    margin-top: 4px;
+  }
+
+  /* SYSTEM ACCESS TABLE */
+  .table-box {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
+  .data-table th { background: #f8fafc; color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; font-size: 10.5px; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table code { background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 10px; font-weight: 700; }
+
+  /* STEPS FLOW */
+  .step-box {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    background: #fafafa;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .step-content h4 { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+  .step-content p { font-size: 11px; color: var(--ink-light); line-height: 1.4; }
+
+  /* FOOTER */
+  .page-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    font-size: 9.5px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  /* ACCENT PILLS */
+  .pill { display: inline-block; padding: 2px 7px; border-radius: 12px; font-size: 9.5px; font-weight: 700; }
+  .pill-green { background: #dcfce7; color: #15803d; }
+  .pill-orange { background: #ffedd5; color: #c2410c; }
+  .pill-blue { background: #e0f2fe; color: #0284c7; }
+
+  ul.check-list { list-style: none; padding-left: 0; font-size: 11px; line-height: 1.5; color: var(--ink-light); }
+  ul.check-list li { margin-bottom: 5px; position: relative; padding-left: 18px; }
+  ul.check-list li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--emerald-dark);
+    font-weight: 900;
+  }
+</style>
+</head>
+<body>
+
+<!-- PÁGINA 1: ACCESOS Y TIENDAS DEMO -->
+<div class="page">
+  <div>
+    <div class="header">
+      <div class="brand">
+        <div class="logo-box">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <div class="brand-text">
+          <h2>Tienda<span>Fast</span></h2>
+          <p>Plataforma Multitenant de Delivery · Puerto Ayacucho</p>
+        </div>
+      </div>
+      <div class="header-badge">GUÍA OFICIAL DE DEMOSTRACIÓN</div>
+    </div>
+
+    <h1>Accesos a Tiendas Demo y Entornos</h1>
+    <p class="lead">Credenciales y enlaces directos para ejecutar demostraciones comerciales presenciales con dueños de comida rápida, bodegones y farmacias en Puerto Ayacucho, Estado Amazonas.</p>
+
+    <div class="alert-warning">
+      <b>Contraseña Demo Global:</b> <code>TiendaFast2026!</code> (Aplica para todos los administradores demo y SuperAdmin).<br>
+      <b>Entorno en la Nube (Staging):</b> Frontend en <code>https://test.shop-mg.com</code> | API en <code>https://delivery-app-3ewq.onrender.com/api</code><br>
+      <b>Entorno Local de Respaldo:</b> Frontend en <code>http://localhost:5173</code> | API en <code>http://localhost:3000/api</code>
+    </div>
+
+    <h3>1. Las 3 Tiendas de Demostración por Vertical</h3>
+    <div class="grid-3">
+      <!-- DEMO COMIDA -->
+      <div class="demo-card food">
+        <span class="card-tag">Comida Rápida</span>
+        <div class="card-title">Demo Comida Rápida</div>
+        <div class="card-desc">Hamburgueserías, perros calientes y pizzas nocturnas. Plantilla RESTAURANT (Orange).</div>
+        <table class="cred-table">
+          <tr><td class="label">Slug / ID:</td><td class="val">demo-comida (36)</td></tr>
+          <tr><td class="label">Usuario Admin:</td><td class="val">admin_comida</td></tr>
+          <tr><td class="label">Contraseña:</td><td class="val">TiendaFast2026!</td></tr>
+          <tr><td class="label">Motorizado:</td><td class="val">Motorizado Comida</td></tr>
+          <tr><td class="label">Pago Móvil:</td><td class="val">0102 · BDV</td></tr>
+        </table>
+        <span class="url-badge">.../demo-comida</span>
+      </div>
+
+      <!-- DEMO VIVERES -->
+      <div class="demo-card market">
+        <span class="card-tag">Víveres y Bodegón</span>
+        <div class="card-title">Demo Víveres</div>
+        <div class="card-desc">Abastos, mini-mercados y cesta básica. Plantilla SUPERMARKET (Emerald).</div>
+        <table class="cred-table">
+          <tr><td class="label">Slug / ID:</td><td class="val">demo-viveres (37)</td></tr>
+          <tr><td class="label">Usuario Admin:</td><td class="val">admin_viveres</td></tr>
+          <tr><td class="label">Contraseña:</td><td class="val">TiendaFast2026!</td></tr>
+          <tr><td class="label">Motorizado:</td><td class="val">Motorizado Víveres</td></tr>
+          <tr><td class="label">Pago Móvil:</td><td class="val">0105 · Mercantil</td></tr>
+        </table>
+        <span class="url-badge">.../demo-viveres</span>
+      </div>
+
+      <!-- DEMO FARMACIA -->
+      <div class="demo-card pharma">
+        <span class="card-tag">Farmacia Local</span>
+        <div class="card-title">Demo Farmacia</div>
+        <div class="card-desc">Medicamentos OTC, analgésicos y botiquín. Plantilla PHARMACY (Blue).</div>
+        <table class="cred-table">
+          <tr><td class="label">Slug / ID:</td><td class="val">demo-farmacia (1)</td></tr>
+          <tr><td class="label">Usuario Admin:</td><td class="val">admin_demo</td></tr>
+          <tr><td class="label">Contraseña:</td><td class="val">TiendaFast2026!</td></tr>
+          <tr><td class="label">Motorizado:</td><td class="val">Motorizado Farmacia</td></tr>
+          <tr><td class="label">Pago Móvil:</td><td class="val">0134 · Banesco</td></tr>
+        </table>
+        <span class="url-badge">.../demo-farmacia</span>
+      </div>
+    </div>
+
+    <h3>2. Accesos Administrativos del Sistema</h3>
+    <div class="table-box">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Rol / Panel</th>
+            <th>Ruta Web</th>
+            <th>Usuario</th>
+            <th>Contraseña</th>
+            <th>Propósito en la Demostración</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pill pill-orange">Admin Tienda</span></td>
+            <td><code>/admin-login</code></td>
+            <td><code>admin_comida</code><br><code>admin_viveres</code><br><code>admin_demo</code></td>
+            <td><code>TiendaFast2026!</code></td>
+            <td>Recepción de pedidos por Socket.io en vivo, validación de referencias de Pago Móvil, cambio de estados y asignación de motorizado.</td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-blue">SuperAdmin</span></td>
+            <td><code>/superadmin</code></td>
+            <td><code>superadmin</code></td>
+            <td><code>TiendaFast2026!</code></td>
+            <td>Gestión de comercios afiliados, activación/desactivación de tiendas, altas comerciales y auditoría general.</td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-green">Cliente Móvil</span></td>
+            <td><code>/&lt;slug&gt;</code></td>
+            <td>OTP por correo<br>(ej. <code>cliente@demo.com</code>)</td>
+            <td>Código 6 dígitos (o DB)</td>
+            <td>Experiencia de compra del consumidor final en celular: carrito, mapa GPS, autocompletado y checkout.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>3. Checklist Previo al Contacto Comercial (5 minutos antes)</h3>
+    <ul class="check-list">
+      <li><b>Conectividad:</b> Asegurar conexión de datos 4G en el teléfono (Digitel/Movistar). Si la señal es débil, tener levantado el entorno local (<code>npm run dev</code>).</li>
+      <li><b>Pestañas precargadas:</b> Dejar abiertas en el navegador móvil las URLs de catálogo de la vertical a visitar (ej. <code>/demo-comida</code> si es hamburguesería).</li>
+      <li><b>Dispositivo de caja:</b> Abrir en la tablet o laptop el panel de administración (<code>/admin-login</code>) con el volumen alto para escuchar la alerta de pedido entrante.</li>
+      <li><b>Tasa BCV verificada:</b> Comprobar que los precios en Bolívares reflejen la tasa del día en la cabecera del catálogo.</li>
+    </ul>
+  </div>
+
+  <div class="page-footer">
+    <span>TiendaFast · Documento de Operaciones Demo · Puerto Ayacucho</span>
+    <span>Página 1 de 2</span>
+  </div>
+</div>
+
+<!-- PÁGINA 2: GUIONES DE DEMOSTRACIÓN COMERCIAL -->
+<div class="page">
+  <div>
+    <div class="header">
+      <div class="brand">
+        <div class="logo-box">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <div class="brand-text">
+          <h2>Tienda<span>Fast</span></h2>
+          <p>Protocolos de Demostración Presencial (10 a 15 Minutos)</p>
+        </div>
+      </div>
+      <div class="header-badge">GUIONES COMERCIALES</div>
+    </div>
+
+    <h1>Guiones de Venta por Vertical</h1>
+    <p class="lead">Estructura de la conversación para impactar al dueño del negocio atacando sus dolores reales en Puerto Ayacucho.</p>
+
+    <!-- GUION COMIDA RAPIDA -->
+    <div class="step-box">
+      <div class="step-num" style="background: var(--orange);">1</div>
+      <div class="step-content">
+        <h4>Vertical Comida Rápida: "Atiende 50 pedidos en hora pico sin colapsar tu WhatsApp"</h4>
+        <p><b>Dolor local:</b> Los viernes por la noche la cocina no puede contestar WhatsApp; los clientes mandan capturas falsas de Pago Móvil y los motorizados se pierden en sectores sin iluminación.<br>
+        <b>Paso a paso de la demo (12 min):</b>
+        <ol style="margin-left: 16px; margin-top: 4px; font-size: 10.5px; line-height: 1.45;">
+          <li><b>Entrega tu teléfono al dueño:</b> Pídele que elija el <i>Combo hamburguesa + papas + refresco</i> y agregue una nota ("sin cebolla, salsa de ajo aparte").</li>
+          <li><b>Ubicación en 3 segundos:</b> Presiona "Ubicar mi casa por GPS" o escribe el sector (ej. "Av. 23 de Enero" o "San Enrique"). El mapa sincroniza la dirección exacta sin explicaciones confusas.</li>
+          <li><b>Pago Móvil seguro:</b> Ingresa una referencia de 6 dígitos. Al presionar "Confirmar Pedido", ¡la laptop suena al instante!</li>
+          <li><b>Panel de Caja:</b> Muestra cómo el pedido cae en la pestaña <i>"Por Validar"</i>. El cajero verifica la referencia y presiona <i>"Aprobar Pago"</i>. El pedido avanza a cocina.</li>
+          <li><b>Despacho al Motorizado:</b> Muestra el botón <i>"Enviar Ruta al Motorizado"</i>: abre Google Maps con la ruta trazada exactamente desde el tráiler hasta la casa del cliente en modo conducción.</li>
+        </ol>
+        </p>
+      </div>
+    </div>
+
+    <!-- GUION VIVERES -->
+    <div class="step-box">
+      <div class="step-num" style="background: var(--emerald-dark);">2</div>
+      <div class="step-content">
+        <h4>Vertical Víveres y Bodegones: "Precios siempre al día con BCV y compras pesadas a domicilio"</h4>
+        <p><b>Dolor local:</b> Variación diaria de precios en Bolívares; el cliente no quiere cargar bultos de harina/arroz ni hacer cola bajo el sol.<br>
+        <b>Paso a paso de la demo (10 min):</b>
+        <ol style="margin-left: 16px; margin-top: 4px; font-size: 10.5px; line-height: 1.45;">
+          <li><b>Conversión automática BCV:</b> Muestra cómo los precios base en USD se expresan en Bolívares automáticamente a la tasa oficial del día sin cambiar etiquetas a mano.</li>
+          <li><b>Catálogo por Pasillos:</b> Navega por Harinas, Granos, Limpieza y Lácteos. Llena un carrito de 5 productos de la cesta básica.</li>
+          <li><b>Zonas de Delivery:</b> Muestra cómo el sistema calcula la tarifa de entrega según la distancia y alerta si la casa está fuera de cobertura.</li>
+          <li><b>Control de Stock:</b> Explica que cuando un producto se agota en el anaquel físico, el sistema bloquea la venta para no prometer lo que no hay.</li>
+        </ol>
+        </p>
+      </div>
+    </div>
+
+    <!-- GUION FARMACIAS -->
+    <div class="step-box">
+      <div class="step-num" style="background: var(--blue-dark);">3</div>
+      <div class="step-content">
+        <h4>Vertical Farmacias: "Consultas de disponibilidad al instante sin llamadas de espera"</h4>
+        <p><b>Dolor local:</b> Clientes que llaman o escriben desesperados preguntando si hay analgésicos o antibióticos y a qué precio.<br>
+        <b>Paso a paso de la demo (10 min):</b>
+        <ol style="margin-left: 16px; margin-top: 4px; font-size: 10.5px; line-height: 1.45;">
+          <li><b>Búsqueda por principio activo o marca:</b> Escribe "Acetaminofén" o "Ibuprofeno" y muestra cómo el producto aparece en 1 segundo con su stock visible.</li>
+          <li><b>Despacho urgente:</b> Muestra el botón de WhatsApp directo para emergencias médicas y la confirmación inmediata.</li>
+        </ol>
+        </p>
+      </div>
+    </div>
+
+    <h3>4. Protocolo de Contingencia Técnica</h3>
+    <table class="data-table" style="border: 1px solid var(--border); border-radius: 6px;">
+      <thead>
+        <tr><th>Imprevisto</th><th>Causa Posible</th><th>Acción Inmediata</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Lentitud al abrir la app</b></td>
+          <td>"Cold Start" de Render (servidor hibernando).</td>
+          <td>Abrir la web 2 minutos antes de entrar al local para despertar el servicio, o usar la copia local en la laptop.</td>
+        </tr>
+        <tr>
+          <td><b>Fallo de datos móviles</b></td>
+          <td>Corte de señal telefónica en el sector.</td>
+          <td>Conectar el teléfono a la red WiFi del comerciante o compartir internet desde el segundo operador.</td>
+        </tr>
+        <tr>
+          <td><b>Dudas sobre el costo</b></td>
+          <td>El cliente teme comisiones por venta.</td>
+          <td><b>Enfatizar: 0% comisión sobre pedidos.</b> El comercio conserva el 100% de su margen. Piloto de 60 días gratis.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="page-footer">
+    <span>TiendaFast · Puerto Ayacucho · Modelo Comercial: Emprendedor $9 / Negocio $19 / Pro $35</span>
+    <span>Página 2 de 2</span>
+  </div>
+</div>
+
+</body>
+</html>

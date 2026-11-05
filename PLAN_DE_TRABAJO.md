@@ -9,7 +9,7 @@
 - **Estrategia de despliegue y validación:**
   1. **Hito 1 (Inmediato / En curso):** Sistema 100% listo, probado y validable en **Localhost** y en el entorno de pruebas existente en la nube (**Netlify** para frontend + **Render** para backend + **Neon** para PostgreSQL). Con esta base lista y pulida se realizarán las demostraciones presenciales y la validación comercial con negocios de comida rápida, víveres y farmacias de Puerto Ayacucho.
   2. **Hito 2 (Final / Producción autónoma):** Migración y despliegue definitivo a **VPS propio** (PostgreSQL 16 local, Nginx, Let's Encrypt, backups automáticos). Los accesos SSH y credenciales del VPS se solicitarán al usuario en el momento exacto de ejecutar esta fase.
-- **Estado general:** F1-34, Fase 1B y bugs C-07/C-08/C-09 corregidos; C-10 verificado como incidencia transitoria (Render responde 200). Las 3 tiendas demo están creadas y las credenciales verificadas. Pendiente inmediato: PDF de accesos, despliegue de los fixes al frontend/backend live y cierre documental. Después continúa la Fase 2 restante.
+- **Estado general:** F1-34, Fase 1B, bugs C-07/C-08/C-09 corregidos, C-10 verificado y tiendas demo creadas con seed idempotente. PDF de accesos y guion de demostración generado (`Accesos_Demo_TiendaFast.pdf`). En curso: Fase 2 restante (inventario/combos, configuración de tienda, pedidos/paginación y analytics).
 - **Zona del piloto:** Puerto Ayacucho, Estado Amazonas
 - **Verticales comerciales prioritarias:**
   1. **Comida Rápida:** Puestos de perros calientes, hamburgueserías, pizzerías y comida rápida nocturna (alta rotación de pedidos vespertinos/nocturnos, combos y necesidad de despacho express).
@@ -574,11 +574,11 @@ Solo si el discovery con 5 farmacias lo confirma.
   - Probar geolocalización en las tres: GPS "Ubicar mi casa" o búsqueda predictiva con mapa.
   - Probar panel de administración desde PC/Tablet: recepción instantánea por Socket.io, validación de Pago Móvil, cambio de estados.
   - Probar rol de repartidor: apertura de ruta directa en Google Maps y Waze hacia la casa del cliente.
-- [ ] F3B-06 **Guiones de demostración comercial adaptados (10 min por vertical):**
+- [x] F3B-06 **Guiones de demostración comercial adaptados (10 min por vertical):**
   - **Guion para Comida Rápida (dueño de hamburguesería/perros calientes):** Demostrar cómo atender 50 pedidos en horas pico sin colapsar el WhatsApp, evitar comprobantes falsos de Pago Móvil y enviar al motorizado directo por GPS sin perderse en la noche.
   - **Guion para Víveres y Bodegones (dueño de abasto/bodegón):** Demostrar la actualización automática de precios en Bs según tasa BCV, cómo exhibir cientos de productos por pasillos y ofrecer delivery de compras pesadas a las casas de los clientes.
   - **Guion para Farmacias:** Demostrar catálogo de medicamentos de alta rotación, stock visible y consulta rápida.
-- [ ] F3B-07 **PDF de accesos y guion de demostración:**
+- [x] F3B-07 **PDF de accesos y guion de demostración:**
   - Generar `Accesos_Demo_TiendaFast.pdf` con URLs de las 3 tiendas, login admin, dashboards y SuperAdmin.
   - Incluir credenciales demo (`superadmin` y 3 administradores), guion de 10–15 min, checklist previo y contingencias.
   - No incluir claves de producción, JWT ni credenciales de base de datos.
@@ -703,7 +703,7 @@ Solo si el discovery con 5 farmacias lo confirma.
 
 #### Producción y cierre
 
-- [ ] F6-17 Crear `scripts/generate-pdfs.ps1`.
+- [x] F6-17 Crear `scripts/generate-pdfs.ps1`.
 - [ ] F6-18 Generar PDFs con Edge headless.
 - [ ] F6-19 Revisar ortografía, precios y claims.
 - [ ] F6-20 Verificar que no se prometan funciones no implementadas.
@@ -712,10 +712,10 @@ Solo si el discovery con 5 farmacias lo confirma.
 
 #### PDF de accesos demo (2026-11-05)
 
-- [ ] F6-23 Crear `docs/demo/accesos-demo.html` con estilos A4, tabla de credenciales y guion.
-- [ ] F6-24 Generar `Accesos_Demo_TiendaFast.pdf` con Edge headless.
-- [ ] F6-25 Revisar que el PDF no exponga claves de producción y que las URLs/credenciales sean las demo.
-- [ ] F6-26 Verificar apertura y contenido del PDF generado.
+- [x] F6-23 Crear `docs/demo/accesos-demo.html` con estilos A4, tabla de credenciales y guion.
+- [x] F6-24 Generar `Accesos_Demo_TiendaFast.pdf` con Edge headless.
+- [x] F6-25 Revisar que el PDF no exponga claves de producción y que las URLs/credenciales sean las demo.
+- [x] F6-26 Verificar apertura y contenido del PDF generado.
 
 ---
 
@@ -866,7 +866,7 @@ npm run build
 | 2026-11-05 | Pruebas API | Hecho | Auth/inventory/stock/store/superadmin 63/63; orders 26/26 aislado. Se aislaron zonas/tarifas demo en tests y se actualizó la prueba de login demo |
 | 2026-11-05 | Timeout transacciones | Hecho | `cancelOrderClient`, `deleteOrder` y `updateOrderStatus` con `maxWait: 10000` y `timeout: 20000`; corrige P2028 en cancelación AWAITING_PAYMENT |
 | 2026-11-05 | Frontend build/lint/typecheck | Hecho | Build OK (1,050.56 kB); lint 0 errores / 86 warnings; typecheck OK |
-| 2026-11-05 | PDF de accesos | En curso | Pendiente generar `docs/demo/accesos-demo.html` y `Accesos_Demo_TiendaFast.pdf` |
+| 2026-11-05 | PDF de accesos (F3B-07, F6-23..26) | Hecho | Creado docs/demo/accesos-demo.html, scripts/generate-pdfs.ps1 y compilado Accesos_Demo_TiendaFast.pdf con Edge headless (540 KB) |
 
 Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 
