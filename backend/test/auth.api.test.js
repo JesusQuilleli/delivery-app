@@ -195,3 +195,62 @@ test('logout: 401 sin token', async () => {
   const res = await req('POST', '/auth/logout');
   assert.equal(res.status, 401);
 });
+
+test('change-password: 401 sin token', async () => {
+  const res = await req('POST', '/auth/change-password', {
+    body: { current_password: 'old', new_password: 'newpassword123' }
+  });
+  assert.equal(res.status, 401);
+});
+
+test('change-password: flujo completo (validación, cambio y re-login)', async () => {
+  const bcrypt = require('bcrypt');
+  const tempUser = `pwd_test_${Date.now()}`;
+  const initialPassword = 'InitialPassword123!';
+  const hashedPassword = await bcrypt.hash(initialPassword, 10);
+  const created = await prisma.user.create({
+    data: {
+      username: tempUser,
+      password: hashedPassword,
+      name: 'Password Test User',
+      role: 'ADMIN',
+      store_id: 1,
+      phone: `04${String(Date.now()).slice(0, 9)}`
+    }
+  });
+
+  const { adminToken } = require('./helpers');
+  const token = adminToken(1, created.id);
+
+  try {
+    // Falla si la contraseña actual no coincide (401 Unauthorized)
+    const failCurrent = await req('POST', '/auth/change-password', {
+      token,
+      body: { current_password: 'WrongPassword!', new_password: 'NewValidPassword123!' }
+    });
+    assert.equal(failCurrent.status, 401);
+
+    // Falla si la nueva contraseña es muy corta
+    const failShort = await req('POST', '/auth/change-password', {
+      token,
+      body: { current_password: initialPassword, new_password: '123' }
+    });
+    assert.equal(failShort.status, 400);
+
+    // Éxito con contraseña válida
+    const successRes = await req('POST', '/auth/change-password', {
+      token,
+      body: { current_password: initialPassword, new_password: 'NewValidPassword123!' }
+    });
+    assert.equal(successRes.status, 200, JSON.stringify(successRes.json));
+
+    // Verificar en base de datos que el hash corresponde a la nueva contraseña y no a la antigua
+    const updated = await prisma.user.findUnique({ where: { id: created.id } });
+    assert.ok(await bcrypt.compare('NewValidPassword123!', updated.password), 'debe coincidir con la nueva contraseña');
+    assert.equal(await bcrypt.compare(initialPassword, updated.password), false, 'no debe coincidir con la contraseña vieja');
+    assert.equal(updated.failed_attempts, 0);
+    assert.equal(updated.locked_until, null);
+  } finally {
+    await prisma.user.delete({ where: { id: created.id } }).catch(() => {});
+  }
+});

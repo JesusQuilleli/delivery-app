@@ -1,6 +1,6 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { req, adminToken, prisma } = require('./helpers');
+const { req, adminToken, superadminToken, prisma } = require('./helpers');
 
 const admin = adminToken(1);
 const adminOtherStore = adminToken(7777);
@@ -200,6 +200,33 @@ test('store: settings sin rol ADMIN da 403', async () => {
     body: { currency: 'USD' }
   });
   assert.equal(res.status, 403, JSON.stringify(res.json));
+});
+
+test('store: superadmin puede actualizar settings e industry/theme_color', async () => {
+  const superToken = superadminToken();
+  const original = await prisma.store.findUnique({
+    where: { id: 1 },
+    select: { industry: true, theme_color: true }
+  });
+
+  try {
+    const res = await req('PUT', '/stores/demo-farmacia/settings', {
+      token: superToken,
+      body: {
+        industry: 'RESTAURANT',
+        theme_color: 'amber'
+      }
+    });
+    assert.equal(res.status, 200, JSON.stringify(res.json));
+    assert.equal(res.json.store.industry, 'RESTAURANT');
+    assert.equal(res.json.store.theme_color, 'amber');
+
+    const pub = await req('GET', '/stores/demo-farmacia/products?limit=1');
+    assert.equal(pub.json.store.industry, 'RESTAURANT');
+    assert.equal(pub.json.store.theme_color, 'amber');
+  } finally {
+    await prisma.store.update({ where: { id: 1 }, data: original });
+  }
 });
 
 test('store: listar clientes', async () => {

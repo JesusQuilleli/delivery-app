@@ -417,12 +417,12 @@ Optimización de la búsqueda y precisión de la dirección del cliente en el ch
 
 #### Configuración de tienda
 
-- [ ] F2-08 Permitir que SuperAdmin edite configuración.
-- [ ] F2-09 Editar industria, tema, nombre, coordenadas y WhatsApp.
-- [ ] F2-10 Editar datos bancarios y métodos de pago.
-- [ ] F2-11 Implementar cambio de contraseña de administrador.
-- [ ] F2-12 Implementar cierre de sesiones.
-- [ ] F2-13 Quitar o completar secciones "en desarrollo" de `Settings.tsx`.
+- [x] F2-08 Permitir que SuperAdmin edite configuración.
+- [x] F2-09 Editar industria, tema, nombre, coordenadas y WhatsApp.
+- [x] F2-10 Editar datos bancarios y métodos de pago.
+- [x] F2-11 Implementar cambio de contraseña de administrador.
+- [x] F2-12 Implementar cierre de sesiones.
+- [x] F2-13 Quitar o completar secciones "en desarrollo" de `Settings.tsx`.
 
 #### Inventario y combos
 
@@ -798,6 +798,7 @@ npm run build
 | 2026-11-03 | 45/45 | 89/89 | 41/41 | 0 errores, 85 warnings | Correcto | Correcto | F2-01–F2-05, F2-07 y F2-25. Pestaña de pagos, aprobación/rechazo individual y por lote, bloqueo de aceptación sin pago, pertenencia en `markOrderViewed` y restauración idempotente de stock. Bundle ~1 MB. |
 | 2026-11-05 | 53/53 | 89/89 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | C-07/C-08/C-09 corregidos; C-10 verificado (200 en productos). Demo seed de 3 tiendas. API: auth/inventory/stock/store/superadmin 63/63 + orders 26/26 aislado; el run conjunto de 89 sufrió caída de conexión de Neon en el `before` de orders, no fallo de código. Se elevó el timeout de transacciones de cancelar/eliminar/actualizar a 20 s. Bundle 1,050.56 kB. |
 | 2026-11-05 | 62/62 | 95/95 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | F2-14 a F2-20. Validación pertenencia categoría/combos, stock dinámico combo min(componente/qty), rechazo stock negativo, bloqueo eliminación si está en combo y stock visible en catálogo/admin. Bundle 1,053.67 kB. |
+| 2026-11-05 | 62/62 | 96/96 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | F2-08 a F2-13. Edición de settings por superadmin, selectores industria/tema, datos de pago, cambio de contraseña admin con bcrypt, cierre de sesión, notificación sonora y permisos push. Bundle 1,060.87 kB. |
 
 ---
 
@@ -869,6 +870,7 @@ npm run build
 | 2026-11-05 | Frontend build/lint/typecheck | Hecho | Build OK (1,050.56 kB); lint 0 errores / 86 warnings; typecheck OK |
 | 2026-11-05 | PDF de accesos (F3B-07, F6-23..26) | Hecho | Creado docs/demo/accesos-demo.html, scripts/generate-pdfs.ps1 y compilado Accesos_Demo_TiendaFast.pdf con Edge headless (540 KB) |
 | 2026-11-05 | F2-14 a F2-20 (Inventario y Combos) | Hecho | Validadas categorías/combos por tienda, stock de combo dinámico en catálogo y admin, rechazo stock negativo, guard de eliminación en combo y stock editable en admin |
+| 2026-11-05 | F2-08 a F2-13 (Settings y Auth) | Hecho | SuperAdmin edita configuración, selectores de industria/tema, datos de pago completos, cambio seguro de contraseña de administrador, cierre de sesión y controles de notificación sonora |
 
 Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 

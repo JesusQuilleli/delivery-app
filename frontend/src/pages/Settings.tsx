@@ -3,13 +3,14 @@ import { useParams } from 'react-router-dom';
 import api from '../api';
 import AdminLayout from '../components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
-import { Store, Bell, Shield, MapPin, Save, Loader2, DollarSign, RefreshCw, Truck, Plus, Trash2, Landmark } from 'lucide-react';
+import { Store, Bell, Shield, MapPin, Save, Loader2, DollarSign, RefreshCw, Truck, Plus, Trash2, Landmark, Volume2, LogOut, KeyRound } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L, { type LatLngExpression } from 'leaflet';
 import { toast } from 'sonner';
+import { playOrderChime } from '../lib/notifications';
 
 // @ts-ignore
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -51,6 +52,8 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
 
   const [storeName, setStoreName] = useState('');
+  const [industry, setIndustry] = useState('PHARMACY');
+  const [themeColor, setThemeColor] = useState('blue');
   const [mapPosition, setMapPosition] = useState<[number, number] | null>(null);
 
   const [currency, setCurrency] = useState('USD');
@@ -70,12 +73,22 @@ export default function Settings() {
   const [bankHolder, setBankHolder] = useState('');
   const [paymentNote, setPaymentNote] = useState('');
 
+  // Notificaciones y Seguridad
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
   useEffect(() => {
     const fetchStore = async () => {
       try {
         const res = await api.get(`/stores/${slug}/products`);
         if (res.data && res.data.store) {
           setStoreName(res.data.store.name);
+          if (res.data.store.industry) setIndustry(res.data.store.industry);
+          if (res.data.store.theme_color) setThemeColor(res.data.store.theme_color);
           if (res.data.store.latitude && res.data.store.longitude) {
             setMapPosition([res.data.store.latitude, res.data.store.longitude]);
           } else {
@@ -113,6 +126,8 @@ export default function Settings() {
     try {
       const payload: any = {
         name: storeName,
+        industry,
+        theme_color: themeColor,
         currency,
         ves_rate: vesRate,
         cop_rate: copRate,
@@ -135,6 +150,48 @@ export default function Settings() {
       toast.error('Hubo un error al guardar la configuración');
     }
     setSaving(false);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword || !newPassword) {
+      toast.error('Completa la contraseña actual y la nueva contraseña.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error('La nueva contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('La confirmación de la contraseña no coincide.');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await api.post('/auth/change-password', {
+        current_password: currentPassword,
+        new_password: newPassword
+      });
+      toast.success('Contraseña actualizada exitosamente.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Error al cambiar la contraseña.');
+    }
+    setChangingPassword(false);
+  };
+
+  const handleLogoutSession = async () => {
+    if (!window.confirm('¿Seguro que deseas cerrar sesión?')) return;
+    setLoggingOut(true);
+    try {
+      await api.post('/auth/logout');
+      window.location.href = '/admin-login';
+    } catch {
+      window.location.href = '/admin-login';
+    }
   };
 
   const syncBCV = async () => {
@@ -225,6 +282,36 @@ export default function Settings() {
                     onChange={e => setStoreName(e.target.value)}
                     className="h-12 bg-background border-border font-medium"
                   />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Tipo de Negocio / Industria</label>
+                    <select
+                      value={industry}
+                      onChange={e => setIndustry(e.target.value)}
+                      className="flex h-12 w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="RESTAURANT">Comida Rápida / Restaurante</option>
+                      <option value="SUPERMARKET">Víveres / Supermercado / Bodegón</option>
+                      <option value="PHARMACY">Farmacia / Salud</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Color de Tema Visual</label>
+                    <select
+                      value={themeColor}
+                      onChange={e => setThemeColor(e.target.value)}
+                      className="flex h-12 w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="orange">Naranja (Cálido / Comida Rápida)</option>
+                      <option value="emerald">Esmeralda (Verde / Víveres)</option>
+                      <option value="blue">Azul (Profesional / Farmacia)</option>
+                      <option value="purple">Púrpura</option>
+                      <option value="rose">Rosa / Coral</option>
+                      <option value="amber">Ámbar</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -463,19 +550,84 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        <Card className="border-border shadow-sm opacity-50">
+        <Card className="border-border shadow-sm">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2">
-              <Bell className="text-primary" /> Notificaciones
+              <Bell className="text-primary" /> Notificaciones y Alertas Sonoras
             </CardTitle>
             <CardDescription>
-              Ajusta cómo y cuándo recibes alertas de nuevos pedidos.
+              Ajusta cómo y cuándo recibes alertas de nuevos pedidos en el panel.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 bg-muted/30 rounded-xl border border-dashed border-border text-center">
-              <p className="text-muted-foreground text-sm font-semibold mb-4">Esta sección está en desarrollo.</p>
-              <Button variant="outline" disabled>Configurar Alertas</Button>
+            <div className="p-4 bg-background rounded-xl border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="font-bold text-foreground flex items-center gap-2">
+                  <Volume2 size={18} className="text-primary" />
+                  Alerta Sonora de Nuevos Pedidos
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Reproduce un timbre cuando entra un nuevo pedido en tiempo real.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => playOrderChime()}
+                  className="font-medium"
+                >
+                  <Volume2 size={16} className="mr-1.5" />
+                  Probar Sonido
+                </Button>
+                <Button
+                  type="button"
+                  variant={soundEnabled ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    const next = !soundEnabled;
+                    setSoundEnabled(next);
+                    localStorage.setItem('admin_sound_enabled', String(next));
+                    toast.success(next ? 'Sonido activado' : 'Sonido silenciado');
+                  }}
+                  className={soundEnabled ? "bg-emerald-600 hover:bg-emerald-700 text-white font-bold" : "font-medium"}
+                >
+                  {soundEnabled ? 'Activado' : 'Silenciado'}
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-4 bg-background rounded-xl border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="font-bold text-foreground flex items-center gap-2">
+                  <Bell size={18} className="text-primary" />
+                  Notificaciones de Escritorio
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Muestra avisos visuales en tu pantalla incluso si la pestaña está en segundo plano.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!('Notification' in window)) {
+                    toast.error('Este navegador no soporta notificaciones de escritorio.');
+                    return;
+                  }
+                  const perm = await Notification.requestPermission();
+                  if (perm === 'granted') {
+                    toast.success('Permiso concedido para notificaciones.');
+                  } else {
+                    toast.error('Permiso denegado por el navegador.');
+                  }
+                }}
+                className="font-medium"
+              >
+                Solicitar Permiso
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -557,19 +709,94 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        <Card className="border-border shadow-sm opacity-50">
+        <Card className="border-border shadow-sm">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2">
-              <Shield className="text-primary" /> Seguridad
+              <Shield className="text-primary" /> Seguridad y Sesión
             </CardTitle>
             <CardDescription>
-              Cambia tu contraseña y ajusta la seguridad de tu cuenta.
+              Cambia la contraseña de acceso y gestiona tu sesión administrativa.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 bg-muted/30 rounded-xl border border-dashed border-border text-center">
-              <p className="text-muted-foreground text-sm font-semibold mb-4">Esta sección está en desarrollo.</p>
-              <Button variant="outline" disabled>Cambiar Contraseña</Button>
+          <CardContent className="space-y-6">
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                <KeyRound size={16} className="text-primary" />
+                Cambiar Contraseña de Administrador
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Contraseña actual
+                  </label>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    value={currentPassword}
+                    onChange={e => setCurrentPassword(e.target.value)}
+                    className="h-11 bg-background border-border"
+                    autoComplete="current-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Nueva contraseña
+                  </label>
+                  <Input
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    className="h-11 bg-background border-border"
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Confirmar nueva contraseña
+                  </label>
+                  <Input
+                    type="password"
+                    placeholder="Repite la contraseña"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    className="h-11 bg-background border-border"
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  disabled={changingPassword}
+                  className="h-11 px-6 font-bold rounded-xl bg-primary hover:bg-primary/90 text-white"
+                >
+                  {changingPassword ? <Loader2 className="animate-spin mr-2" size={16} /> : <KeyRound className="mr-2" size={16} />}
+                  Actualizar Contraseña
+                </Button>
+              </div>
+            </form>
+
+            <div className="pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="font-bold text-destructive flex items-center gap-2">
+                  <LogOut size={16} />
+                  Cerrar Sesión
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Finaliza la sesión activa en este navegador y vuelve a la pantalla de login.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleLogoutSession}
+                disabled={loggingOut}
+                className="font-bold h-10 px-5"
+              >
+                {loggingOut ? <Loader2 className="animate-spin mr-2" size={16} /> : <LogOut className="mr-2" size={16} />}
+                Cerrar Sesión
+              </Button>
             </div>
           </CardContent>
         </Card>

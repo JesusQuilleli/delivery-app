@@ -312,6 +312,46 @@ const logout = (req, res) => {
   res.json({ message: 'Sesión cerrada exitosamente' });
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'No autenticado' });
+    }
+
+    if (!current_password || !new_password) {
+      return res.status(400).json({ error: 'Debes proporcionar la contraseña actual y la nueva contraseña.' });
+    }
+
+    if (typeof new_password !== 'string' || new_password.length < 6) {
+      return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.password) {
+      return res.status(404).json({ error: 'Usuario no encontrado o no tiene contraseña configurada.' });
+    }
+
+    const isMatch = await bcrypt.compare(current_password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'La contraseña actual es incorrecta.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword, failed_attempts: 0, locked_until: null }
+    });
+
+    res.json({ message: 'Contraseña actualizada exitosamente.' });
+  } catch (error) {
+    console.error('Error al cambiar contraseña:', error);
+    res.status(500).json({ error: 'Error interno al cambiar contraseña.' });
+  }
+};
+
 const refreshToken = async (req, res) => {
   try {
     const token = req.cookies?.auth_token;
@@ -354,4 +394,4 @@ const refreshToken = async (req, res) => {
   }
 };
 
-module.exports = { checkEmail, verifyOtp, adminLogin, logout, refreshToken };
+module.exports = { checkEmail, verifyOtp, adminLogin, logout, refreshToken, changePassword };

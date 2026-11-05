@@ -269,6 +269,8 @@ const updateStoreSettings = async (req, res) => {
     const { slug } = req.params;
     const {
       name,
+      industry,
+      theme_color,
       latitude,
       longitude,
       currency,
@@ -285,14 +287,26 @@ const updateStoreSettings = async (req, res) => {
     } = req.body;
     const user = req.user;
 
-    // Verificar si el usuario es ADMIN
-    if (!user || user.role !== 'ADMIN') {
+    // F2-08: Permitir a ADMIN de la tienda o SUPERADMIN
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
       return res.status(403).json({ error: 'No autorizado para editar configuración' });
     }
 
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) {
       return res.status(404).json({ error: 'Tienda no encontrada' });
+    }
+
+    if (user.role === 'ADMIN' && user.store_id !== store.id) {
+      return res.status(403).json({ error: 'No autorizado para editar la configuración de otra tienda' });
+    }
+
+    // F2-09: Validar industria si se proporciona
+    if (industry) {
+      const validIndustries = ['RESTAURANT', 'SUPERMARKET', 'PHARMACY'];
+      if (!validIndustries.includes(industry)) {
+        return res.status(400).json({ error: 'Industria inválida. Debe ser RESTAURANT, SUPERMARKET o PHARMACY.' });
+      }
     }
 
     let parsedDeliveryFee;
@@ -307,6 +321,8 @@ const updateStoreSettings = async (req, res) => {
       where: { id: store.id },
       data: {
         name: name || undefined,
+        industry: industry || undefined,
+        theme_color: cleanOptionalText(theme_color, 30) || undefined,
         latitude: latitude !== undefined ? parseFloat(latitude) : undefined,
         longitude: longitude !== undefined ? parseFloat(longitude) : undefined,
         currency: currency || undefined,
