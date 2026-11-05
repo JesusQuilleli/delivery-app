@@ -6,7 +6,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { Printer, Trash2, Calendar, Search, History, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Printer, Trash2, Calendar, Search, History, ChevronLeft, ChevronRight, Download, Filter } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { toast } from 'sonner';
 import { formatPrice } from '../utils/currency';
@@ -20,6 +20,9 @@ export default function OrderHistory() {
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [storeConfig, setStoreConfig] = useState<any>(null);
 
   const [showMonthSales, setShowMonthSales] = useState(false);
@@ -39,16 +42,39 @@ export default function OrderHistory() {
     setLoading(true);
     setCurrentPage(1);
     try {
-      let query = '';
-      if (dateFrom && dateTo) {
-        query = `?from=${dateFrom}&to=${dateTo}T23:59:59.999Z`;
-      }
-      const res = await api.get(`/stores/${slug}/history${query}`);
-      setOrders(res.data);
+      const params = new URLSearchParams();
+      if (dateFrom) params.append('from', dateFrom);
+      if (dateTo) params.append('to', dateTo);
+      if (statusFilter && statusFilter !== 'ALL') params.append('status', statusFilter);
+      if (paymentFilter && paymentFilter !== 'ALL') params.append('payment_method', paymentFilter);
+      if (searchTerm.trim()) params.append('search', searchTerm.trim());
+
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      const res = await api.get(`/stores/${slug}/history${queryStr}`);
+      const data = Array.isArray(res.data) ? res.data : (res.data.orders || []);
+      setOrders(data);
     } catch (error) {
       console.error("Error fetching history", error);
     }
     setLoading(false);
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (dateFrom) params.append('from', dateFrom);
+      if (dateTo) params.append('to', dateTo);
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      const res = await api.get(`/stores/${slug}/analytics${queryStr}`);
+      setAnalytics(res.data);
+    } catch (error) {
+      console.error("Error fetching analytics", error);
+    }
+  };
+
+  const handleApplyFilters = () => {
+    fetchHistory();
+    fetchAnalytics();
   };
 
   useEffect(() => {
@@ -56,14 +82,6 @@ export default function OrderHistory() {
       navigate('/admin-login');
       return;
     }
-    const fetchAnalytics = async () => {
-      try {
-        const res = await api.get(`/stores/${slug}/analytics`);
-        setAnalytics(res.data);
-      } catch (error) {
-        console.error("Error fetching analytics", error);
-      }
-    };
 
     fetchHistory();
     fetchAnalytics();
@@ -87,6 +105,54 @@ export default function OrderHistory() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleExportCsv = () => {
+    if (!orders || orders.length === 0) {
+      toast.error('No hay órdenes para exportar.');
+      return;
+    }
+
+    const headers = [
+      'ID Pedido',
+      'Fecha',
+      'Cliente',
+      'Teléfono',
+      'Dirección',
+      'Método de Pago',
+      'Referencia',
+      'Subtotal',
+      'Delivery',
+      'Total',
+      'Estado'
+    ];
+
+    const rows = orders.map((o) => {
+      const escape = (val: any) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+      return [
+        o.id,
+        escape(new Date(o.createdAt).toLocaleString()),
+        escape(o.user?.name || 'Sin Nombre'),
+        escape(o.user?.phone || ''),
+        escape(o.delivery_address || ''),
+        escape(o.payment_method === 'CASH' ? 'Efectivo' : 'Pago Móvil'),
+        escape(o.payment_reference || ''),
+        Number(o.subtotal || o.total_amount).toFixed(2),
+        Number(o.delivery_fee || 0).toFixed(2),
+        Number(o.total_amount).toFixed(2),
+        escape(o.status === 'DELIVERED' ? 'COMPLETADO' : 'CANCELADO')
+      ].join(',');
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `reporte_ventas_${slug}_${dateFrom || 'inicio'}_${dateTo || 'fin'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Reporte exportado en formato CSV');
   };
 
   return (
@@ -122,8 +188,21 @@ export default function OrderHistory() {
             <CardContent className="p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-emerald-100 font-bold uppercase tracking-wider text-xs mb-1">Ventas de Hoy</p>
-                   <h3 className="text-3xl font-black">{formatPrice(analytics.todaySales, storeConfig?.currency)}</h3>
+                  <p className="text-emerald-100 font-bold uppercase tracking-wider text-xs mb-1">
+                    {analytics.filtered ? 'Ventas en Período' : 'Ventas de Hoy'}
+                  </p>
+                  <h3 className="text-3xl font-black">
+                    {formatPrice(analytics.filtered ? analytics.filtered.sales : analytics.todaySales, storeConfig?.currency)}
+                  </h3>
+                  {analytics.filtered ? (
+                    <p className="text-xs text-emerald-100 font-semibold mt-1">
+                      {analytics.filtered.orders} pedidos entregados
+                    </p>
+                  ) : analytics.todayNetSales !== undefined ? (
+                    <p className="text-xs text-emerald-100 font-semibold mt-1">
+                      Neto productos: {formatPrice(analytics.todayNetSales, storeConfig?.currency)}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                   <span className="text-xl">💰</span>
@@ -139,6 +218,11 @@ export default function OrderHistory() {
                   <div>
                     <p className="text-blue-100 font-bold uppercase tracking-wider text-xs mb-1">Ventas del Mes</p>
                     <h3 className="text-3xl font-black">{formatPrice(analytics.monthSales, storeConfig?.currency)}</h3>
+                    {analytics.monthNetSales !== undefined && (
+                      <p className="text-xs text-blue-100 font-semibold mt-1">
+                        Neto: {formatPrice(analytics.monthNetSales, storeConfig?.currency)} ({analytics.monthOrders || 0} pedidos)
+                      </p>
+                    )}
                   </div>
                   <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                     <span className="text-xl">📅</span>
@@ -155,6 +239,11 @@ export default function OrderHistory() {
                   <div>
                     <p className="text-purple-100 font-bold uppercase tracking-wider text-xs mb-1">Histórico Total</p>
                     <h3 className="text-3xl font-black">{formatPrice(analytics.totalSales, storeConfig?.currency)}</h3>
+                    {analytics.totalNetSales !== undefined && (
+                      <p className="text-xs text-purple-100 font-semibold mt-1">
+                        Neto productos: {formatPrice(analytics.totalNetSales, storeConfig?.currency)}
+                      </p>
+                    )}
                   </div>
                   <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                     <span className="text-xl">📈</span>
@@ -171,6 +260,11 @@ export default function OrderHistory() {
                   <div>
                     <p className="text-orange-100 font-bold uppercase tracking-wider text-xs mb-1">Pedidos Entregados</p>
                     <h3 className="text-3xl font-black">{analytics.totalOrders}</h3>
+                    {analytics.cancelledOrders !== undefined && (
+                      <p className="text-xs text-orange-100 font-semibold mt-1">
+                        Cancelados: {analytics.cancelledOrders}
+                      </p>
+                    )}
                   </div>
                   <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                     <span className="text-xl">📦</span>
@@ -184,21 +278,73 @@ export default function OrderHistory() {
       
       {/* Filtros - Ocultos en impresión */}
       <Card className="mb-8 print:hidden border border-border shadow-sm bg-card">
-        <CardContent className="p-4 sm:p-6 flex flex-col md:flex-row gap-4 items-end">
-          <div className="flex-1 space-y-2 w-full">
-            <label className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2"><Calendar size={16}/> Desde</label>
-            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-background border-border h-10" />
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Calendar size={14}/> Desde
+              </label>
+              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-background border-border h-10" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Calendar size={14}/> Hasta
+              </label>
+              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-background border-border h-10" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Filter size={14}/> Estado
+              </label>
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="w-full h-10 px-3 rounded-md bg-background border border-border text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="ALL">Todos los estados</option>
+                <option value="DELIVERED">Solo Completados</option>
+                <option value="CANCELLED">Solo Cancelados</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Filter size={14}/> Método de Pago
+              </label>
+              <select
+                value={paymentFilter}
+                onChange={e => setPaymentFilter(e.target.value)}
+                className="w-full h-10 px-3 rounded-md bg-background border border-border text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="ALL">Todos los métodos</option>
+                <option value="CASH">Efectivo</option>
+                <option value="TRANSFER">Pago Móvil</option>
+              </select>
+            </div>
           </div>
-          <div className="flex-1 space-y-2 w-full">
-            <label className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2"><Calendar size={16}/> Hasta</label>
-            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-background border-border h-10" />
+
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between pt-2 border-t border-border">
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input
+                placeholder="Buscar por cliente, teléfono o #ID..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleApplyFilters(); }}
+                className="pl-9 h-10 bg-background border-border text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button onClick={handleApplyFilters} className="h-10 bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 flex-1 sm:flex-initial rounded-lg">
+                <Search className="mr-2" size={16} /> Filtrar
+              </Button>
+              <Button variant="outline" onClick={handleExportCsv} className="h-10 font-bold gap-2 text-sm border-border text-foreground hover:bg-muted flex-1 sm:flex-initial rounded-lg">
+                <Download size={16} /> CSV
+              </Button>
+              <Button variant="outline" className="h-10 font-bold gap-2 text-sm border-primary text-primary hover:bg-primary/10 flex-1 sm:flex-initial rounded-lg" onClick={handlePrint}>
+                <Printer size={16} /> Imprimir
+              </Button>
+            </div>
           </div>
-          <Button onClick={fetchHistory} className="h-10 bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8 w-full md:w-auto rounded-lg">
-            <Search className="mr-2" size={18} /> Filtrar
-          </Button>
-          <Button variant="outline" className="h-10 font-bold gap-2 text-sm border-primary text-primary hover:bg-primary/10 w-full md:w-auto rounded-lg" onClick={handlePrint}>
-            <Printer size={16} /> Imprimir
-          </Button>
         </CardContent>
       </Card>
 

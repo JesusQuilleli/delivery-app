@@ -10,7 +10,7 @@
     "db:push": "npx prisma db push",
     "db:seed": "node prisma/seed.js",
     "test": "npm run test:unit && npm run test:api",
-    "test:unit": "node --test --test-concurrency=1 test/validations.test.js test/middleware.test.js test/rates.test.js test/delivery.test.js test/geocode.test.js test/phone.test.js test/inventory.unit.test.js",
+    "test:unit": "node --test --test-concurrency=1 test/validations.test.js test/middleware.test.js test/rates.test.js test/delivery.test.js test/geocode.test.js test/phone.test.js test/inventory.unit.test.js test/dates.unit.test.js",
     "test:api": "node --test --test-concurrency=1 test/auth.api.test.js test/store.api.test.js test/orders.api.test.js test/inventory.api.test.js test/superadmin.api.test.js test/stock.api.test.js"
   },
   "dependencies": {

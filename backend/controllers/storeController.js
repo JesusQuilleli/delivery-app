@@ -2,6 +2,11 @@ const prisma = require('../prismaClient');
 const { getBcvRate } = require('../services/ratesService');
 const { resolveDeliveryFee } = require('../services/deliveryService');
 const { formatProductWithStock } = require('../utils/inventory');
+const {
+  getCaracasStartOfDay,
+  getCaracasStartOfMonth,
+  parseCaracasDateRange
+} = require('../utils/dates');
 
 const cleanOptionalText = (value, max = 120) => {
   if (value === undefined) return undefined;
@@ -124,25 +129,85 @@ const getStoreProducts = async (req, res) => {
 const getStoreOrders = async (req, res) => {
   try {
     const { slug } = req.params;
+    const { status, payment_method, search, page, limit } = req.query;
+
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
 
+    const activeStatuses = ['AWAITING_PAYMENT', 'PENDING', 'ACCEPTED', 'DISPATCHED'];
+    let statusFilter = { in: activeStatuses };
+
+    if (status) {
+      if (status.includes(',')) {
+        statusFilter = { in: status.split(',').map(s => s.trim().toUpperCase()) };
+      } else {
+        statusFilter = status.toUpperCase();
+      }
+    }
+
+    const where = {
+      store_id: store.id,
+      status: statusFilter
+    };
+
+    if (payment_method) {
+      where.payment_method = payment_method.toUpperCase();
+    }
+
+    if (search) {
+      const term = String(search).trim();
+      const num = parseInt(term, 10);
+      where.OR = [
+        ...(Number.isInteger(num) ? [{ id: num }] : []),
+        { user: { name: { contains: term, mode: 'insensitive' } } },
+        { user: { phone: { contains: term, mode: 'insensitive' } } },
+        { delivery_address: { contains: term, mode: 'insensitive' } }
+      ];
+    }
+
+    const include = {
+      items: { include: { product: true } },
+      user: true,
+      driver: true
+    };
+
+    if (page && limit) {
+      const pageNum = Math.max(1, parseInt(page, 10) || 1);
+      const limitNum = Math.max(1, parseInt(limit, 10) || 20);
+      const skip = (pageNum - 1) * limitNum;
+
+      const [totalOrders, orders] = await prisma.$transaction([
+        prisma.order.count({ where }),
+        prisma.order.findMany({
+          where,
+          include,
+          skip,
+          take: limitNum,
+          orderBy: { createdAt: 'desc' }
+        })
+      ]);
+
+      return res.json({
+        storeId: store.id,
+        orders,
+        pagination: {
+          currentPage: pageNum,
+          totalPages: Math.max(1, Math.ceil(totalOrders / limitNum)),
+          totalOrders,
+          limit: limitNum
+        }
+      });
+    }
+
     const orders = await prisma.order.findMany({
-      where: {
-        store_id: store.id,
-        status: { in: ['AWAITING_PAYMENT', 'PENDING', 'ACCEPTED', 'DISPATCHED'] }
-      },
-      include: {
-        items: { include: { product: true } },
-        user: true,
-        driver: true
-      },
+      where,
+      include,
       orderBy: { createdAt: 'desc' }
     });
 
     res.json({ storeId: store.id, orders });
   } catch (error) {
-    console.error(error);
+    console.error('Error cargando órdenes activas:', error);
     res.status(500).json({ error: 'Error cargando órdenes activas' });
   }
 };
@@ -150,36 +215,88 @@ const getStoreOrders = async (req, res) => {
 const getStoreHistory = async (req, res) => {
   try {
     const { slug } = req.params;
-    const { from, to } = req.query;
+    const { from, to, status, payment_method, search, page, limit } = req.query;
     
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
 
-    let dateFilter = {};
-    if (from && to) {
-      dateFilter = {
-        gte: new Date(from),
-        lte: new Date(to)
-      };
+    let statusFilter = { in: ['DELIVERED', 'CANCELLED'] };
+    if (status) {
+      if (status.includes(',')) {
+        statusFilter = { in: status.split(',').map(s => s.trim().toUpperCase()) };
+      } else {
+        statusFilter = status.toUpperCase();
+      }
+    }
+
+    const where = {
+      store_id: store.id,
+      status: statusFilter
+    };
+
+    const dateFilter = parseCaracasDateRange(from, to);
+    if (dateFilter) {
+      where.createdAt = dateFilter;
+    }
+
+    if (payment_method) {
+      where.payment_method = payment_method.toUpperCase();
+    }
+
+    if (search) {
+      const term = String(search).trim();
+      const num = parseInt(term, 10);
+      where.OR = [
+        ...(Number.isInteger(num) ? [{ id: num }] : []),
+        { user: { name: { contains: term, mode: 'insensitive' } } },
+        { user: { phone: { contains: term, mode: 'insensitive' } } },
+        { delivery_address: { contains: term, mode: 'insensitive' } },
+        { payment_reference: { contains: term, mode: 'insensitive' } }
+      ];
+    }
+
+    const include = {
+      items: { include: { product: true } },
+      user: true,
+      driver: true
+    };
+
+    if (page && limit) {
+      const pageNum = Math.max(1, parseInt(page, 10) || 1);
+      const limitNum = Math.max(1, parseInt(limit, 10) || 20);
+      const skip = (pageNum - 1) * limitNum;
+
+      const [totalOrders, orders] = await prisma.$transaction([
+        prisma.order.count({ where }),
+        prisma.order.findMany({
+          where,
+          include,
+          skip,
+          take: limitNum,
+          orderBy: { createdAt: 'desc' }
+        })
+      ]);
+
+      return res.json({
+        orders,
+        pagination: {
+          currentPage: pageNum,
+          totalPages: Math.max(1, Math.ceil(totalOrders / limitNum)),
+          totalOrders,
+          limit: limitNum
+        }
+      });
     }
 
     const orders = await prisma.order.findMany({
-      where: {
-        store_id: store.id,
-        status: { in: ['DELIVERED', 'CANCELLED'] },
-        ...(from && to ? { createdAt: dateFilter } : {})
-      },
-      include: {
-        items: { include: { product: true } },
-        user: true,
-        driver: true
-      },
+      where,
+      include,
       orderBy: { createdAt: 'desc' }
     });
 
     res.json(orders);
   } catch (error) {
-    console.error(error);
+    console.error('Error cargando historial de órdenes:', error);
     res.status(500).json({ error: 'Error cargando historial de órdenes' });
   }
 };
@@ -555,50 +672,126 @@ const quoteStoreDelivery = async (req, res) => {
 const getStoreAnalytics = async (req, res) => {
   try {
     const { slug } = req.params;
+    const { from, to } = req.query;
+
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
 
-    // Definir fechas base
+    // Fechas base calculadas estrictamente en la zona horaria de Caracas (UTC-4)
     const now = new Date();
-    
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfToday = getCaracasStartOfDay(now);
+    const startOfMonth = getCaracasStartOfMonth(now);
 
-    // Todas las ordenes entregadas
+    // Órdenes entregadas históricas (excluyendo canceladas y pendientes)
     const deliveredOrders = await prisma.order.findMany({
       where: {
         store_id: store.id,
         status: 'DELIVERED'
       },
       select: {
+        id: true,
+        subtotal: true,
+        delivery_fee: true,
         total_amount: true,
         createdAt: true
       }
     });
 
     let todaySales = 0;
+    let todayNetSales = 0;
+    let todayOrders = 0;
+
     let monthSales = 0;
+    let monthNetSales = 0;
+    let monthOrders = 0;
+
     let totalSales = 0;
+    let totalNetSales = 0;
+    let totalDeliveryFees = 0;
     let totalOrders = deliveredOrders.length;
 
     for (const order of deliveredOrders) {
-      const amount = Number(order.total_amount);
-      totalSales += amount;
+      const gross = Number(order.total_amount) || 0;
+      const delivery = Number(order.delivery_fee) || 0;
+      const net = (order.subtotal !== null && order.subtotal !== undefined)
+        ? Number(order.subtotal)
+        : Math.max(0, gross - delivery);
+
+      totalSales += gross;
+      totalNetSales += net;
+      totalDeliveryFees += delivery;
 
       const orderDate = new Date(order.createdAt);
       if (orderDate >= startOfMonth) {
-        monthSales += amount;
+        monthSales += gross;
+        monthNetSales += net;
+        monthOrders += 1;
       }
       if (orderDate >= startOfToday) {
-        todaySales += amount;
+        todaySales += gross;
+        todayNetSales += net;
+        todayOrders += 1;
       }
     }
 
+    // Si el usuario especificó un rango personalizado `from` / `to`, calculamos métricas de ese periodo
+    let filteredMetrics = null;
+    const dateRangeFilter = parseCaracasDateRange(from, to);
+    if (dateRangeFilter) {
+      let filteredGross = 0;
+      let filteredNet = 0;
+      let filteredDelivery = 0;
+      let filteredCount = 0;
+
+      for (const order of deliveredOrders) {
+        const orderDate = new Date(order.createdAt);
+        const matchGte = !dateRangeFilter.gte || orderDate >= dateRangeFilter.gte;
+        const matchLte = !dateRangeFilter.lte || orderDate <= dateRangeFilter.lte;
+        if (matchGte && matchLte) {
+          const gross = Number(order.total_amount) || 0;
+          const delivery = Number(order.delivery_fee) || 0;
+          const net = (order.subtotal !== null && order.subtotal !== undefined)
+            ? Number(order.subtotal)
+            : Math.max(0, gross - delivery);
+
+          filteredGross += gross;
+          filteredNet += net;
+          filteredDelivery += delivery;
+          filteredCount += 1;
+        }
+      }
+
+      filteredMetrics = {
+        sales: filteredGross,
+        netSales: filteredNet,
+        deliveryFees: filteredDelivery,
+        orders: filteredCount,
+        from: from || null,
+        to: to || null
+      };
+    }
+
+    // Cantidad de pedidos cancelados (para tasa de cancelación)
+    const cancelledOrdersCount = await prisma.order.count({
+      where: {
+        store_id: store.id,
+        status: 'CANCELLED'
+      }
+    });
+
     res.json({
       todaySales,
+      todayNetSales,
+      todayOrders,
       monthSales,
+      monthNetSales,
+      monthOrders,
       totalSales,
+      totalNetSales,
+      totalDeliveryFees,
       totalOrders,
+      cancelledOrders: cancelledOrdersCount,
+      filtered: filteredMetrics,
       currency: store.currency
     });
   } catch (error) {

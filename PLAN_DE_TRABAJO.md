@@ -412,7 +412,7 @@ Optimización de la búsqueda y precisión de la dirección del cliente en el ch
 - [x] F2-03 Rechazar pago: `AWAITING_PAYMENT` → `CANCELLED`.
 - [x] F2-04 Soportar aprobación/rechazo por lote.
 - [x] F2-05 Corregir acciones que aceptan pedidos sin pago aprobado.
-- [ ] F2-06 Agregar paginación y filtros server-side en pedidos.
+- [x] F2-06 Agregar paginación y filtros server-side en pedidos.
 - [x] F2-07 Validar pertenencia de tienda en `markOrderViewed`.
 
 #### Configuración de tienda
@@ -437,10 +437,10 @@ Optimización de la búsqueda y precisión de la dirección del cliente en el ch
 
 #### Historial y analytics
 
-- [ ] F2-21 Corregir filtros de fecha según zona horaria.
-- [ ] F2-22 Calcular ventas netas y totales coherentes.
-- [ ] F2-23 Corregir analytics con filtros aplicados.
-- [ ] F2-24 Verificar exportación e impresión de reportes.
+- [x] F2-21 Corregir filtros de fecha según zona horaria.
+- [x] F2-22 Calcular ventas netas y totales coherentes.
+- [x] F2-23 Corregir analytics con filtros aplicados.
+- [x] F2-24 Verificar exportación e impresión de reportes.
 
 #### Tiendas inactivas
 
@@ -799,6 +799,7 @@ npm run build
 | 2026-11-05 | 53/53 | 89/89 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | C-07/C-08/C-09 corregidos; C-10 verificado (200 en productos). Demo seed de 3 tiendas. API: auth/inventory/stock/store/superadmin 63/63 + orders 26/26 aislado; el run conjunto de 89 sufrió caída de conexión de Neon en el `before` de orders, no fallo de código. Se elevó el timeout de transacciones de cancelar/eliminar/actualizar a 20 s. Bundle 1,050.56 kB. |
 | 2026-11-05 | 62/62 | 95/95 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | F2-14 a F2-20. Validación pertenencia categoría/combos, stock dinámico combo min(componente/qty), rechazo stock negativo, bloqueo eliminación si está en combo y stock visible en catálogo/admin. Bundle 1,053.67 kB. |
 | 2026-11-05 | 62/62 | 96/96 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | F2-08 a F2-13. Edición de settings por superadmin, selectores industria/tema, datos de pago, cambio de contraseña admin con bcrypt, cierre de sesión, notificación sonora y permisos push. Bundle 1,060.87 kB. |
+| 2026-11-05 | 66/66 | 99/99 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | F2-06, F2-21 a F2-24. Paginación y filtros server-side en órdenes e historial, fechas en America/Caracas UTC-4, ventas netas/brutas, analytics con período y exportación CSV/impresión. Bundle 1,065.64 kB. |
 
 ---
 
@@ -871,6 +872,7 @@ npm run build
 | 2026-11-05 | PDF de accesos (F3B-07, F6-23..26) | Hecho | Creado docs/demo/accesos-demo.html, scripts/generate-pdfs.ps1 y compilado Accesos_Demo_TiendaFast.pdf con Edge headless (540 KB) |
 | 2026-11-05 | F2-14 a F2-20 (Inventario y Combos) | Hecho | Validadas categorías/combos por tienda, stock de combo dinámico en catálogo y admin, rechazo stock negativo, guard de eliminación en combo y stock editable en admin |
 | 2026-11-05 | F2-08 a F2-13 (Settings y Auth) | Hecho | SuperAdmin edita configuración, selectores de industria/tema, datos de pago completos, cambio seguro de contraseña de administrador, cierre de sesión y controles de notificación sonora |
+| 2026-11-05 | F2-06, F2-21 a F2-24 (Pedidos, Fechas y Analytics) | Hecho | Paginación y filtros server-side (status, payment_method, search, page/limit), fechas America/Caracas UTC-4, métricas netas/brutas en analytics y exportación a CSV con impresión en OrderHistory |
 
 Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 

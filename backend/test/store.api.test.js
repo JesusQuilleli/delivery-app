@@ -65,6 +65,37 @@ test('store: history con 200', async () => {
   assert.equal(res.status, 200, JSON.stringify(res.json));
 });
 
+test('store: orders activas con paginación y filtros server-side', async () => {
+  const res = await req('GET', '/stores/demo-farmacia/orders?page=1&limit=5&status=PENDING', { token: admin });
+  assert.equal(res.status, 200, JSON.stringify(res.json));
+  assert.ok(Array.isArray(res.json.orders));
+  assert.ok(res.json.pagination, 'debe incluir metadatos de paginación');
+  assert.equal(res.json.pagination.currentPage, 1);
+  assert.equal(res.json.pagination.limit, 5);
+  assert.ok(typeof res.json.pagination.totalOrders === 'number');
+});
+
+test('store: history con paginación y filtro de fecha en zona horaria Caracas', async () => {
+  const res = await req('GET', '/stores/demo-farmacia/history?from=2026-01-01&to=2026-12-31&page=1&limit=5', { token: admin });
+  assert.equal(res.status, 200, JSON.stringify(res.json));
+  assert.ok(Array.isArray(res.json.orders));
+  assert.ok(res.json.pagination, 'debe incluir metadatos de paginación');
+  assert.equal(res.json.pagination.currentPage, 1);
+  assert.equal(res.json.pagination.limit, 5);
+});
+
+test('store: analytics con métricas netas y filtro de período aplicado', async () => {
+  const res = await req('GET', '/stores/demo-farmacia/analytics?from=2026-01-01&to=2026-12-31', { token: admin });
+  assert.equal(res.status, 200, JSON.stringify(res.json));
+  assert.ok(typeof res.json.totalSales === 'number', 'totalSales debe ser numérico');
+  assert.ok(typeof res.json.totalNetSales === 'number', 'totalNetSales debe ser numérico');
+  assert.ok(typeof res.json.totalDeliveryFees === 'number', 'totalDeliveryFees debe ser numérico');
+  assert.ok(typeof res.json.cancelledOrders === 'number', 'cancelledOrders debe ser numérico');
+  assert.ok(res.json.filtered, 'debe incluir filtered con from/to');
+  assert.ok(typeof res.json.filtered.sales === 'number');
+  assert.ok(typeof res.json.filtered.netSales === 'number');
+});
+
 test('store: actualizar settings admin', async () => {
   const res = await req('PUT', '/stores/demo-farmacia/settings', {
     token: admin,
