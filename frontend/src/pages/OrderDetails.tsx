@@ -78,7 +78,7 @@ const OrderRouteMap = ({ order, storeLocation }: { order: Order, storeLocation?:
   return (
     <div className="h-[250px] sm:h-[300px] w-full rounded-xl overflow-hidden mt-4 border border-border shadow-inner relative z-0">
       <MapContainer center={centerLoc} zoom={14} style={{ height: '100%', width: '100%' }}>
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+        <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         {storeLocation && storeLocation[0] && <Marker position={storeLocation} />}
         <Marker position={customerLoc} />
         {routeCoords.length > 0 ? (

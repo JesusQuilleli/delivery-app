@@ -350,7 +350,7 @@ export default function Settings() {
                   {mapPosition && (
                     <div className="h-[300px] w-full rounded-2xl overflow-hidden border border-border shadow-inner relative z-0">
                       <MapContainer center={mapPosition as LatLngExpression} zoom={15} style={{ height: '100%', width: '100%' }} key={`${mapPosition[0]}-${mapPosition[1]}`}>
-                        <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                        <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                         <LocationMarker position={mapPosition} setPosition={setMapPosition} />
                       </MapContainer>
                     </div>
