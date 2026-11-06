@@ -207,7 +207,7 @@ export default function Catalog() {
 
       <div className="max-w-6xl mx-auto -mt-8 relative z-20">
         {/* F2C-13: Botón Pedir con mi Récipe para Farmacias */}
-        {(storeConfig?.industry === 'FARMACIA' || storeConfig?.industry === 'Farmacia' || products.some(p => p.prescription_type && p.prescription_type !== 'NONE')) && (
+        {(storeConfig?.industry?.toUpperCase() === 'PHARMACY' || storeConfig?.industry?.toUpperCase() === 'FARMACIA') && (
           <div className="px-4 mb-4 flex justify-center">
             <button
               onClick={() => setIsQuoteOpen(true)}

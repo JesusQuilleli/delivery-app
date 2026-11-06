@@ -23,6 +23,7 @@ import L from 'leaflet';
 interface StoreConfig {
   id: number;
   name?: string;
+  industry?: string;
   latitude?: number | null;
   longitude?: number | null;
   currency?: string;
@@ -126,6 +127,7 @@ export default function Checkout() {
     coverage?: { has_zones: boolean; max_distance_km: number | null; zones_count: number };
     distance_km: number | null;
     estimated_minutes: number | null;
+    zone_name?: string | null;
   } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [cashCurrency, setCashCurrency] = useState('USD');
@@ -195,7 +197,8 @@ export default function Checkout() {
           in_range: res.data.in_range ?? null,
           coverage: res.data.coverage,
           distance_km: res.data.distance_km ?? null,
-          estimated_minutes: res.data.estimated_minutes ?? null
+          estimated_minutes: res.data.estimated_minutes ?? null,
+          zone_name: res.data.zone?.name ?? null
         });
       })
       .catch((err) => {
@@ -751,16 +754,33 @@ export default function Checkout() {
               )}
 
               {deliveryQuote?.in_range !== false && deliveryQuote?.distance_km !== null && deliveryQuote?.distance_km !== undefined && (
-                <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
-                  <div className="flex items-center gap-2 font-bold text-sm">
-                    <Navigation size={18} /> Delivery estimado
+                <div className="rounded-2xl border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50 p-4 text-emerald-950 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-black text-sm">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                        <Navigation size={15} />
+                      </div>
+                      <div>
+                        <span>{deliveryQuote.zone_name ? `Zona: ${deliveryQuote.zone_name}` : 'Tarifa por Distancia'}</span>
+                        <span className="block text-[11px] text-emerald-700 font-semibold">
+                          Calculado según tu ubicación en el mapa
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black text-lg text-emerald-800 tracking-tight">{formatPrice(deliveryFee, storeConfig?.currency)}</p>
+                      {storeConfig && storeConfig.currency !== 'VES' && storeConfig.ves_rate && (
+                        <p className="text-[11px] font-black text-emerald-700">
+                          Bs. {(deliveryFee * Number(storeConfig.ves_rate)).toFixed(2)}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-black">{formatPrice(deliveryFee, storeConfig?.currency)}</p>
-                    <p className="text-[11px] font-semibold text-emerald-700">
-                      {deliveryQuote.distance_km} km
-                      {deliveryQuote.estimated_minutes ? ` · ~${deliveryQuote.estimated_minutes} min` : ''}
-                    </p>
+                  <div className="flex items-center justify-between text-xs font-bold text-emerald-800 pt-2 border-t border-emerald-200/80">
+                    <span>📏 Distancia al local: {deliveryQuote.distance_km} km</span>
+                    {deliveryQuote.estimated_minutes && (
+                      <span>⏱️ Tiempo estimado: ~{deliveryQuote.estimated_minutes} min</span>
+                    )}
                   </div>
                 </div>
               )}
@@ -803,7 +823,7 @@ export default function Checkout() {
             </CardHeader>
             <CardContent className="p-5 sm:p-8 space-y-5 sm:space-y-8">
 
-              {requiresPrescription && (
+              {(storeConfig?.industry?.toUpperCase() === 'PHARMACY' || storeConfig?.industry?.toUpperCase() === 'FARMACIA') && requiresPrescription && (
                 <div className="p-5 rounded-2xl border-2 border-amber-200 bg-amber-50/60 space-y-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">📋</span>
@@ -836,18 +856,58 @@ export default function Checkout() {
                 </div>
               )}
 
-              <div className="rounded-2xl bg-gray-50 border border-gray-200 p-4 space-y-2 text-sm">
-                <div className="flex justify-between text-gray-600">
-                  <span>Productos</span>
-                  <span className="font-bold">{formatPrice(total, storeConfig?.currency)}</span>
+              <div className="rounded-2xl bg-gradient-to-br from-gray-50 to-emerald-50/30 border border-emerald-100 p-5 space-y-3 text-sm shadow-sm">
+                <div className="flex justify-between text-gray-700">
+                  <span className="font-medium">Productos ({cart.reduce((a, b) => a + b.quantity, 0)})</span>
+                  <div className="text-right">
+                    <span className="font-bold">{formatPrice(total, storeConfig?.currency)}</span>
+                    {storeConfig && storeConfig.currency !== 'VES' && storeConfig.ves_rate && (
+                      <span className="block text-[11px] text-muted-foreground">
+                        Bs. {(total * Number(storeConfig.ves_rate)).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Delivery</span>
-                  <span className="font-bold">{formatPrice(deliveryFee, storeConfig?.currency)}</span>
+
+                <div className="flex justify-between items-start text-gray-700 pt-1">
+                  <div>
+                    <span className="font-bold flex items-center gap-1.5 text-gray-900">
+                      🛵 Envío / Delivery
+                    </span>
+                    <span className="text-xs text-emerald-700 font-semibold block">
+                      {deliveryQuote?.zone_name ? `Zona: ${deliveryQuote.zone_name}` : 'Tarifa calculada por distancia'}
+                      {deliveryQuote?.distance_km ? ` (${deliveryQuote.distance_km} km)` : ''}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-emerald-800">{formatPrice(deliveryFee, storeConfig?.currency)}</span>
+                    {storeConfig && storeConfig.currency !== 'VES' && storeConfig.ves_rate && (
+                      <span className="block text-[11px] text-emerald-700 font-semibold">
+                        Bs. {(deliveryFee * Number(storeConfig.ves_rate)).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex justify-between border-t border-gray-200 pt-2 text-base font-black text-gray-900">
-                  <span>Total</span>
-                  <span>{formatPrice(grandTotal, storeConfig?.currency)}</span>
+
+                <div className="border-t border-gray-200/80 pt-3 flex justify-between items-baseline">
+                  <div>
+                    <span className="text-base font-black text-gray-900 block">Total a Pagar</span>
+                    {storeConfig && storeConfig.currency !== 'VES' && storeConfig.ves_rate && (
+                      <span className="text-xs font-semibold text-gray-500">
+                        Tasa BCV: {Number(storeConfig.ves_rate).toFixed(2)} Bs/$
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-black text-emerald-600 block tracking-tight">
+                      {formatPrice(grandTotal, storeConfig?.currency)}
+                    </span>
+                    {storeConfig && storeConfig.currency !== 'VES' && storeConfig.ves_rate && (
+                      <span className="text-xs font-black text-gray-800 bg-emerald-100/70 px-2 py-0.5 rounded-md inline-block mt-0.5">
+                        Total en Bs: {(grandTotal * Number(storeConfig.ves_rate)).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 

@@ -549,17 +549,20 @@ export default function Dashboard() {
       <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
         
         {/* F2C-14: Botón de Cotizaciones de Récipe */}
-        <Button
-          onClick={() => setIsQuotesListOpen(true)}
-          className="relative bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md h-9 px-3 text-xs flex items-center gap-1.5"
-        >
-          <FileText size={15} /> Récipes Médicos
-          {prescriptionQuotes.filter(q => q.status === 'PENDING').length > 0 && (
-            <span className="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-black animate-pulse">
-              {prescriptionQuotes.filter(q => q.status === 'PENDING').length}
-            </span>
-          )}
-        </Button>
+        {/* F2C-14: Botón de Cotizaciones de Récipe (Solo para Farmacias) */}
+        {(storeConfig?.industry?.toUpperCase() === 'PHARMACY' || storeConfig?.industry?.toUpperCase() === 'FARMACIA') && (
+          <Button
+            onClick={() => setIsQuotesListOpen(true)}
+            className="relative bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md h-9 px-3 text-xs flex items-center gap-1.5"
+          >
+            <FileText size={15} /> Récipes Médicos
+            {prescriptionQuotes.filter(q => q.status === 'PENDING').length > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-black animate-pulse">
+                {prescriptionQuotes.filter(q => q.status === 'PENDING').length}
+              </span>
+            )}
+          </Button>
+        )}
 
           <ConnectionStatus connected={connected} />
         <Button

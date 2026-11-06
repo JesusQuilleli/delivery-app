@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import api from '../api';
 import AdminLayout from '../components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
-import { Store, Bell, Shield, MapPin, Save, Loader2, DollarSign, RefreshCw, Truck, Plus, Trash2, Landmark, Volume2, LogOut, KeyRound, LayoutTemplate, ExternalLink, Image as ImageIcon, Camera } from 'lucide-react';
+import { Store, Bell, Shield, MapPin, Save, Loader2, DollarSign, RefreshCw, Truck, Plus, Trash2, Landmark, Volume2, LogOut, KeyRound, LayoutTemplate, ExternalLink, Image as ImageIcon, Camera, Calculator, Zap } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -65,6 +65,36 @@ export default function Settings() {
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [zoneForm, setZoneForm] = useState({ name: '', min: '', max: '', fee: '' });
   const [savingZone, setSavingZone] = useState(false);
+  const [testKm, setTestKm] = useState('4.5');
+  const [loadingPresets, setLoadingPresets] = useState(false);
+
+  const loadPuertoAyacuchoPresets = async () => {
+    setLoadingPresets(true);
+    try {
+      const presets = [
+        { name: 'Casco Central / Centro (0 a 3 km)', min: '0', max: '3', fee: '1.50' },
+        { name: 'Zona Urbana Intermedia (3 a 6 km)', min: '3', max: '6', fee: '2.50' },
+        { name: 'Zona Sur / Periferia (6 a 10 km)', min: '6', max: '10', fee: '3.50' },
+        { name: 'Límite de Cobertura (10 a 14 km)', min: '10', max: '14', fee: '5.00' }
+      ];
+      for (const p of presets) {
+        await api.post(`/stores/${slug}/delivery-zones`, {
+          name: p.name,
+          min_distance_km: parseFloat(p.min),
+          max_distance_km: parseFloat(p.max),
+          fee: parseFloat(p.fee)
+        });
+      }
+      const res = await api.get(`/stores/${slug}/delivery-zones`);
+      setZones(res.data.zones || []);
+      toast.success('¡Tarifas estándar para Puerto Ayacucho cargadas con éxito!');
+    } catch (e) {
+      console.error(e);
+      toast.error('Error al cargar zonas sugeridas');
+    } finally {
+      setLoadingPresets(false);
+    }
+  };
 
   const [bankName, setBankName] = useState('');
   const [bankCode, setBankCode] = useState('');
@@ -889,7 +919,23 @@ export default function Settings() {
             </div>
 
             <div className="pt-4 border-t border-border space-y-3">
-              <h4 className="font-bold text-gray-900">Zonas por distancia</h4>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="font-bold text-gray-900">Zonas por distancia</h4>
+                  <p className="text-xs text-muted-foreground">Configura los precios según los kilómetros de viaje desde tu local.</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={loadingPresets}
+                  onClick={loadPuertoAyacuchoPresets}
+                  className="font-bold text-xs h-8 gap-1.5 border-emerald-300 text-emerald-800 hover:bg-emerald-50 rounded-lg w-fit"
+                >
+                  {loadingPresets ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} className="text-amber-500 fill-amber-500" />}
+                  Cargar Zonas Sugeridas (Puerto Ayacucho)
+                </Button>
+              </div>
 
               {zones.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Aún no hay zonas configuradas.</p>
@@ -966,6 +1012,51 @@ export default function Settings() {
                   {savingZone ? <Loader2 className="animate-spin mr-2" size={16} /> : <Plus className="mr-2" size={16} />}
                   Agregar
                 </Button>
+              </div>
+
+              {/* Simulador Interactivo de Tarifas */}
+              <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase text-slate-700 tracking-wider flex items-center gap-1.5">
+                    <Calculator size={14} className="text-primary" /> Simulador de Tarifa en Vivo
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">Comprueba al instante cómo cobrará tu tienda</span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-600">Probar distancia:</span>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={testKm}
+                      onChange={e => setTestKm(e.target.value)}
+                      placeholder="Ej. 4.5"
+                      className="h-8 w-24 text-xs font-bold bg-white border-slate-300"
+                    />
+                    <span className="text-xs font-bold text-slate-600">km</span>
+                  </div>
+                  <div className="text-xs flex-1">
+                    {(() => {
+                      const km = parseFloat(testKm);
+                      if (isNaN(km)) return <span className="text-muted-foreground">Escribe una distancia en km para simular.</span>;
+                      const matchingZone = zones.find(z => km >= Number(z.min_distance_km) && (z.max_distance_km === null || km <= Number(z.max_distance_km)));
+                      const approxMins = Math.round((km / 25) * 60) + 15;
+                      if (matchingZone) {
+                        return (
+                          <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 font-medium">
+                            ✓ Aplica zona: <strong className="font-black text-emerald-950">{matchingZone.name}</strong> · Tarifa cliente: <strong className="font-black text-emerald-700">{currency} {Number(matchingZone.fee).toFixed(2)}</strong> (~{approxMins} mins en moto)
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-medium">
+                          ⚠️ Ninguna zona específica cubre {km} km · Aplicaría Tarifa Plana: <strong className="font-black">{currency} {deliveryFee.toFixed(2)}</strong> (~{approxMins} mins)
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -691,29 +691,33 @@ export default function Inventory() {
                     <Label className="font-bold text-gray-700">Descripción (Opcional)</Label>
                     <Input value={editProductDesc} onChange={e => setEditProductDesc(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200" />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="font-bold text-gray-700">Tipo de Récipe Médico (Farmacias)</Label>
-                    <select
-                      value={editPrescriptionType}
-                      onChange={e => setEditPrescriptionType(e.target.value as any)}
-                      className="flex h-10 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
-                    >
-                      <option value="NONE">Venta Libre (Sin récipe)</option>
-                      <option value="SHOW_ONLY">Requiere Récipe (Solo mostrar al motorizado)</option>
-                      <option value="RETAIN_ORIGINAL">Retención Obligatoria (Motorizado debe retenerlo para archivo)</option>
-                    </select>
-                  </div>
+                  {(storeConfig?.industry?.toUpperCase() === 'PHARMACY' || storeConfig?.industry?.toUpperCase() === 'FARMACIA') && (
+                    <>
+                      <div className="space-y-1">
+                        <Label className="font-bold text-gray-700">Tipo de Récipe Médico (Farmacias)</Label>
+                        <select
+                          value={editPrescriptionType}
+                          onChange={e => setEditPrescriptionType(e.target.value as any)}
+                          className="flex h-10 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+                        >
+                          <option value="NONE">Venta Libre (Sin récipe)</option>
+                          <option value="SHOW_ONLY">Requiere Récipe (Solo mostrar al motorizado)</option>
+                          <option value="RETAIN_ORIGINAL">Retención Obligatoria (Motorizado debe retenerlo para archivo)</option>
+                        </select>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="font-bold text-gray-700 text-xs">Nº Lote (Opcional)</Label>
-                      <Input value={editLotNumber} onChange={e => setEditLotNumber(e.target.value)} placeholder="Ej. L-2026A" className="rounded-xl bg-gray-50 border-gray-200 h-10 text-xs" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="font-bold text-gray-700 text-xs">Vencimiento</Label>
-                      <Input type="date" value={editExpiresAt} onChange={e => setEditExpiresAt(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200 h-10 text-xs" />
-                    </div>
-                  </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="font-bold text-gray-700 text-xs">Nº Lote (Opcional)</Label>
+                          <Input value={editLotNumber} onChange={e => setEditLotNumber(e.target.value)} placeholder="Ej. L-2026A" className="rounded-xl bg-gray-50 border-gray-200 h-10 text-xs" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="font-bold text-gray-700 text-xs">Vencimiento</Label>
+                          <Input type="date" value={editExpiresAt} onChange={e => setEditExpiresAt(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200 h-10 text-xs" />
+                        </div>
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-1">
                     <Label className="font-bold text-gray-700">Subir Imagen (Opcional)</Label>
                     <div className="flex gap-2 items-center">
