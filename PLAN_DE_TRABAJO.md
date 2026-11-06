@@ -494,7 +494,7 @@ Flujo integral de medicamentos con récipe médico, evaluación por farmaceuta y
 
 ### Fase 2D — Correcciones Operativas Críticas y Experiencia en Vivo (Bloque A - Inmediato)
 
-- [x] F2D-01 **Mapas sin marcas de agua (OpenStreetMap Standard):** Sustituir Carto basemaps (que exige API key) por OpenStreetMap en `Checkout.tsx`, `OrderDetails.tsx`, `Dashboard.tsx` y `Settings.tsx`.
+- [x] F2D-01 **Mapas sin marcas de agua (OpenStreetMap Standard y Auto-Bounds):** Sustituir Carto basemaps (que exige API key) por OpenStreetMap Standard en `Checkout.tsx`, `OrderDetails.tsx`, `Dashboard.tsx` y `Settings.tsx`. Añadido auto-encuadre dinámico (`fitBounds`) entre el local y la dirección de entrega del cliente. Sincronizado y desplegado en `main` para actualización en vivo de Netlify en `https://test.shop-mg.com`.
 - [x] F2D-02 **Campanita Sonora ante Nuevos Pedidos en Dashboard:** Generador de audio de dos tonos (ding-dong 880Hz / 1320Hz) con Web Audio API sintetizado en el cliente (cero dependencias de red, nunca falla por 404), archivo mp3 de respaldo en `frontend/public/notification.mp3` y botón activador de audio amigable ante políticas de autoplay del navegador.
 - [x] F2D-03 **Sincronización en Tiempo Real sin Refrescar:** Inyectar JWT token en `socket.ts` handshake auth para superar el bloqueo de cookies de terceros en cross-domain (Netlify ↔ Render), asegurar reconexión reactiva en `RealtimeContext.tsx`, y activar polling de alta frecuencia (cada 4s) en `Checkout.tsx` (Paso 5) y modal de `MyOrders.tsx` cuando una orden está activa.
 - [x] F2D-04 **Cola de Pedidos por Urgencia (FIFO):** Ordenar los pedidos pendientes (`PENDING` y `AWAITING_PAYMENT`) por `createdAt ASC` (el que lleva más tiempo esperando de primero arriba) en backend y en `Dashboard.tsx`, agregando badges dinámicos de tiempo transcurrido (Verde <10m, Ámbar 10-20m, Rojo parpadeante >20m con alerta de urgencia).
@@ -849,6 +849,7 @@ npm run build
 
 | Fecha | Fase / ID | Estado | Notas |
 |---|---|---|---|
+| 2026-11-06 | F2D-01 (Despliegue) | Hecho | Merge y push a rama `main` en GitHub para que Netlify actualice `test.shop-mg.com/admin/demo-comida/order/391` con OpenStreetMap y auto-bounds sin marcas de agua |
 | 2026-11-06 | F2C, F2D, F2E planificados | En curso | Incorporados al plan: flujo completo de récipes y lotes de farmacia (con retención física), correcciones operativas críticas (OSM, campanita, realtime, cola FIFO) y módulo SaaS (CMS visual y multi-sucursal) |
 | 2026-11-06 | F2D-01 | Hecho | Tiles Carto reemplazados por OpenStreetMap Standard en Checkout, OrderDetails y Settings (sin API key ni marca de agua) |
 | 2026-11-06 | F2D-02 | Hecho | Campanita sintetizada Web Audio API (880/1320Hz ding-dong), archivos notification.mp3/wav en public y botón de prueba en Dashboard |

@@ -6,7 +6,7 @@ import api from '../api';
 import { Clock, MapPin, Phone, Truck, CheckCircle, Check, ArrowLeft, XCircle, Navigation } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { formatPrice } from '../utils/currency';
 import { buildDriverMessage, buildGoogleMapsUrl, buildWazeUrl } from '../utils/navigation';
@@ -53,6 +53,16 @@ interface Order {
   } | null;
 }
 
+const MapAutoBounds = ({ storeLocation, customerLoc }: { storeLocation?: [number, number], customerLoc: [number, number] }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (storeLocation && storeLocation[0]) {
+      map.fitBounds([storeLocation, customerLoc], { padding: [35, 35], maxZoom: 16 });
+    }
+  }, [map, storeLocation, customerLoc]);
+  return null;
+};
+
 const OrderRouteMap = ({ order, storeLocation }: { order: Order, storeLocation?: [number, number] }) => {
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
 
@@ -82,6 +92,7 @@ const OrderRouteMap = ({ order, storeLocation }: { order: Order, storeLocation?:
     <div className="h-[250px] sm:h-[300px] w-full rounded-xl overflow-hidden mt-4 border border-border shadow-inner relative z-0">
       <MapContainer center={centerLoc} zoom={14} style={{ height: '100%', width: '100%' }}>
         <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <MapAutoBounds storeLocation={storeLocation} customerLoc={customerLoc} />
         {storeLocation && storeLocation[0] && <Marker position={storeLocation} />}
         <Marker position={customerLoc} />
         {routeCoords.length > 0 ? (
