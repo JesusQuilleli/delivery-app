@@ -3,7 +3,7 @@
 > Documento vivo. Actualizar después de cada tarea.
 > Si se pierde la sesión: leer este archivo, revisar `git status` y `git log`, y continuar desde la primera casilla sin marcar.
 
-- **Última actualización:** 2026-11-06
+- **Última actualización:** 2026-11-06 (Récipes avanzados, Cotizador y CMS Modular)
 - **Rama actual:** `feature/operational-enhancements`
 - **Rama principal:** `main`
 - **Estrategia de despliegue y validación:**
@@ -510,6 +510,38 @@ Flujo integral de medicamentos con récipe médico, evaluación por farmaceuta y
 - [x] F2E-05 **Arquitectura Multi-Sucursales:** Campo `parent_store_id Int?` en `Store`, vinculación de sedes secundarias (ej. Farma-Ayacucho Centro vs Sur).
 - [x] F2E-06 **Enrutamiento por Proximidad y Selector de Sede:** Detección de distancia Haversine a la sede más cercana o modal selector para que el cliente compre en la sucursal correcta.
 - [x] F2E-07 **Monetización Multi-Sucursal:** Esquema de add-on de sucursal adicional (+ $10/mes por sede extra en vez de tienda completa).
+
+---
+
+### Fase 2C-B — Récipes Avanzados (Retención en Farmacia vs Mostrar) y Cotizador por Récipe (2 días)
+
+Flujo avanzado de prescripción médica adaptado a la operativa real de farmacias:
+
+- [ ] F2C-09 **Clasificación de Récipe en Producto:** Campo `Product.prescription_type` (`NONE` = venta libre, `SHOW_ONLY` = mostrar al motorizado pero retiene cliente, `RETAIN_ORIGINAL` = retención física obligatoria y archivado en farmacia).
+- [ ] F2C-10 **Distintivos Visuales en Catálogo y Búsqueda:** Badges destacados en el catálogo para cada medicamento: *"Venta solo con récipe"* (azul) y *"Requiere retención de récipe original"* (rojo/ámbar).
+- [ ] F2C-11 **Formulario de Inventario Farmacéutico:** Selector de 3 opciones en alta y edición de producto para que el administrador configure el tipo de récipe de forma intuitiva.
+- [ ] F2C-12 **Instrucciones Diferenciadas para Motorizado y Cliente:**
+  - Si la orden contiene `RETAIN_ORIGINAL`: Alerta roja en comanda y WhatsApp *"🔴 OBLIGATORIO: Retener y llevar el récipe original físico a la farmacia (no devolver al cliente)"*.
+  - Si es `SHOW_ONLY`: Alerta amarilla *"🟡 Verificar récipe físico del cliente antes de entregar (se lo queda el cliente)"*.
+- [ ] F2C-13 **Módulo "Pedir con mi Récipe" (Carga directa sin buscar producto por producto):**
+  - Botón prominente en catálogo y landing: *"📸 Pedir con mi Récipe"*.
+  - El cliente sube la foto del récipe manuscrito con su número de contacto y notas opcionales en 1 clic.
+- [ ] F2C-14 **Bandeja de "Cotizaciones por Récipe" en Dashboard de Farmacia:**
+  - El farmaceuta recibe la solicitud, visualiza el récipe y arma el carrito del cliente con el inventario en 2 clics.
+  - Envía la cotización aprobada con enlace directo de pago y notificación en tiempo real.
+- [ ] F2C-15 **Asistente de Detección de Medicamentos (OCR / Sugerencia automática):** Lectura asistida de nombres de medicamentos en el récipe para pre-seleccionar ítems disponibles en stock.
+
+---
+
+### Fase 2E-B — CMS Modular de Secciones, Banners y Estructura Visual (2 días)
+
+Personalización estructural de la landing page para clientes en planes avanzados sin tocar código:
+
+- [ ] F2E-08 **Estructura Modular en `landing_config`:** Soporte para visibilidad de secciones (`promos`, `categories`, `banners`, `about`, `gallery`, `testimonials`) y carrusel de banners promocionales.
+- [ ] F2E-09 **Editor de Bloques en Configuración de Tienda:** Panel visual para activar/desactivar bloques, reordenar secciones y subir hasta 3–5 banners con títulos y enlaces directos al catálogo.
+- [ ] F2E-10 **Galería de Fotos del Local / Fachada:** Subida de fotografías del establecimiento físico a Cloudinary para reforzar confianza del cliente.
+- [ ] F2E-11 **Consumo Modular en Plantillas:** Las plantillas de Farmacia, Restaurante y Supermercado renderizan condicionalmente los bloques según la configuración del comerciante.
+- [ ] F2E-12 **Límites Comerciales por Plan SaaS:** Plan Emprendedor (plantilla fija), Plan Negocio (textos y banner principal), Plan PRO / Add-on CMS (control modular total de bloques y banners ilimitados).
 
 ---
 
