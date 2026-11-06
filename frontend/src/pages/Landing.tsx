@@ -11,6 +11,7 @@ interface StoreConfig {
   theme_color?: string;
   name?: string;
   slug?: string;
+  branches?: any[];
 }
 
 interface Category {

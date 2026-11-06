@@ -11,7 +11,7 @@ export function Hero({ store }: { store?: any }) {
   const slogan = landing.slogan || "Tu salud, a un clic de tu puerta.";
   const subtitle = landing.subtitle || `Medicamentos, cuidado personal y bienestar entregados rápido. ${storeName} — la farmacia de confianza de tu barrio, ahora también online.`;
   const badgePromo = landing.badge_promo || "Delivery activo";
-  const badgeDeliveryTime = landing.badge_delivery_time || "{badgeDeliveryTime}";
+  const badgeDeliveryTime = landing.badge_delivery_time || "Entrega en 45 min";
   const heroImage = landing.hero_image_url || delivery;
 
   return (
@@ -60,7 +60,7 @@ export function Hero({ store }: { store?: any }) {
             className="col-span-12 sm:col-span-7 lg:col-span-4 rounded-3xl overflow-hidden bg-secondary min-h-[280px] relative"
           >
             <img
-              src={delivery}
+              src={heroImage}
               alt="Repartidor de delivery"
               width={1024}
               height={1280}
@@ -71,7 +71,7 @@ export function Hero({ store }: { store?: any }) {
                 <Truck className="w-4 h-4" />
               </span>
               <div className="leading-tight">
-                <div className="font-semibold text-sm">Entrega en 45 min</div>
+                <div className="font-semibold text-sm">{badgeDeliveryTime}</div>
                 <div className="text-xs text-muted-foreground">en zona urbana</div>
               </div>
             </div>

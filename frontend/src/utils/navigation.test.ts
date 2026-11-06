@@ -55,8 +55,20 @@ describe('navigation', () => {
       longitude: -67.6236,
       user: { name: 'Pedro' },
       delivery_address: 'Av. 23 de Enero',
-      prescription_url: 'https://cloudinary.com/recipe.jpg'
+      prescription_url: 'https://cloudinary.com/recipe.jpg',
+      prescription_type: 'RETAIN_ORIGINAL'
     });
-    expect(message).toContain('Retener el récipe médico original');
+    expect(message).toContain('OBLIGATORIO: Retener el récipe médico original');
+  });
+
+  it('incluye advertencia de solo mostrar récipe si es SHOW_ONLY', () => {
+    const message = buildDriverMessage({
+      latitude: 5.6631,
+      longitude: -67.6236,
+      user: { name: 'María' },
+      delivery_address: 'Barrio Simón Bolívar',
+      prescription_type: 'SHOW_ONLY'
+    });
+    expect(message).toContain('Verificar récipe médico del cliente');
   });
 });

@@ -35,7 +35,7 @@ const RealtimeContext = createContext<RealtimeContextValue>({
 export const useClientRealtime = () => useContext(RealtimeContext);
 
 export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
-  const { user, token } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const handlersRef = useRef<Set<OrderHandler>>(new Set());
   const lastStatusRef = useRef<Map<number, string>>(new Map());
   const seededRef = useRef(false);
@@ -54,7 +54,7 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
     lastStatusRef.current = new Map();
     seededRef.current = false;
     let cancelled = false;
-    const socket = createSocket(token || undefined);
+    const socket = createSocket();
 
     const dispatch = (order: RealtimeOrder, notify: boolean) => {
       if (!order?.id) return;

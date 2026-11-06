@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>TiendaFast — Manual del Fundador: Onboarding & Configuración de Clientes</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap');
+
+  :root {
+    --orange: #f97316;
+    --orange-dark: #ea580c;
+    --amber: #fbbf24;
+    --emerald: #10b981;
+    --emerald-dark: #059669;
+    --blue: #0284c7;
+    --blue-dark: #0369a1;
+    --purple: #8b5cf6;
+    --purple-dark: #6d28d9;
+    --ink: #0f172a;
+    --ink-light: #334155;
+    --muted: #64748b;
+    --paper: #ffffff;
+    --bg-card: #f8fafc;
+    --border: #e2e8f0;
+    --tag-bg: #f1f5f9;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'Manrope', Arial, sans-serif; color: var(--ink); background: #e2e8f0; }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+    background: var(--paper);
+    padding: 14mm 16mm 14mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo-box {
+    background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+    color: white;
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    letter-spacing: -0.5px;
+  }
+  .doc-title { font-size: 13px; font-weight: 800; color: var(--ink); }
+  .doc-subtitle { font-size: 10px; color: var(--muted); font-weight: 600; }
+  .confidential-tag {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 4px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  /* FOOTER */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  /* TYPOGRAPHY */
+  h1 { font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 800; line-height: 1.15; color: var(--ink); margin-bottom: 6px; }
+  h2 { font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700; color: var(--ink); margin: 10px 0 6px; }
+  h3 { font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 700; color: var(--ink-light); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  p, li { font-size: 10px; line-height: 1.45; color: var(--ink-light); }
+
+  /* BOXES */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .card-highlight {
+    background: #fff7ed;
+    border: 1.5px solid #fed7aa;
+  }
+  .card-blue {
+    background: #f0f9ff;
+    border: 1.5px solid #bae6fd;
+  }
+  .card-green {
+    background: #f0fdf4;
+    border: 1.5px solid #bbf7d0;
+  }
+  .card-purple {
+    background: #faf5ff;
+    border: 1.5px solid #e9d5ff;
+  }
+
+  /* BADGES */
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .badge-orange { background: #ffedd5; color: #c2410c; }
+  .badge-green { background: #dcfce7; color: #15803d; }
+  .badge-blue { background: #e0f2fe; color: #0369a1; }
+  .badge-purple { background: #f3e8ff; color: #6b21a8; }
+  .badge-red { background: #fee2e2; color: #b91c1c; }
+
+  /* GRIDS & TABLES */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 9.5px; margin: 4px 0 8px; }
+  th, td { padding: 6px 8px; text-align: left; border: 1px solid var(--border); }
+  th { background: #f1f5f9; font-weight: 700; color: var(--ink); text-transform: uppercase; font-size: 8.5px; }
+  tr:nth-child(even) { background: #fafafa; }
+
+  .checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 9.5px;
+    margin-bottom: 4px;
+    color: var(--ink-light);
+  }
+  .check-box {
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid var(--muted);
+    border-radius: 3px;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+
+  .quote-box {
+    border-left: 3px solid var(--orange);
+    padding-left: 10px;
+    font-style: italic;
+    color: #431407;
+    background: #fffaf5;
+    padding: 6px 10px;
+    border-radius: 0 8px 8px 0;
+    margin: 6px 0;
+    font-size: 9.5px;
+  }
+</style>
+</head>
+<body>
+
+<!-- PÁGINA 1: PITCH Y GUION PARA EL PRIMER CLIENTE -->
+<div class="page">
+  <div>
+    <div class="header">
+      <div class="brand">
+        <div class="logo-box">TiendaFast</div>
+        <div>
+          <div class="doc-title">MANUAL DEL FUNDADOR — PROTOCOLO DE ONBOARDING</div>
+          <div class="doc-subtitle">Guía de implantación comercial y configuración para el comercio local</div>
+        </div>
+      </div>
+      <div class="confidential-tag">USO EXCLUSIVO FUNDADOR</div>
+    </div>
+
+    <h1>Paso 1: Guion de Venta & Demostración para tu Primer Cliente</h1>
+    <p style="margin-bottom: 10px;">
+      Tu primer cliente será un negocio de <strong>Comida Rápida (Hamburguesas, Perros Calientes o Pizzería)</strong> en Puerto Ayacucho. A continuación tienes el guion exacto, el dolor que le resuelves y cómo generar el impacto comercial inmediato en menos de 5 minutos.
+    </p>
+
+    <!-- EL DOLOR DEL CLIENTE -->
+    <div class="card card-highlight">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <h3>🚨 El Problema Real que tiene el dueño cada noche</h3>
+        <span class="badge badge-orange">Dolor Operativo Nocturno</span>
+      </div>
+      <p style="font-size: 9.5px; line-height: 1.45;">
+        Los fines de semana entre las 7:00 PM y las 11:30 PM, el WhatsApp del negocio colapsa con 40 personas pidiendo fotos del menú, preguntando precios, mandando capturas de Pago Móvil borrosas y cambiando ingredientes. <strong>Pierden entre 8 y 15 pedidos por noche</strong> por no responder a tiempo, y el cocinero se confunde con el orden de llegada de las comandas.
+      </p>
+    </div>
+
+    <!-- EL PITCH DE 3 MINUTOS -->
+    <div class="card card-blue">
+      <h3>🗣️ Qué decirle al dueño del negocio (Pitch Conversacional)</h3>
+      <div class="quote-box">
+        "Buenas noches amigo. No te vengo a vender un software caro ni a complicarte la vida. Vengo a resolverte el colapso de WhatsApp de los fines de semana. Con TiendaFast, tu cliente abre tu propio link en su teléfono (<strong>tiendafast.com/tu-negocio</strong>), ve tus hamburguesas y combos con fotos apetitosas, arma su orden, paga con Pago Móvil y pone su pin en el mapa. A ti te suena una campanita fuerte en la cocina con el pedido ya listo y pagado. Con un solo clic se lo pasas al motorizado con la ruta en Google Maps. <strong>Te regalo 30 días de prueba sin pagar un solo bolívar para que lo compruebes tú mismo este fin de semana.</strong>"
+      </div>
+    </div>
+
+    <!-- EL EFECTO WOW EN 60 SEGUNDOS -->
+    <h2>El Efecto "Demo en Vivo" frente al dueño</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Paso A: Abre tu teléfono frente a él</h3>
+        <p>1. Entra a <code>test.shop-mg.com/demo-comida</code>.</p>
+        <p>2. Agrega un "Combo Hamburguesa Doble" al carrito.</p>
+        <p>3. Pon una dirección de prueba y dale a confirmar pedido.</p>
+        <p style="color: var(--emerald-dark); font-weight: 700; margin-top: 4px;">Duración: 20 segundos.</p>
+      </div>
+
+      <div class="card">
+        <h3>Paso B: Muestra la pantalla de la Cocina</h3>
+        <p>1. Ten abierta la sesión en su teléfono o en tu tablet.</p>
+        <p>2. Sonará la <strong>campanita sonora (ding-dong)</strong>.</p>
+        <p>3. Aparecerá el pedido arriba en color naranja con el tiempo transcurrido.</p>
+        <p>4. Toca "Aceptar" y muestra cómo se genera el mensaje para el motorizado con el link de Google Maps.</p>
+      </div>
+    </div>
+
+    <!-- OBJECIONES Y RESPUESTAS -->
+    <h2>Cómo responder a sus dudas frecuentes</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 35%;">Objeción del Dueño</th>
+          <th style="width: 65%;">Tu Respuesta Imbatible</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>"Mis clientes están acostumbrados a pedir por WhatsApp"</strong></td>
+          <td>"Excelente, no vas a dejar de usar WhatsApp. Lo que harás es poner tu link en la respuesta automática de WhatsApp Business: <em>'¡Hola! Haz tu pedido aquí en 1 minuto con fotos y delivery: tiendafast.com/tu-negocio'</em>. El cliente compra solo y te llega la comanda lista."</td>
+        </tr>
+        <tr>
+          <td><strong>"No sé usar computadoras ni tecnología"</strong></td>
+          <td>"No necesitas computadora. Todo funciona desde tu propio teléfono o el del cajero. Yo mismo te dejo todo configurado hoy con tus fotos, tus precios y tus datos de Pago Móvil."</td>
+        </tr>
+        <tr>
+          <td><strong>"¿Cuánto me vas a cobrar después de los 30 días?"</strong></td>
+          <td>"Solo $30 al mes (o en bolívares a tasa oficial). Con 2 o 3 hamburguesas que salves en todo el mes ya se pagó sola la plataforma. Si no te gusta en 30 días, no pagas nada."</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    <span>TiendaFast v2.0 • Plataforma Multitenant para Puerto Ayacucho</span>
+    <span>Página 1 de 4</span>
+  </div>
+</div>
+
+<!-- PÁGINA 2: CHECKLIST DE MATERIALES A PEDIR AL CLIENTE -->
+<div class="page">
+  <div>
+    <div class="header">
+      <div class="brand">
+        <div class="logo-box">TiendaFast</div>
+        <div>
+          <div class="doc-title">MANUAL DEL FUNDADOR — FICHA DE RECAUDACIÓN DE DATOS</div>
+          <div class="doc-subtitle">Checklist exhaustivo de lo que debes pedir al comerciante para su alta</div>
+        </div>
+      </div>
+      <div class="confidential-tag">CHECKLIST OPERATIVO</div>
+    </div>
+
+    <h1>Paso 2: Checklist de Requisitos que debes Pedir al Negocio</h1>
+    <p style="margin-bottom: 10px;">
+      Para que el negocio esté listo para despachar en <strong>menos de 2 horas</strong>, pide estos datos exactos. Puedes enviarle esta lista por WhatsApp o anotarlos en una libreta durante tu visita presencial.
+    </p>
+
+    <!-- BLOQUE 1: IDENTIDAD -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <h3>1. Identidad de la Marca & Enlace</h3>
+        <span class="badge badge-blue">Datos Básicos</span>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Nombre Comercial exacto:</strong> Ej. "Burger & Grill Ayacucho".</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Slug / Enlace deseado:</strong> Ej. <code>burger-grill</code> (sin espacios ni ñ).</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Color de Marca:</strong> Naranja (Comida), Rojo, Azul, Verde, Morado.</span></div>
+        </div>
+        <div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Logo o Foto Fachada:</strong> Archivo JPEG/PNG por WhatsApp.</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>WhatsApp de contacto:</strong> Número para atención al público.</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Eslogan corto:</strong> Ej. "El mejor sabor a la parrilla".</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BLOQUE 2: MENÚ Y PRECIOS -->
+    <div class="card card-green">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <h3>2. Menú, Categorías y Combos (Corazón de la Venta)</h3>
+        <span class="badge badge-green">Catálogo</span>
+      </div>
+      <div class="checklist-item"><div class="check-box"></div><span><strong>Lista de Categorías:</strong> Ej. "Hamburguesas", "Perros Calientes", "Bebidas", "Combos Familiares".</span></div>
+      <div class="checklist-item"><div class="check-box"></div><span><strong>Lista de Productos con precio:</strong> Nombre, descripción de ingredientes y precio en USD o Bs.</span></div>
+      <div class="checklist-item"><div class="check-box"></div><span><strong>Combos especiales:</strong> Indicar qué productos incluye cada combo y si tienen precio de descuento.</span></div>
+      <div class="checklist-item"><div class="check-box"></div><span><strong>Fotografías:</strong> Fotos de sus platos principales. <em>(Tip: Si no tienen fotos buenas, tómale 5 fotos con luz natural a sus platos estrella en 10 minutos)</em>.</span></div>
+    </div>
+
+    <!-- BLOQUE 3: DATOS BANCARIOS PAGO MÓVIL -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <h3>3. Datos para Cobro por Pago Móvil & Tasa de Cambio</h3>
+        <span class="badge badge-purple">Financiero</span>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Banco receptor:</strong> Ej. Banesco (0134), Mercantil (0105), Venezuela (0102).</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Teléfono Pago Móvil:</strong> Teléfono registrado en su banco.</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Cédula o RIF del Titular:</strong> V- / J- para recibir pagos.</span></div>
+        </div>
+        <div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Nombre del Titular:</strong> Nombre personal o razón social.</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Tasa de cambio:</strong> Si usa Tasa Oficial BCV o si maneja una tasa fija propia.</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Cobro en Efectivo:</strong> Si acepta dólares en efectivo o pesos colombianos (COP).</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BLOQUE 4: REPARTO Y MOTORIZADOS -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <h3>4. Zonas de Reparto y Motorizados de Confianza</h3>
+        <span class="badge badge-orange">Logística</span>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Dirección física del local:</strong> Punto de partida para calcular distancias.</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Zona 1 (Cercana / Centro):</strong> Tarifa sugerida $1.00 a $1.50.</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Zona 2 (Media / Sur o Triángulo):</strong> Tarifa sugerida $2.00 a $2.50.</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Zona 3 (Lejana / Carinagua o Periferia):</strong> Tarifa sugerida $3.00 a $4.00.</span></div>
+        </div>
+        <div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Motorizado 1:</strong> Nombre completo, WhatsApp y placa de la moto.</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Motorizado 2 (opcional):</strong> Nombre, WhatsApp y placa.</span></div>
+          <div class="checklist-item"><div class="check-box"></div><span><strong>Tiempo promedio de entrega:</strong> Ej. "25 a 35 minutos".</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>TiendaFast v2.0 • Protocolo de Onboarding del Fundador</span>
+    <span>Página 2 de 4</span>
+  </div>
+</div>
+
+<!-- PÁGINA 3: CONFIGURACIÓN SEGÚN EL PLAN EN SUPERADMIN Y SETTINGS -->
+<div class="page">
+  <div>
+    <div class="header">
+      <div class="brand">
+        <div class="logo-box">TiendaFast</div>
+        <div>
+          <div class="doc-title">MANUAL DEL FUNDADOR — CONFIGURACIÓN TÉCNICA POR PLAN</div>
+          <div class="doc-subtitle">Procedimiento para dar de alta y personalizar la tienda en SuperAdmin</div>
+        </div>
+      </div>
+      <div class="confidential-tag">GUÍA TÉCNICA</div>
+    </div>
+
+    <h1>Paso 3: Cómo Configurar la Tienda según el Plan Contratado</h1>
+    <p style="margin-bottom: 10px;">
+      Como fundador de la app, eres el encargado de crear el inquilino (Tenant) en el panel SuperAdmin y dejar configurado el CMS según lo que el cliente pague.
+    </p>
+
+    <!-- MATRIZ DE PLANES -->
+    <h2>Matriz de Capacidades y Precios de la Plataforma</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Característica</th>
+          <th>Plan Emprendedor ($15/m)</th>
+          <th>Plan Negocio ($30/m) ⭐ <em>(Primer Cliente)</em></th>
+          <th>Plan PRO ($50/m)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Límite de Productos</strong></td>
+          <td>Hasta 50 productos</td>
+          <td>Hasta 250 productos y combos</td>
+          <td>Hasta 1,000 productos y combos</td>
+        </tr>
+        <tr>
+          <td><strong>Personalización Landing</strong></td>
+          <td>Plantilla estándar fija con logo</td>
+          <td>Eslogan, subtítulo y tiempo de entrega</td>
+          <td><strong>Editor Modular CMS</strong> (Banners rotativos y galería)</td>
+        </tr>
+        <tr>
+          <td><strong>Sucursales</strong></td>
+          <td>1 sola sede física</td>
+          <td>1 sede (+ $10/m por sucursal extra)</td>
+          <td>Multi-Sucursal incluida con selector de sede</td>
+        </tr>
+        <tr>
+          <td><strong>Récipes Farmacéuticos</strong></td>
+          <td>Básico</td>
+          <td>Récipes con retención y validación</td>
+          <td>Bandeja de Cotizaciones y sugerencia IA</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- PASO A PASO EN SUPERADMIN -->
+    <h2>Procedimiento de Alta en el Panel SuperAdmin (5 Minutos)</h2>
+    <div class="card card-purple">
+      <h3>Acceso: Inicia sesión en <code>/superadmin</code> con tu usuario maestro</h3>
+      <ol style="padding-left: 14px; font-size: 9.5px; line-height: 1.5; margin-top: 4px;">
+        <li>En la columna izquierda <strong>"+ Nueva Tienda"</strong>, escribe el Nombre del negocio (ej: <em>Papas & Burgers</em>).</li>
+        <li>Escribe el slug en minúsculas y sin acentos (ej: <code>papas-burgers</code>).</li>
+        <li>Selecciona el <strong>Tipo de Negocio</strong>: <code>Comida Rápida</code> (carga la plantilla con carrusel de comida y colores cálidos).</li>
+        <li>Elige el color principal de la marca (ej: Naranja o Rojo).</li>
+        <li>Crea el usuario y contraseña del administrador (ej: <code>admin_burgers</code> / contraseña segura temporal).</li>
+        <li>Selecciona el <strong>Plan</strong>: <code>NEGOCIO ($30/mes)</code> y define <strong>30 días de período de prueba</strong>.</li>
+        <li>Haz clic en <strong>"Crear Tienda"</strong>. La tienda y sus tablas quedarán aisladas y activas al instante.</li>
+      </ol>
+    </div>
+
+    <!-- PASO A PASO EN SETTINGS -->
+    <h2>Personalización en el Panel de la Tienda (<code>/admin/slug/settings</code>)</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>1. Datos de Pago Móvil & Tasas</h3>
+        <p>• Coloca el Banco, Cédula, Teléfono y Titular recopilados en el Checklist.</p>
+        <p>• Si cobra a tasa oficial, haz clic en el botón <strong>"Sincronizar BCV"</strong>.</p>
+        <p>• En la nota de pago escribe: <em>"Enviar captura por WhatsApp para agilizar despacho."</em></p>
+      </div>
+
+      <div class="card">
+        <h3>2. Personalización de Landing (CMS)</h3>
+        <p>• <strong>Eslogan:</strong> Escribe una frase atractiva (ej: <em>"Hamburguesas al carbón hechas al instante"</em>).</p>
+        <p>• <strong>Subtítulo:</strong> Descripción del local y horarios de atención.</p>
+        <p>• <strong>Banner Hero:</strong> Sube una foto de su mejor hamburguesa a Cloudinary.</p>
+        <p>• <strong>WhatsApp:</strong> Coloca el teléfono directo de pedidos del local.</p>
+      </div>
+    </div>
+
+    <!-- CAPACITACIÓN AL PERSONAL -->
+    <div class="card card-highlight" style="margin-top: 6px;">
+      <h3>👨‍🍳 Capacitación Express al Personal de Cocina (15 Minutos presenciales)</h3>
+      <p style="font-size: 9px; line-height: 1.4;">
+        1. En el teléfono del cocinero o cajero, abre Chrome y entra a <code>test.shop-mg.com/admin/slug</code>.<br/>
+        2. Toca los tres puntos de Chrome y selecciona <strong>"Agregar a la pantalla principal"</strong> (queda como una app en el celular).<br/>
+        3. Haz clic en el botón <strong>"🔔 Probar campanita"</strong> para desbloquear el audio del navegador.<br/>
+        4. Enséñales que los pedidos nuevos salen arriba ordenados por tiempo de espera y que con el botón verde aceptan el pedido.
+      </p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>TiendaFast v2.0 • Configuración Técnica del Fundador</span>
+    <span>Página 3 de 4</span>
+  </div>
+</div>
+
+<!-- PÁGINA 4: ADAPTACIÓN A VÍVERES/FARMACIAS Y PROTOCOLO DE COBRO -->
+<div class="page">
+  <div>
+    <div class="header">
+      <div class="brand">
+        <div class="logo-box">TiendaFast</div>
+        <div>
+          <div class="doc-title">MANUAL DEL FUNDADOR — EXPANSION A OTRAS VERTICALES & CIERRE</div>
+          <div class="doc-subtitle">Adaptación para Bodegones, Farmacias y Protocolo de Cobro Recurrente</div>
+        </div>
+      </div>
+      <div class="confidential-tag">MODELO DE NEGOCIO</div>
+    </div>
+
+    <h1>Paso 4: Adaptación a otras Verticales y Cobro de Mensualidad</h1>
+    <p style="margin-bottom: 10px;">
+      El sistema es multitenant y multi-industria. Una vez que domines tu primer cliente de comida rápida, aplica esta misma metodología con abastos, bodegones y farmacias locales.
+    </p>
+
+    <!-- VERTICAL VÍVERES -->
+    <div class="card card-green">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <h3>🛒 Adaptación para Víveres, Abastos y Bodegones</h3>
+        <span class="badge badge-green">Vertical Bodegones</span>
+      </div>
+      <div class="grid-2">
+        <div>
+          <p><strong>El Dolor:</strong> La gente no quiere cargar bultos pesados de harina, arroz o agua potable hasta su casa, o hacen filas eternas en el mostrador.</p>
+          <p><strong>Enfoque de Venta:</strong> <em>"Permite que las familias hagan su mercado semanal desde la casa y tú se lo envías directo a su puerta en motorizado o carro."</em></p>
+        </div>
+        <div>
+          <p><strong>Puntos Clave de Configuración:</strong></p>
+          <p>• Tipo de negocio: <code>Supermercado</code> (verde, categorías familiares).</p>
+          <p>• Indispensable activar la sincronización diaria de <strong>Tasa BCV</strong>.</p>
+          <p>• Categorías sugeridas: Granos y Pastas, Charcutería, Bebidas, Limpieza.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- VERTICAL FARMACIAS -->
+    <div class="card card-blue">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <h3>💊 Adaptación para Farmacias y Cuidado Personal</h3>
+        <span class="badge badge-blue">Vertical Farmacias</span>
+      </div>
+      <div class="grid-2">
+        <div>
+          <p><strong>El Dolor:</strong> Pacientes con fiebre o emergencia nocturna que no pueden salir a buscar medicinas, o recetas que cuesta descifrar.</p>
+          <p><strong>Función Estrella:</strong> <em>"Pedir con mi Récipe"</em>. El cliente le toma foto a la receta y el farmaceuta le arma el pedido con los medicamentos disponibles.</p>
+        </div>
+        <div>
+          <p><strong>Puntos Clave de Configuración:</strong></p>
+          <p>• Tipo de negocio: <code>Farmacia</code> (azul/verde menta, badges médicos).</p>
+          <p>• Configurar récipe: <em>Venta Libre</em>, <em>Solo Mostrar</em> o <em>Retener en Farmacia</em>.</p>
+          <p>• Activar advertencia al motorizado para traer el récipe físico original.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROTOCOLO DE COBRO Y CIERRE SAAS -->
+    <h2>Protocolo de Cierre y Cobro de la Mensualidad (Día 25 al 30)</h2>
+    <div class="card card-highlight">
+      <h3>📅 Cómo cobrar los $30/mes después de la prueba gratuita</h3>
+      <p style="font-size: 9.5px; line-height: 1.5;">
+        <strong>Día 25 (Visita de Cierre):</strong> Ve al local y abre la pestaña <strong>Analytics / Reportes</strong> de su panel. Muéstrale los números reales: cuántos pedidos despachó y cuánto dinero ingresó gracias a la plataforma.<br/>
+        <strong>El Argumento de Cierre:</strong> <em>"Hermano, este mes despachaste 85 pedidos por TiendaFast. Sin la app, la mitad de esos clientes se habrían ido a otro negocio porque tu WhatsApp estaba ocupado. La plataforma te costará solo $30 al mes. ¿Te genero tu recibo para el próximo mes?"</em><br/>
+        <strong>Emisión de Recibo en 1 Clic:</strong> En tu panel SuperAdmin, busca su tienda, haz clic en <strong>"Registrar Pago"</strong>, selecciona el método (Pago Móvil / Efectivo) y presiona <strong>"Imprimir Recibo"</strong>. Le entregas su recibo membretado y le envías el comprobante formateado por WhatsApp.
+      </p>
+    </div>
+
+    <!-- RESUMEN FINAL DE METAS -->
+    <h2>Metas del Piloto de 60 Días en Puerto Ayacucho</h2>
+    <div class="grid-3">
+      <div class="card" style="text-align: center;">
+        <span class="badge badge-orange">Meta 1</span>
+        <p style="font-weight: 800; font-size: 11px; margin-top: 4px;">2 Comida Rápida</p>
+        <p style="font-size: 8.5px; color: var(--muted);">Puestos nocturnos activos</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <span class="badge badge-green">Meta 2</span>
+        <p style="font-weight: 800; font-size: 11px; margin-top: 4px;">2 Víveres / Bodegón</p>
+        <p style="font-size: 8.5px; color: var(--muted);">Compras de hogar semanales</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <span class="badge badge-blue">Meta 3</span>
+        <p style="font-weight: 800; font-size: 11px; margin-top: 4px;">2 Farmacias</p>
+        <p style="font-size: 8.5px; color: var(--muted);">Pedidos express de salud</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>TiendaFast v2.0 • Diseñado para potenciar el comercio local • Puerto Ayacucho, Amazonas</span>
+    <span>Página 4 de 4</span>
+  </div>
+</div>
+
+</body>
+</html>

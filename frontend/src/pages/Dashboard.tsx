@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { io, Socket } from 'socket.io-client';
-import { getSocketURL, createSocket } from '../lib/socket';
+import { Socket } from 'socket.io-client';
+import { createSocket } from '../lib/socket';
 import { playOrderChime } from '../lib/notifications';
 import api from '../api';
-import { Bell, MapPin, CheckCircle, Package, Clock, Phone, XCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Truck, User, X, Utensils, Check, Navigation } from 'lucide-react';
+import { Bell, MapPin, CheckCircle, Package, Clock, Phone, XCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Truck, User, X, Utensils, Check, Navigation, FileText, MessageSquare, Plus } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardFooter } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -14,6 +14,8 @@ import { Checkbox } from '../components/ui/checkbox';
 import AdminLayout from '../components/AdminLayout';
 import RejectOrderDialog from '../components/RejectOrderDialog';
 import ConnectionStatus from '../components/ConnectionStatus';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import { formatPrice } from '../utils/currency';
 import { buildGoogleMapsUrl, buildWazeUrl } from '../utils/navigation';
@@ -105,6 +107,17 @@ export default function Dashboard() {
   const [showDispatchModal, setShowDispatchModal] = useState<Order | null>(null);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<number | ''>('');
+
+  // F2C-14: Gestión de Cotizaciones por Récipe
+  const [prescriptionQuotes, setPrescriptionQuotes] = useState<any[]>([]);
+  const [isQuotesListOpen, setIsQuotesListOpen] = useState(false);
+  const [activeQuote, setActiveQuote] = useState<any | null>(null);
+  const [newQuoteItemName, setNewQuoteItemName] = useState('');
+  const [newQuoteItemPrice, setNewQuoteItemPrice] = useState('');
+  const [newQuoteItemQty, setNewQuoteItemQty] = useState('1');
+  const [quoteItemsList, setQuoteItemsList] = useState<{ name: string; quantity: number; price: number }[]>([]);
+  const [quoteAdminNotes, setQuoteAdminNotes] = useState('');
+  const [savingQuote, setSavingQuote] = useState(false);
   const ITEMS_PER_PAGE = 10;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const urgentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -210,7 +223,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!storeId) return;
 
-    const socketURL = getSocketURL();
+    
     let reconnectAttempts = 0;
     let reconnectTimer: ReturnType<typeof setTimeout>;
 
@@ -257,6 +270,16 @@ export default function Dashboard() {
         setAlertQueue(prev => prev.filter(o => o.id !== updatedOrder.id));
         // Si el pedido actualizado es el que se está despachando, cerrar modal
         setShowDispatchModal(prev => prev?.id === updatedOrder.id ? null : prev);
+      });
+
+      socket.on('new_prescription_quote', (quote: any) => {
+        setPrescriptionQuotes(prev => [quote, ...prev]);
+        playOrderChime();
+        toast.info(`¡Nuevo récipe médico recibido de ${quote.customer_name}!`);
+      });
+
+      socket.on('prescription_quote_updated', (updatedQuote: any) => {
+        setPrescriptionQuotes(prev => prev.map(q => q.id === updatedQuote.id ? updatedQuote : q));
       });
     }
 
@@ -386,6 +409,109 @@ export default function Dashboard() {
   };
 
   // F2D-04: Cola de pedidos pendientes ordenada por tiempo de espera (FIFO: el más antiguo primero)
+  
+  const openQuoteEditor = (quote: any) => {
+    setActiveQuote(quote);
+    setQuoteItemsList(Array.isArray(quote.items) ? quote.items : []);
+    setQuoteAdminNotes(quote.admin_notes || '');
+    setNewQuoteItemName('');
+    setNewQuoteItemPrice('');
+    setNewQuoteItemQty('1');
+  };
+
+  const handleAddItemToQuote = () => {
+    if (!newQuoteItemName || !newQuoteItemPrice) {
+      toast.error("Indica nombre y precio del medicamento");
+      return;
+    }
+    const price = parseFloat(newQuoteItemPrice);
+    const qty = parseInt(newQuoteItemQty) || 1;
+    if (isNaN(price) || price <= 0) {
+      toast.error("Precio inválido");
+      return;
+    }
+    setQuoteItemsList(prev => [...prev, { name: newQuoteItemName.trim(), price, quantity: qty }]);
+    setNewQuoteItemName('');
+    setNewQuoteItemPrice('');
+    setNewQuoteItemQty('1');
+  };
+
+  const handleRemoveItemFromQuote = (index: number) => {
+    setQuoteItemsList(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const quoteTotalUsd = quoteItemsList.reduce((acc, it) => acc + it.price * it.quantity, 0);
+  const quoteTotalVes = storeConfig?.ves_rate ? (quoteTotalUsd * Number(storeConfig.ves_rate)).toFixed(2) : null;
+
+  const handleSendQuotation = async () => {
+    if (!activeQuote) return;
+    if (quoteItemsList.length === 0) {
+      toast.error("Agrega al menos un medicamento a la cotización");
+      return;
+    }
+    setSavingQuote(true);
+    try {
+      const res = await api.put(`/orders/prescription-quote/${activeQuote.id}`, {
+        status: 'QUOTED',
+        items: quoteItemsList,
+        total_usd: quoteTotalUsd,
+        total_ves: quoteTotalVes ? parseFloat(quoteTotalVes) : null,
+        admin_notes: quoteAdminNotes
+      });
+      setPrescriptionQuotes(prev => prev.map(q => q.id === activeQuote.id ? res.data.quote : q));
+      toast.success("Cotización guardada exitosamente");
+
+      // Generar mensaje de WhatsApp para el cliente
+      const lines = [
+        `¡Hola ${activeQuote.customer_name}! Te saludamos de ${storeConfig?.name || 'la Farmacia'}.`,
+        `Revisamos el récipe médico que nos enviaste. Disponemos de los siguientes medicamentos:`,
+        ''
+      ];
+      quoteItemsList.forEach(item => {
+        lines.push(`• ${item.quantity}x ${item.name} - ${(item.price * item.quantity).toFixed(2)}`);
+      });
+      lines.push('');
+      lines.push(`*Total en USD:* ${quoteTotalUsd.toFixed(2)}`);
+      if (quoteTotalVes) {
+        lines.push(`*Total en Bolívares (BCV):* Bs. ${quoteTotalVes}`);
+      }
+      if (quoteAdminNotes) {
+        lines.push(`*Nota del Farmaceuta:* ${quoteAdminNotes}`);
+      }
+      if (activeQuote.delivery_address) {
+        lines.push(`*Dirección de entrega:* ${activeQuote.delivery_address}`);
+      }
+      lines.push('');
+      lines.push('¿Deseas que te lo preparemos y enviemos con nuestro motorizado?');
+
+      const waUrl = `https://wa.me/${activeQuote.customer_phone.replace(/\D/g, '')}?text=${encodeURIComponent(lines.join('\n'))}`;
+      window.open(waUrl, '_blank');
+      setActiveQuote(null);
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || "Error al actualizar cotización");
+    } finally {
+      setSavingQuote(false);
+    }
+  };
+
+  const handleRejectQuotation = async () => {
+    if (!activeQuote) return;
+    setSavingQuote(true);
+    try {
+      const res = await api.put(`/orders/prescription-quote/${activeQuote.id}`, {
+        status: 'REJECTED',
+        admin_notes: quoteAdminNotes || 'No disponemos de los medicamentos indicados en el récipe actualmente.'
+      });
+      setPrescriptionQuotes(prev => prev.map(q => q.id === activeQuote.id ? res.data.quote : q));
+      toast.info("Cotización marcada como rechazada/no disponible");
+      setActiveQuote(null);
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || "Error al rechazar cotización");
+    } finally {
+      setSavingQuote(false);
+    }
+  };
+
   const getOrdersForColumn = (status: string) => {
     const filtered = orders.filter(o => o.status === status);
     if (status === 'PENDING' || status === 'AWAITING_PAYMENT') {
@@ -421,7 +547,21 @@ export default function Dashboard() {
   return (
     <AdminLayout title="Panel de Despachos">
       <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-        <ConnectionStatus connected={connected} />
+        
+        {/* F2C-14: Botón de Cotizaciones de Récipe */}
+        <Button
+          onClick={() => setIsQuotesListOpen(true)}
+          className="relative bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md h-9 px-3 text-xs flex items-center gap-1.5"
+        >
+          <FileText size={15} /> Récipes Médicos
+          {prescriptionQuotes.filter(q => q.status === 'PENDING').length > 0 && (
+            <span className="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-black animate-pulse">
+              {prescriptionQuotes.filter(q => q.status === 'PENDING').length}
+            </span>
+          )}
+        </Button>
+
+          <ConnectionStatus connected={connected} />
         <Button
           variant="outline"
           size="sm"
@@ -1004,6 +1144,201 @@ export default function Dashboard() {
 
       <audio ref={audioRef} src="/notification.mp3" preload="auto" />
       <audio ref={urgentAudioRef} src="/notification-urgent.mp3" preload="auto" />
+    
+      {/* Modal Lista de Cotizaciones de Récipe */}
+      <Dialog open={isQuotesListOpen} onOpenChange={setIsQuotesListOpen}>
+        <DialogContent className="max-w-3xl rounded-2xl bg-white max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black flex items-center gap-2">
+              <FileText className="text-emerald-600" /> Solicitudes de Cotización por Récipe ({prescriptionQuotes.length})
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Récipes subidos por clientes que no buscaron productos uno a uno. Cotízales en 2 clics y envíales el total directo por WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+
+          {prescriptionQuotes.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground text-sm font-medium">
+              No hay solicitudes de récipe registradas aún.
+            </div>
+          ) : (
+            <div className="space-y-3 mt-4">
+              {prescriptionQuotes.map(q => (
+                <div key={q.id} className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <a href={q.prescription_url} target="_blank" rel="noopener noreferrer" className="relative group">
+                      <img src={q.prescription_url} alt="Récipe" className="w-16 h-16 object-cover rounded-xl border border-gray-300 shadow-sm" />
+                      <span className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">Ver</span>
+                    </a>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-gray-900 text-sm">{q.customer_name}</p>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          q.status === 'PENDING' ? 'bg-amber-100 text-amber-800' :
+                          q.status === 'QUOTED' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-700'
+                        }`}>
+                          {q.status === 'PENDING' ? 'Pendiente' : q.status === 'QUOTED' ? 'Cotizado' : 'Rechazado'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">{q.customer_phone} {q.delivery_address ? `• ${q.delivery_address}` : ''}</p>
+                      {q.notes && <p className="text-xs text-gray-600 italic mt-0.5 font-medium">"{q.notes}"</p>}
+                      <p className="text-[10px] text-gray-400 mt-1">{new Date(q.created_at).toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 self-end sm:self-center">
+                    <Button
+                      size="sm"
+                      onClick={() => openQuoteEditor(q)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-sm"
+                    >
+                      {q.status === 'QUOTED' ? 'Re-cotizar' : 'Armar Cotización'}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Armador de Cotización */}
+      <Dialog open={Boolean(activeQuote)} onOpenChange={(open) => { if (!open) setActiveQuote(null); }}>
+        <DialogContent className="max-w-2xl rounded-2xl bg-white max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black flex items-center gap-2">
+              <FileText className="text-emerald-600" /> Cotizar Récipe de {activeQuote?.customer_name}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Revisa el récipe, agrega los medicamentos en stock y genera la respuesta automática para WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+
+          {activeQuote && (
+            <div className="space-y-4 mt-2">
+              {/* Imagen del Récipe */}
+              <div className="p-2 rounded-xl bg-gray-100 border border-gray-200 text-center">
+                <a href={activeQuote.prescription_url} target="_blank" rel="noopener noreferrer" className="inline-block relative">
+                  <img src={activeQuote.prescription_url} alt="Récipe Médico" className="max-h-56 mx-auto rounded-lg shadow-md object-contain" />
+                  <span className="mt-1 block text-xs font-bold text-blue-600 underline">Clic para abrir en tamaño completo</span>
+                </a>
+              </div>
+
+              {/* Formulario de agregar medicamento */}
+              <div className="p-3 rounded-xl border border-dashed border-gray-300 bg-gray-50/70 space-y-2">
+                <p className="text-xs font-bold uppercase text-gray-600">Agregar Medicamento Cotizado</p>
+                <div className="grid grid-cols-12 gap-2">
+                  <div className="col-span-6">
+                    <Input
+                      placeholder="Nombre del medicamento (ej. Amoxicilina 500mg)"
+                      value={newQuoteItemName}
+                      onChange={e => setNewQuoteItemName(e.target.value)}
+                      className="h-9 text-xs bg-white"
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Precio USD"
+                      value={newQuoteItemPrice}
+                      onChange={e => setNewQuoteItemPrice(e.target.value)}
+                      className="h-9 text-xs bg-white"
+                    />
+                  </div>
+                  <div className="col-span-3 flex gap-2">
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Cant"
+                      value={newQuoteItemQty}
+                      onChange={e => setNewQuoteItemQty(e.target.value)}
+                      className="h-9 text-xs bg-white w-14 text-center"
+                    />
+                    <Button type="button" size="sm" onClick={handleAddItemToQuote} className="h-9 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">
+                      <Plus size={14} />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lista de medicamentos agregados */}
+              {quoteItemsList.length > 0 && (
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-100 border-b border-gray-200">
+                      <tr>
+                        <th className="py-2 px-3 text-left">Medicamento</th>
+                        <th className="py-2 px-3 text-center">Cant</th>
+                        <th className="py-2 px-3 text-right">Precio</th>
+                        <th className="py-2 px-3 text-right">Subtotal</th>
+                        <th className="py-2 px-2 text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {quoteItemsList.map((it, idx) => (
+                        <tr key={idx}>
+                          <td className="py-2 px-3 font-semibold">{it.name}</td>
+                          <td className="py-2 px-3 text-center">{it.quantity}</td>
+                          <td className="py-2 px-3 text-right">${it.price.toFixed(2)}</td>
+                          <td className="py-2 px-3 text-right font-bold">${(it.price * it.quantity).toFixed(2)}</td>
+                          <td className="py-2 px-2 text-center">
+                            <button type="button" onClick={() => handleRemoveItemFromQuote(idx)} className="text-red-500 hover:text-red-700">
+                              <Trash2 size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Totales */}
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex justify-between items-center text-sm font-bold text-emerald-950">
+                <span>Total Estimado de la Orden:</span>
+                <div className="text-right">
+                  <span className="text-base text-emerald-700">${quoteTotalUsd.toFixed(2)}</span>
+                  {quoteTotalVes && <span className="block text-xs text-emerald-800">Bs. {quoteTotalVes} (Tasa BCV)</span>}
+                </div>
+              </div>
+
+              {/* Notas del Farmaceuta */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 uppercase">Indicaciones o Notas para el Cliente</label>
+                <Input
+                  placeholder="Ej. Tenemos marca genérica disponible, tomar cada 8 horas."
+                  value={quoteAdminNotes}
+                  onChange={e => setQuoteAdminNotes(e.target.value)}
+                  className="text-xs bg-white"
+                />
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-2 justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleRejectQuotation}
+                  disabled={savingQuote}
+                  className="text-rose-600 border-rose-200 hover:bg-rose-50 text-xs font-bold"
+                >
+                  No Disponemos en Stock
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSendQuotation}
+                  disabled={savingQuote || quoteItemsList.length === 0}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-5 rounded-xl shadow-lg shadow-emerald-600/20"
+                >
+                  <MessageSquare size={16} className="mr-1.5" /> Guardar y Enviar Cotización por WhatsApp
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </AdminLayout>
   );
 }

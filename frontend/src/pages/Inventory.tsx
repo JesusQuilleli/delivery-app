@@ -31,6 +31,10 @@ interface Product {
   is_combo: boolean;
   category_id?: number | null;
   category?: Category;
+  requires_prescription?: boolean;
+  prescription_type?: string;
+  lot_number?: string | null;
+  expires_at?: string | null;
   comboItems?: { product_id: number; product: Product; quantity: number }[];
 }
 
@@ -81,6 +85,9 @@ export default function Inventory() {
   const [newProductStock, setNewProductStock] = useState('');
   const [newProductImage, setNewProductImage] = useState('');
   const [newProductCategoryId, setNewProductCategoryId] = useState<number | ''>('');
+  const [newPrescriptionType, setNewPrescriptionType] = useState<'NONE' | 'SHOW_ONLY' | 'RETAIN_ORIGINAL'>('NONE');
+  const [newLotNumber, setNewLotNumber] = useState('');
+  const [newExpiresAt, setNewExpiresAt] = useState('');
 
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
 
@@ -100,6 +107,9 @@ export default function Inventory() {
   const [editProductStock, setEditProductStock] = useState('');
   const [editProductImage, setEditProductImage] = useState('');
   const [editProductCategoryId, setEditProductCategoryId] = useState<number | ''>('');
+  const [editPrescriptionType, setEditPrescriptionType] = useState<'NONE' | 'SHOW_ONLY' | 'RETAIN_ORIGINAL'>('NONE');
+  const [editLotNumber, setEditLotNumber] = useState('');
+  const [editExpiresAt, setEditExpiresAt] = useState('');
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
 
   // Formulario Categorías
@@ -342,6 +352,9 @@ export default function Inventory() {
     setEditProductStock(p.stock !== null && p.stock !== undefined ? p.stock.toString() : '');
     setEditProductImage(p.image_url || '');
     setEditProductCategoryId(p.category_id || '');
+    setEditPrescriptionType((p.prescription_type as any) || (p.requires_prescription ? 'RETAIN_ORIGINAL' : 'NONE'));
+    setEditLotNumber(p.lot_number || '');
+    setEditExpiresAt(p.expires_at ? p.expires_at.split('T')[0] : '');
     setIsEditProductOpen(true);
   };
 
@@ -355,7 +368,10 @@ export default function Inventory() {
         description: editProductDesc,
         stock: editProductStock !== '' ? parseInt(editProductStock) : null,
         image_url: editProductImage,
-        category_id: editProductCategoryId ? Number(editProductCategoryId) : null
+        category_id: editProductCategoryId ? Number(editProductCategoryId) : null,
+        prescription_type: editPrescriptionType,
+        lot_number: editLotNumber ? editLotNumber.trim() : null,
+        expires_at: editExpiresAt ? editExpiresAt : null
       };
       const res = await api.put(`/inventory/products/${editingProduct.id}`, payload);
       setProducts(products.map(p => p.id === editingProduct.id ? res.data.product : p));
@@ -590,6 +606,29 @@ export default function Inventory() {
                     <Input value={newProductDesc} onChange={e => setNewProductDesc(e.target.value)} placeholder="Detalles del producto..." className="rounded-xl bg-gray-50 border-gray-200" />
                   </div>
                   <div className="space-y-1">
+                    <Label className="font-bold text-gray-700">Tipo de Récipe Médico (Farmacias)</Label>
+                    <select
+                      value={newPrescriptionType}
+                      onChange={e => setNewPrescriptionType(e.target.value as any)}
+                      className="flex h-10 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+                    >
+                      <option value="NONE">Venta Libre (Sin récipe)</option>
+                      <option value="SHOW_ONLY">Requiere Récipe (Solo mostrar al motorizado)</option>
+                      <option value="RETAIN_ORIGINAL">Retención Obligatoria (Motorizado debe retenerlo para archivo)</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="font-bold text-gray-700 text-xs">Nº Lote (Opcional)</Label>
+                      <Input value={newLotNumber} onChange={e => setNewLotNumber(e.target.value)} placeholder="Ej. L-2026A" className="rounded-xl bg-gray-50 border-gray-200 h-10 text-xs" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="font-bold text-gray-700 text-xs">Vencimiento</Label>
+                      <Input type="date" value={newExpiresAt} onChange={e => setNewExpiresAt(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200 h-10 text-xs" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
                     <Label className="font-bold text-gray-700">Subir Imagen (Opcional)</Label>
                     <div className="flex gap-2 items-center">
                       <Input
@@ -651,6 +690,29 @@ export default function Inventory() {
                   <div className="space-y-1">
                     <Label className="font-bold text-gray-700">Descripción (Opcional)</Label>
                     <Input value={editProductDesc} onChange={e => setEditProductDesc(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="font-bold text-gray-700">Tipo de Récipe Médico (Farmacias)</Label>
+                    <select
+                      value={editPrescriptionType}
+                      onChange={e => setEditPrescriptionType(e.target.value as any)}
+                      className="flex h-10 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+                    >
+                      <option value="NONE">Venta Libre (Sin récipe)</option>
+                      <option value="SHOW_ONLY">Requiere Récipe (Solo mostrar al motorizado)</option>
+                      <option value="RETAIN_ORIGINAL">Retención Obligatoria (Motorizado debe retenerlo para archivo)</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="font-bold text-gray-700 text-xs">Nº Lote (Opcional)</Label>
+                      <Input value={editLotNumber} onChange={e => setEditLotNumber(e.target.value)} placeholder="Ej. L-2026A" className="rounded-xl bg-gray-50 border-gray-200 h-10 text-xs" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="font-bold text-gray-700 text-xs">Vencimiento</Label>
+                      <Input type="date" value={editExpiresAt} onChange={e => setEditExpiresAt(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200 h-10 text-xs" />
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <Label className="font-bold text-gray-700">Subir Imagen (Opcional)</Label>

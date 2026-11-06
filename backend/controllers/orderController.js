@@ -118,10 +118,19 @@ const placeOrder = async (req, res) => {
     }
 
     // F2C-02: Validar récipe médico obligatorio si algún producto lo requiere
-    const requiresPrescription = products.some(p => p.requires_prescription);
+    let resolvedPrescriptionType = 'NONE';
+    if (products.some(p => p.prescription_type === 'RETAIN_ORIGINAL' || (p.requires_prescription && p.prescription_type !== 'SHOW_ONLY'))) {
+      resolvedPrescriptionType = 'RETAIN_ORIGINAL';
+    } else if (products.some(p => p.prescription_type === 'SHOW_ONLY')) {
+      resolvedPrescriptionType = 'SHOW_ONLY';
+    }
+
+    const requiresPrescription = resolvedPrescriptionType !== 'NONE';
     if (requiresPrescription && !prescription_url) {
       return res.status(400).json({
-        error: 'Uno o más medicamentos en tu pedido requieren récipe médico. Por favor adjunta la fotografía del récipe para continuar.'
+        error: resolvedPrescriptionType === 'RETAIN_ORIGINAL'
+          ? 'Uno o más medicamentos en tu pedido requieren retención física obligatoria del récipe original en farmacia. Por favor adjunta la fotografía del récipe para continuar.'
+          : 'Uno o más medicamentos en tu pedido requieren récipe médico (para mostrar al motorizado). Por favor adjunta la fotografía del récipe para continuar.'
       });
     }
 
@@ -232,6 +241,9 @@ const placeOrder = async (req, res) => {
           payment_method,
           payment_reference: payment_reference || null,
           status: payment_method === 'TRANSFER' ? 'AWAITING_PAYMENT' : 'PENDING',
+          prescription_url: prescription_url || null,
+          prescription_status: requiresPrescription ? 'PENDING_REVIEW' : 'NOT_REQUIRED',
+          prescription_type: resolvedPrescriptionType,
           items: {
             create: verifiedItems.map(item => ({
               product: { connect: { id: item.product_id } },
@@ -721,4 +733,97 @@ const reviewPrescription = async (req, res) => {
   }
 };
 
-module.exports = { placeOrder, updateOrderStatus, deleteOrder, getMyOrders, getMyAddresses, rateOrder, getOrderById, cancelOrderClient, batchUpdateStatus, markOrderViewed };
+
+const createPrescriptionQuote = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { customer_name, customer_phone, delivery_address, prescription_url, notes } = req.body;
+
+    if (!customer_name || !customer_phone || !prescription_url) {
+      return res.status(400).json({ error: 'Nombre, teléfono y foto del récipe son obligatorios.' });
+    }
+
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const quote = await prisma.prescriptionQuote.create({
+      data: {
+        store_id: store.id,
+        user_id: req.user ? req.user.id : null,
+        customer_name: String(customer_name).trim(),
+        customer_phone: String(customer_phone).trim(),
+        delivery_address: delivery_address ? String(delivery_address).trim() : null,
+        prescription_url: String(prescription_url).trim(),
+        notes: notes ? String(notes).trim() : null,
+        status: 'PENDING'
+      }
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`store_${store.id}`).emit('new_prescription_quote', quote);
+    }
+
+    res.status(201).json({ message: 'Solicitud de cotización enviada exitosamente', quote });
+  } catch (error) {
+    console.error('Error creando cotización de récipe:', error);
+    res.status(500).json({ error: 'Error interno procesando cotización' });
+  }
+};
+
+const getPrescriptionQuotes = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    const quotes = await prisma.prescriptionQuote.findMany({
+      where: { store_id: store.id },
+      orderBy: { created_at: 'desc' }
+    });
+
+    res.json({ quotes });
+  } catch (error) {
+    console.error('Error listando cotizaciones:', error);
+    res.status(500).json({ error: 'Error interno obteniendo cotizaciones' });
+  }
+};
+
+const updatePrescriptionQuote = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, items, total_usd, total_ves, admin_notes } = req.body;
+
+    const quote = await prisma.prescriptionQuote.findUnique({
+      where: { id: Number(id) },
+      include: { store: true }
+    });
+    if (!quote) return res.status(404).json({ error: 'Cotización no encontrada' });
+
+    const updated = await prisma.prescriptionQuote.update({
+      where: { id: Number(id) },
+      data: {
+        status: status || quote.status,
+        items: items !== undefined ? items : quote.items,
+        total_usd: total_usd !== undefined ? Number(total_usd) : quote.total_usd,
+        total_ves: total_ves !== undefined ? Number(total_ves) : quote.total_ves,
+        admin_notes: admin_notes !== undefined ? admin_notes : quote.admin_notes
+      }
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`store_${quote.store_id}`).emit('prescription_quote_updated', updated);
+    }
+
+    res.json({ message: 'Cotización actualizada exitosamente', quote: updated });
+  } catch (error) {
+    console.error('Error actualizando cotización:', error);
+    res.status(500).json({ error: 'Error interno actualizando cotización' });
+  }
+};
+
+module.exports = {
+  createPrescriptionQuote,
+  getPrescriptionQuotes,
+  updatePrescriptionQuote, placeOrder, updateOrderStatus, deleteOrder, getMyOrders, getMyAddresses, rateOrder, getOrderById, cancelOrderClient, batchUpdateStatus, markOrderViewed };

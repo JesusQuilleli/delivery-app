@@ -240,6 +240,53 @@ export default function OrderDetails() {
 
       {/* Contenido */}
       <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-4 md:space-y-6">
+        
+        {/* F2C-04: Revisión de Récipe Médico */}
+        {order.prescription_url && (
+          <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-black text-amber-950 text-base flex items-center gap-2">
+                📋 Récipe Médico Adjunto
+              </span>
+              <Badge className={
+                order.prescription_status === 'APPROVED' ? 'bg-emerald-600 text-white' :
+                order.prescription_status === 'REJECTED' ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white'
+              }>
+                {order.prescription_status === 'APPROVED' ? 'Aprobado' :
+                 order.prescription_status === 'REJECTED' ? 'Rechazado' : 'Por Revisar'}
+              </Badge>
+            </div>
+            {order.prescription_notes && (
+              <p className="text-xs font-semibold text-rose-800">Nota del Farmaceuta: {order.prescription_notes}</p>
+            )}
+            <div className="text-center">
+              <a href={order.prescription_url} target="_blank" rel="noopener noreferrer" className="inline-block relative group">
+                <img src={order.prescription_url} alt="Récipe" className="max-h-64 mx-auto rounded-xl shadow-md border border-gray-300 object-contain" />
+                <span className="mt-1 block text-xs font-bold text-blue-600 underline">Ver en tamaño completo</span>
+              </a>
+            </div>
+            {order.prescription_status === 'PENDING_REVIEW' && (
+              <div className="flex gap-2 justify-end pt-2">
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => handleReviewPrescription('REJECTED')}
+                  className="font-bold text-xs"
+                >
+                  Rechazar Récipe
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => handleReviewPrescription('APPROVED')}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                >
+                  Aprobar Récipe
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {/* Cliente */}
           <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">

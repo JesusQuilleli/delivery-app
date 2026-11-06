@@ -1,10 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { placeOrder, updateOrderStatus, deleteOrder, getMyOrders, getMyAddresses, rateOrder, getOrderById, cancelOrderClient, batchUpdateStatus, markOrderViewed, reviewPrescription } = require('../controllers/orderController');
+const { placeOrder, updateOrderStatus, deleteOrder, getMyOrders, getMyAddresses, rateOrder, getOrderById, cancelOrderClient, batchUpdateStatus, markOrderViewed, reviewPrescription, createPrescriptionQuote, getPrescriptionQuotes, updatePrescriptionQuote } = require('../controllers/orderController');
 const { requireAuth, requireAdmin } = require('../middleware/authMiddleware');
 const { orderLimiter, adminLimiter } = require('../middleware/rateLimiter');
 const validate = require('../middleware/validate');
 const { placeOrderSchema, updateOrderStatusSchema, batchStatusSchema, prescriptionReviewSchema } = require('../validations/orderValidation');
+
+
+router.post('/prescription-quote/:slug', orderLimiter, createPrescriptionQuote);
+router.get('/prescription-quotes/:slug', requireAdmin, adminLimiter, getPrescriptionQuotes);
+router.put('/prescription-quote/:id', requireAdmin, adminLimiter, updatePrescriptionQuote);
 
 router.get('/my-orders', requireAuth, getMyOrders);
 router.get('/my-addresses', requireAuth, getMyAddresses);

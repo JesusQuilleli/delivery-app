@@ -1,10 +1,22 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, Utensils, Star, Flame } from "lucide-react";
 import { motion } from "framer-motion";
+import { Gallery } from "./Gallery";
 
 export default function RestaurantTemplate({ store, categories }: any) {
+  const landing = store?.landing_config || {};
+  const visibility = landing.sections_visibility || {
+    categories: true,
+    banners: true,
+    gallery: true,
+    about: true
+  };
+  const banners = landing.banners || [];
+  const galleryImages = landing.gallery_images || [];
+  const heroImage = landing.hero_image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop";
+
   return (
-    <div className="min-h-screen bg-orange-50 text-gray-900 font-sans">
+    <div className="min-h-screen bg-orange-50/50 text-gray-900 font-sans">
       {/* Basic Navbar */}
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-orange-100">
         <div className="max-w-7xl mx-auto px-5 lg:px-8 h-16 flex items-center justify-between">
@@ -29,10 +41,10 @@ export default function RestaurantTemplate({ store, categories }: any) {
               >
                 <span className="inline-flex items-center gap-2 rounded-full bg-orange-100 text-orange-700 px-3 py-1 text-sm font-bold">
                   <Flame className="w-4 h-4 text-orange-500" />
-                  {store?.landing_config?.badge_promo || "Caliente y recién hecho"}
+                  {landing.badge_promo || "Caliente y recién hecho"}
                 </span>
                 <h1 className="mt-6 font-display font-black text-5xl lg:text-7xl leading-[1.1] text-gray-900">
-                  {store?.landing_config?.slogan || (
+                  {landing.slogan || (
                     <>
                       El sabor que amas, <br/>
                       <span className="text-orange-600">directo a tu mesa.</span>
@@ -40,7 +52,7 @@ export default function RestaurantTemplate({ store, categories }: any) {
                   )}
                 </h1>
                 <p className="mt-6 text-lg text-gray-600 max-w-xl">
-                  {store?.landing_config?.subtitle || "Disfruta de nuestros mejores platillos sin salir de casa. Delivery súper rápido para que tu comida llegue perfecta."}
+                  {landing.subtitle || "Disfruta de nuestros mejores platillos sin salir de casa. Delivery súper rápido para que tu comida llegue perfecta."}
                 </p>
                 <div className="mt-8 flex gap-4">
                   <Link
@@ -60,19 +72,19 @@ export default function RestaurantTemplate({ store, categories }: any) {
               >
                 <div className="aspect-square rounded-full bg-orange-200/50 absolute -inset-4 blur-3xl -z-10" />
                 <img 
-                  src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop" 
+                  src={heroImage} 
                   alt="Comida deliciosa" 
                   className="rounded-3xl shadow-2xl object-cover aspect-[4/3] w-full"
                 />
                 
                 {/* Floating badge */}
-                <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-2xl shadow-xl flex items-center gap-4">
+                <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-2xl shadow-xl flex items-center gap-4 border border-orange-100">
                   <div className="bg-yellow-100 p-3 rounded-full text-yellow-600">
                     <Star className="w-6 h-6 fill-current" />
                   </div>
                   <div>
-                    <div className="font-black text-xl">4.9/5</div>
-                    <div className="text-sm text-gray-500 font-medium">Reseñas de clientes</div>
+                    <div className="font-black text-xl">{landing.badge_delivery_time || "Entrega Rápida"}</div>
+                    <div className="text-sm text-gray-500 font-medium">Directo a tu puerta</div>
                   </div>
                 </div>
               </motion.div>
@@ -80,8 +92,36 @@ export default function RestaurantTemplate({ store, categories }: any) {
           </div>
         </section>
 
+        {/* Banners Promocionales */}
+        {visibility.banners !== false && banners.length > 0 && (
+          <section className="py-8 bg-orange-100/40">
+            <div className="max-w-7xl mx-auto px-5 lg:px-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {banners.map((banner: any, i: number) => (
+                  <div key={i} className="rounded-2xl overflow-hidden shadow-md bg-white border border-orange-200/60 flex flex-col">
+                    {banner.image_url && (
+                      <img src={banner.image_url} alt={banner.title || "Promoción"} className="h-44 w-full object-cover" />
+                    )}
+                    <div className="p-4 flex-1 flex flex-col justify-between">
+                      <div>
+                        <h4 className="font-bold text-gray-900 text-lg">{banner.title}</h4>
+                        {banner.subtitle && <p className="text-xs text-gray-500 mt-1">{banner.subtitle}</p>}
+                      </div>
+                      {banner.link_url && (
+                        <Link to={banner.link_url} className="mt-3 inline-flex items-center text-xs font-bold text-orange-600 hover:text-orange-700">
+                          Ver promo <ArrowRight size={14} className="ml-1" />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Categorías o "Nuestro Menú" */}
-        {categories?.length > 0 && (
+        {visibility.categories !== false && categories?.length > 0 && (
           <section className="py-16 bg-white">
             <div className="max-w-7xl mx-auto px-5 lg:px-8">
               <h2 className="text-3xl font-black mb-8 text-center">Explora nuestro menú</h2>
@@ -90,7 +130,7 @@ export default function RestaurantTemplate({ store, categories }: any) {
                   <Link 
                     key={cat.id} 
                     to={`/${store?.slug}/categorias/${cat.id}`}
-                    className="group relative overflow-hidden rounded-2xl aspect-square bg-gray-100"
+                    className="group relative overflow-hidden rounded-2xl aspect-square bg-gray-100 border border-gray-100 shadow-sm hover:shadow-md transition"
                   >
                     {cat.image_url ? (
                       <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" />
@@ -107,6 +147,11 @@ export default function RestaurantTemplate({ store, categories }: any) {
               </div>
             </div>
           </section>
+        )}
+
+        {/* Galería del Local */}
+        {visibility.gallery !== false && galleryImages.length > 0 && (
+          <Gallery images={galleryImages} storeName={store?.name} />
         )}
       </main>
 

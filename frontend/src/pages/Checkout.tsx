@@ -802,6 +802,40 @@ export default function Checkout() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5 sm:p-8 space-y-5 sm:space-y-8">
+
+              {requiresPrescription && (
+                <div className="p-5 rounded-2xl border-2 border-amber-200 bg-amber-50/60 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">📋</span>
+                    <span className="font-black text-amber-950 text-sm">
+                      {cart.some(i => i.prescription_type === 'RETAIN_ORIGINAL')
+                        ? 'Retención Legal de Récipe Médico Original'
+                        : 'Verificación de Récipe Médico'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    {cart.some(i => i.prescription_type === 'RETAIN_ORIGINAL')
+                      ? '⚠️ Atención: Este pedido incluye medicamentos de control especial. El motorizado retendrá físicamente tu récipe original en papel para el archivo legal de la farmacia. Adjunta la foto para que el farmaceuta lo pre-apruebe antes de despachar.'
+                      : '📄 Uno o más medicamentos requieren récipe médico. Por favor adjunta la foto para agilizar la preparación y ten el récipe en mano para mostrárselo al motorizado al momento de la entrega.'}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 items-center pt-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploadingPrescription}
+                      onChange={handlePrescriptionUpload}
+                      className="bg-white border-amber-300 text-xs file:bg-amber-100 file:text-amber-800 file:border-0 file:rounded-lg file:font-semibold"
+                    />
+                    {prescriptionUrl && (
+                      <a href={prescriptionUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-700 underline whitespace-nowrap">
+                        Ver récipe adjunto ✓
+                      </a>
+                    )}
+                  </div>
+                  {isUploadingPrescription && <p className="text-xs text-amber-700 animate-pulse">Subiendo fotografía del récipe...</p>}
+                </div>
+              )}
+
               <div className="rounded-2xl bg-gray-50 border border-gray-200 p-4 space-y-2 text-sm">
                 <div className="flex justify-between text-gray-600">
                   <span>Productos</span>

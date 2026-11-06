@@ -7,11 +7,19 @@ export interface CartItem {
   unit_price: number;
   quantity: number;
   requires_prescription?: boolean;
+  prescription_type?: string;
 }
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: { id: number; name: string; price: number; stock?: number | null; requires_prescription?: boolean }) => void;
+  addToCart: (product: {
+    id: number;
+    name: string;
+    price: number;
+    stock?: number | null;
+    requires_prescription?: boolean;
+    prescription_type?: string;
+  }) => void;
   removeFromCart: (productId: number) => void;
   clearCart: () => void;
   total: number;
@@ -59,7 +67,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [cart, storeSlug]);
 
-  const addToCart = (product: { id: number; name: string; price: number; stock?: number | null }) => {
+  const addToCart = (product: {
+    id: number;
+    name: string;
+    price: number;
+    stock?: number | null;
+    requires_prescription?: boolean;
+    prescription_type?: string;
+  }) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.product_id === product.id);
       if (product.stock != null && (product.stock <= 0 || (existing?.quantity || 0) >= product.stock)) {
@@ -70,7 +85,18 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           item.product_id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { product_id: product.id, name: product.name, unit_price: product.price, quantity: 1, requires_prescription: Boolean(product.requires_prescription) }];
+      const pType = product.prescription_type || (product.requires_prescription ? 'RETAIN_ORIGINAL' : 'NONE');
+      return [
+        ...prev,
+        {
+          product_id: product.id,
+          name: product.name,
+          unit_price: product.price,
+          quantity: 1,
+          requires_prescription: pType !== 'NONE',
+          prescription_type: pType
+        }
+      ];
     });
   };
 

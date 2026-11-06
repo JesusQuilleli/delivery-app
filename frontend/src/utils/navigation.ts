@@ -43,20 +43,23 @@ export function buildDriverMessage(order: {
   user?: { name?: string | null; phone?: string | null };
   delivery_address?: string | null;
   prescription_url?: string | null;
+  prescription_type?: string | null;
 }, store?: Coordinates | null): string {
   const mapsUrl = buildGoogleMapsUrl(order, store);
   const lines = [
-    'Hola! Nuevo pedido para entregar.',
+    '¡Hola! Nuevo pedido para entregar.',
     '',
     `👤 *Cliente:* ${order.user?.name || 'Sin nombre'}`,
     `📞 *Teléfono:* ${order.user?.phone || 'No registrado'}`,
-    `🏠 *Dirección:* ${(order.delivery_address || '').split(' | Link GMaps:')[0]}`,
+    `📍 *Dirección:* ${(order.delivery_address || '').split(' | Link GMaps:')[0]}`,
   ];
 
-  if (order.prescription_url) {
-    lines.push('', '⚠️ *OBLIGATORIO: Retener el récipe médico original del cliente al entregar.*');
+  if (order.prescription_type === 'RETAIN_ORIGINAL' || (order.prescription_url && order.prescription_type !== 'SHOW_ONLY')) {
+    lines.push('', '🚨 *OBLIGATORIO: Retener el récipe médico original del cliente al entregar y llevarlo a la farmacia.*');
+  } else if (order.prescription_type === 'SHOW_ONLY') {
+    lines.push('', '📄 *Verificar récipe médico del cliente antes de entregar el paquete (el cliente lo conserva).*');
   }
 
-  lines.push('', '📍 *Iniciar Navegación GPS:*', mapsUrl || 'Ubicación no disponible');
+  lines.push('', '🗺️ *Iniciar Navegación GPS:*', mapsUrl || 'Ubicación no disponible');
   return lines.join('\n');
 }

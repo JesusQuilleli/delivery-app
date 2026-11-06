@@ -45,6 +45,7 @@ model Store {
   drivers    Driver[]
   deliveryZones DeliveryZone[]
   subscriptionPayments SubscriptionPayment[]
+  prescriptionQuotes PrescriptionQuote[]
 }
 
 model SubscriptionPayment {
@@ -78,6 +79,7 @@ model User {
   failed_attempts Int      @default(0)
   locked_until   DateTime?
   orders         Order[]
+  prescriptionQuotes PrescriptionQuote[]
   store          Store?    @relation(fields: [store_id], references: [id])
 
   @@unique([store_id, email])
@@ -106,6 +108,7 @@ model Product {
   stock        Int?
   category_id  Int?
   requires_prescription Boolean @default(false)
+  prescription_type     String  @default("NONE")
   lot_number   String?
   expires_at   DateTime?
   comboItems   ComboItem[] @relation("ComboItems")
@@ -145,6 +148,7 @@ model Order {
   prescription_url  String?
   prescription_status String @default("NOT_REQUIRED")
   prescription_notes String?
+  prescription_type  String  @default("NONE")
   driver_id         Int?
   store             Store       @relation(fields: [store_id], references: [id])
   user              User        @relation(fields: [user_id], references: [id])
@@ -200,6 +204,28 @@ model DeliveryZone {
   fee             Decimal @db.Decimal(12, 2)
   is_active       Boolean @default(true)
   store           Store   @relation(fields: [store_id], references: [id], onDelete: Cascade)
+
+  @@index([store_id])
+}
+
+model PrescriptionQuote {
+  id               Int      @id @default(autoincrement())
+  store_id         Int
+  user_id          Int?
+  customer_name    String
+  customer_phone   String
+  delivery_address String?
+  prescription_url String
+  notes            String?
+  status           String   @default("PENDING")
+  items            Json?
+  total_usd        Decimal? @db.Decimal(12, 2)
+  total_ves        Decimal? @db.Decimal(14, 2)
+  admin_notes      String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  store            Store    @relation(fields: [store_id], references: [id], onDelete: Cascade)
+  user             User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
 
   @@index([store_id])
 }

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import api from '../api';
 import AdminLayout from '../components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
-import { Store, Bell, Shield, MapPin, Save, Loader2, DollarSign, RefreshCw, Truck, Plus, Trash2, Landmark, Volume2, LogOut, KeyRound } from 'lucide-react';
+import { Store, Bell, Shield, MapPin, Save, Loader2, DollarSign, RefreshCw, Truck, Plus, Trash2, Landmark, Volume2, LogOut, KeyRound, LayoutTemplate, ExternalLink, Image as ImageIcon, Camera } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -80,8 +80,27 @@ export default function Settings() {
     badge_promo: '',
     badge_delivery_time: '',
     hero_image_url: '',
-    whatsapp_contact: ''
+    whatsapp_contact: '',
+    sections_visibility: {
+      categories: true,
+      delivery_info: true,
+      offers: true,
+      combos: true,
+      gallery: true,
+      about: true,
+      testimonials: true,
+      contact: true
+    },
+    banners: [] as { id: string; image_url: string; title: string; subtitle?: string; link_url?: string }[],
+    gallery_images: [] as string[]
   });
+
+  const [newBannerTitle, setNewBannerTitle] = useState('');
+  const [newBannerSubtitle, setNewBannerSubtitle] = useState('');
+  const [newBannerLink, setNewBannerLink] = useState('');
+  const [newBannerImage, setNewBannerImage] = useState('');
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
   const [isUploadingHero, setIsUploadingHero] = useState(false);
 
   const handleHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,6 +124,99 @@ export default function Settings() {
     } finally {
       setIsUploadingHero(false);
     }
+  };
+
+  
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingBanner(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setNewBannerImage(res.data.imageUrl);
+      toast.success("Imagen de banner cargada");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Error al subir imagen");
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  const handleAddBanner = () => {
+    if (!newBannerImage && !newBannerTitle) {
+      toast.error("Indica al menos un título o imagen para el banner");
+      return;
+    }
+    const newB = {
+      id: Date.now().toString(),
+      image_url: newBannerImage,
+      title: newBannerTitle,
+      subtitle: newBannerSubtitle,
+      link_url: newBannerLink
+    };
+    setLandingConfig(prev => ({
+      ...prev,
+      banners: [...prev.banners, newB]
+    }));
+    setNewBannerTitle('');
+    setNewBannerSubtitle('');
+    setNewBannerLink('');
+    setNewBannerImage('');
+    toast.success("Banner agregado. Recuerda guardar cambios.");
+  };
+
+  const handleRemoveBanner = (bannerId: string) => {
+    setLandingConfig(prev => ({
+      ...prev,
+      banners: prev.banners.filter(b => b.id !== bannerId)
+    }));
+  };
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (landingConfig.gallery_images.length >= 4) {
+      toast.error("Máximo 4 imágenes en la galería del local");
+      return;
+    }
+    setIsUploadingGallery(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setLandingConfig(prev => ({
+        ...prev,
+        gallery_images: [...prev.gallery_images, res.data.imageUrl]
+      }));
+      toast.success("Foto añadida a la galería. Recuerda guardar cambios.");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Error al subir foto");
+    } finally {
+      setIsUploadingGallery(false);
+    }
+  };
+
+  const handleRemoveGalleryImage = (idxToRemove: number) => {
+    setLandingConfig(prev => ({
+      ...prev,
+      gallery_images: prev.gallery_images.filter((_, idx) => idx !== idxToRemove)
+    }));
+  };
+
+  const toggleSection = (sectionKey: string) => {
+    setLandingConfig(prev => ({
+      ...prev,
+      sections_visibility: {
+        ...prev.sections_visibility,
+        [sectionKey]: !(prev.sections_visibility as any)[sectionKey]
+      }
+    }));
   };
 
   // Notificaciones y Seguridad
@@ -133,13 +245,26 @@ export default function Settings() {
           if (res.data.store.cop_rate) setCopRate(res.data.store.cop_rate);
           if (res.data.store.delivery_fee !== undefined) setDeliveryFee(Number(res.data.store.delivery_fee));
           if (res.data.store.landing_config) {
+            const cfg = res.data.store.landing_config;
             setLandingConfig({
-              slogan: res.data.store.landing_config.slogan || '',
-              subtitle: res.data.store.landing_config.subtitle || '',
-              badge_promo: res.data.store.landing_config.badge_promo || '',
-              badge_delivery_time: res.data.store.landing_config.badge_delivery_time || '',
-              hero_image_url: res.data.store.landing_config.hero_image_url || '',
-              whatsapp_contact: res.data.store.landing_config.whatsapp_contact || ''
+              slogan: cfg.slogan || '',
+              subtitle: cfg.subtitle || '',
+              badge_promo: cfg.badge_promo || '',
+              badge_delivery_time: cfg.badge_delivery_time || '',
+              hero_image_url: cfg.hero_image_url || '',
+              whatsapp_contact: cfg.whatsapp_contact || '',
+              sections_visibility: cfg.sections_visibility || {
+                categories: true,
+                delivery_info: true,
+                offers: true,
+                combos: true,
+                gallery: true,
+                about: true,
+                testimonials: true,
+                contact: true
+              },
+              banners: Array.isArray(cfg.banners) ? cfg.banners : [],
+              gallery_images: Array.isArray(cfg.gallery_images) ? cfg.gallery_images : []
             });
           }
           setBankName(res.data.store.bank_name || '');
@@ -411,6 +536,264 @@ export default function Settings() {
               </>
             )}
 
+          </CardContent>
+        </Card>
+
+        
+        {/* F2E-B: CMS Modular de Landing y Diseño Visual */}
+        <Card className="border-border shadow-sm">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <LayoutTemplate className="text-primary" /> Diseño y Landing Page (CMS Modular)
+                </CardTitle>
+                <CardDescription>
+                  Personaliza textos, banners promocionales y qué secciones mostrar u ocultar en tu página web sin tocar código.
+                </CardDescription>
+              </div>
+              <a
+                href={`/${slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl border border-primary/30 text-primary hover:bg-primary/10 transition-colors w-fit"
+              >
+                <ExternalLink size={14} /> Ver Landing en Vivo
+              </a>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Textos Principales del Hero */}
+            <div className="space-y-4">
+              <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wider flex items-center gap-2">
+                <ImageIcon size={16} className="text-primary" /> Encabezado y Portada (Hero)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">Eslogan / Título Principal</label>
+                  <Input
+                    placeholder="Ej. El sabor que amas, directo a tu mesa"
+                    value={landingConfig.slogan}
+                    onChange={e => setLandingConfig(prev => ({ ...prev, slogan: e.target.value }))}
+                    className="bg-background border-border"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">Distintivo Promocional (Badge)</label>
+                  <Input
+                    placeholder="Ej. Delivery Activo | Caliente y recién hecho"
+                    value={landingConfig.badge_promo}
+                    onChange={e => setLandingConfig(prev => ({ ...prev, badge_promo: e.target.value }))}
+                    className="bg-background border-border"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-muted-foreground uppercase">Subtítulo Descriptivo</label>
+                <Input
+                  placeholder="Ej. Hamburguesas gourmet, perros calientes y combos para compartir con delivery veloz."
+                  value={landingConfig.subtitle}
+                  onChange={e => setLandingConfig(prev => ({ ...prev, subtitle: e.target.value }))}
+                  className="bg-background border-border"
+                />
+              </div>
+
+              {/* Subida de Imagen Hero */}
+              <div className="space-y-2 pt-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase">Foto de Portada / Banner Principal</label>
+                <div className="flex items-center gap-4">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    disabled={isUploadingHero}
+                    onChange={handleHeroUpload}
+                    className="bg-background border-border file:bg-primary/10 file:text-primary file:border-0 file:rounded-lg file:font-semibold"
+                  />
+                  {landingConfig.hero_image_url && (
+                    <img src={landingConfig.hero_image_url} alt="Portada" className="h-12 w-20 object-cover rounded-lg border border-border shadow-sm" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* F2E-09: Interruptores On/Off de Secciones */}
+            <div className="pt-4 border-t border-border space-y-4">
+              <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wider flex items-center gap-2">
+                <LayoutTemplate size={16} className="text-primary" /> Estructura Modular (Activar / Ocultar Secciones)
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                Controla qué bloques aparecen en la landing de tu negocio. Si no tienes combos u ofertas activas, puedes apagarlos para que la web luzca limpia.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { key: 'categories', label: 'Categorías' },
+                  { key: 'offers', label: 'Ofertas' },
+                  { key: 'combos', label: 'Combos' },
+                  { key: 'delivery_info', label: 'Info Delivery' },
+                  { key: 'gallery', label: 'Galería Fotos' },
+                  { key: 'about', label: 'Quiénes Somos' },
+                  { key: 'testimonials', label: 'Testimonios' },
+                  { key: 'contact', label: 'Contacto' }
+                ].map(item => {
+                  const isActive = (landingConfig.sections_visibility as any)[item.key] !== false;
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => toggleSection(item.key)}
+                      className={`p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
+                        isActive
+                          ? 'border-primary/40 bg-primary/5 text-primary font-bold shadow-sm'
+                          : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/40 font-medium'
+                      }`}
+                    >
+                      <span className="text-xs">{item.label}</span>
+                      <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded-full font-black ${
+                        isActive ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        {isActive ? 'ON' : 'OFF'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* F2E-08: Banners Promocionales Rotativos */}
+            <div className="pt-4 border-t border-border space-y-4">
+              <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wider flex items-center gap-2">
+                <ImageIcon size={16} className="text-primary" /> Banners Promocionales ({landingConfig.banners.length}/5)
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                Muestra anuncios destacados como "2x1 los Jueves" o "Combo Familiar con Refresco Gratis".
+              </p>
+
+              {/* Agregar nuevo banner */}
+              {landingConfig.banners.length < 5 && (
+                <div className="p-4 rounded-xl border border-dashed border-border bg-muted/10 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Input
+                      placeholder="Título del banner"
+                      value={newBannerTitle}
+                      onChange={e => setNewBannerTitle(e.target.value)}
+                      className="bg-background border-border text-xs"
+                    />
+                    <Input
+                      placeholder="Subtítulo opcional"
+                      value={newBannerSubtitle}
+                      onChange={e => setNewBannerSubtitle(e.target.value)}
+                      className="bg-background border-border text-xs"
+                    />
+                    <Input
+                      placeholder="Enlace o categoría (opcional)"
+                      value={newBannerLink}
+                      onChange={e => setNewBannerLink(e.target.value)}
+                      className="bg-background border-border text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        disabled={isUploadingBanner}
+                        onChange={handleBannerUpload}
+                        className="bg-background border-border text-xs file:bg-primary/10 file:text-primary file:border-0 file:rounded-lg file:font-semibold"
+                      />
+                      {newBannerImage && (
+                        <img src={newBannerImage} alt="Preview" className="h-10 w-16 object-cover rounded-lg border border-border" />
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAddBanner}
+                      disabled={isUploadingBanner || (!newBannerImage && !newBannerTitle)}
+                      className="font-bold text-xs whitespace-nowrap"
+                    >
+                      <Plus size={14} className="mr-1" /> Añadir Banner
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Lista de banners */}
+              {landingConfig.banners.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  {landingConfig.banners.map(b => (
+                    <div key={b.id} className="p-3 rounded-xl border border-border bg-card shadow-sm flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        {b.image_url ? (
+                          <img src={b.image_url} alt={b.title} className="h-12 w-16 object-cover rounded-lg border border-border flex-shrink-0" />
+                        ) : (
+                          <div className="h-12 w-16 bg-muted rounded-lg flex items-center justify-center flex-shrink-0"><ImageIcon size={18} className="text-muted-foreground" /></div>
+                        )}
+                        <div className="overflow-hidden">
+                          <p className="font-bold text-xs truncate">{b.title || "Banner sin título"}</p>
+                          {b.subtitle && <p className="text-[11px] text-muted-foreground truncate">{b.subtitle}</p>}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveBanner(b.id)}
+                        className="text-red-500 hover:bg-red-50 hover:text-red-600 rounded-lg h-8 w-8 flex-shrink-0"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* F2E-10: Galería del Local / Fachada */}
+            <div className="pt-4 border-t border-border space-y-4">
+              <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wider flex items-center gap-2">
+                <Camera size={16} className="text-primary" /> Galería de Fotos del Local ({landingConfig.gallery_images.length}/4)
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                Sube fotos de la fachada, mesas o cocina de tu negocio para generar confianza en tus clientes online.
+              </p>
+
+              {landingConfig.gallery_images.length < 4 && (
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    disabled={isUploadingGallery}
+                    onChange={handleGalleryUpload}
+                    className="bg-background border-border text-xs file:bg-primary/10 file:text-primary file:border-0 file:rounded-lg file:font-semibold max-w-sm"
+                  />
+                  {isUploadingGallery && <span className="text-xs text-muted-foreground animate-pulse">Subiendo foto...</span>}
+                </div>
+              )}
+
+              {landingConfig.gallery_images.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                  {landingConfig.gallery_images.map((img, idx) => (
+                    <div key={idx} className="relative group rounded-xl overflow-hidden border border-border shadow-sm h-28 bg-muted">
+                      <img src={img} alt="Foto local" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveGalleryImage(idx)}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-red-600 text-white shadow-md hover:bg-red-700 transition opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-border">
+              <Button onClick={handleSave} disabled={saving} className="h-12 px-8 font-black rounded-xl">
+                {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" size={18} />}
+                Guardar Cambios de Diseño
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
