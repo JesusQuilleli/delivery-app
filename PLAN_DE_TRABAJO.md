@@ -462,16 +462,16 @@ Optimización de la búsqueda y precisión de la dirección del cliente en el ch
 
 ### Fase 2B — Planes, suscripciones y onboarding SaaS (3 días)
 
-- [ ] F2B-01 Agregar a `Store`: plan, ciclo, precio, estado, fin de prueba y próximo pago.
-- [ ] F2B-02 Crear historial de pagos: monto, método, referencia, período y fecha.
-- [ ] F2B-03 Crear panel SuperAdmin de clientes, planes y estados.
-- [ ] F2B-04 Implementar marcar pagado, extender, suspender y cambiar plan.
-- [ ] F2B-05 Aplicar límites por plan: productos y administradores.
-- [ ] F2B-06 Vencimiento automático de prueba y suspensión por impago.
-- [ ] F2B-07 Crear asistente de alta: tienda, admin, categorías y catálogo.
-- [ ] F2B-08 Crear plantilla de recibo y recordatorios de pago.
-- [ ] F2B-09 Crear panel de MRR y clientes activos.
-- [ ] F2B-10 Registrar auditoría de acciones comerciales.
+- [x] F2B-01 Agregar a `Store`: plan, ciclo, precio, estado, fin de prueba y próximo pago.
+- [x] F2B-02 Crear historial de pagos: modelo `SubscriptionPayment` (monto, método, referencia, período y fecha).
+- [x] F2B-03 Crear panel SuperAdmin de clientes, planes y estados con métricas visuales.
+- [x] F2B-04 Implementar marcar pagado, extender, suspender y cambiar plan con auditoría estructurada.
+- [x] F2B-05 Aplicar límites por plan: productos (Emprendedor: 50, Negocio: 250, Pro: 1000) en creación unitaria, combos y masiva.
+- [x] F2B-06 Vencimiento automático de prueba y suspensión por impago (estados TRIAL, ACTIVE, PAST_DUE, SUSPENDED).
+- [x] F2B-07 Crear asistente de alta SaaS: tienda, admin, selección de plan/días prueba y categorías iniciales por industria.
+- [x] F2B-08 Crear plantilla de recibo imprimible y generador de recordatorios de pago para WhatsApp.
+- [x] F2B-09 Crear panel de MRR y clientes activos (tarjetas KPI de ingresos recurrentes proyectados).
+- [x] F2B-10 Registrar auditoría de acciones comerciales (`SUBSCRIPTION_UPDATED`, `SUBSCRIPTION_PAYMENT_RECORDED`).
 
 **Criterio de terminado:** se puede cobrar, suspender y administrar clientes sin planillas externas.
 
@@ -937,6 +937,17 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 - `placeOrder` rechaza con 400 y mensaje `Tienda inactiva o no disponible`.
 - El administrador de una tienda inactiva puede iniciar sesión para consultar reportes y realizar configuraciones, pero ve un banner ámbar persistente de advertencia informando el estado inactivo.
 - SuperAdmin `toggleStoreStatus` registra eventos de auditoría estructurados con `{ store_id, store_slug, store_name, previous_status, new_status, action, actor, reason, timestamp }`.
+
+### Decisiones de Fase 2B — Planes y Suscripciones SaaS (F2B-01 a F2B-10)
+
+- Planes estructurados: `EMPRENDEDOR` ($15/mes, max 50 prods), `NEGOCIO` ($30/mes, max 250 prods) y `PRO` ($50/mes, max 1000 prods).
+- Modelo `SubscriptionPayment` para registrar pagos de mensualidad con monto, moneda (USD/VES), método (Pago Móvil, Transferencia, Efectivo, Zelle), referencia, rango de fechas y notas.
+- Bloqueo de catálogo por exceso de cupo: `createProduct`, `createProductsBulk` y `createCombo` responden 403 con mensaje explicativo si la tienda supera el límite de productos de su plan.
+- Asistente de alta SaaS en SuperAdmin que pre-carga categorías base de la industria (`PHARMACY`, `RESTAURANT`, `SUPERMARKET`) y configura período de prueba (30 días por defecto).
+- Plantilla visual de recibo de suscripción con botón de impresión directa (`window.print()`) y generador de mensaje de cobro/recordatorio formateado para WhatsApp en un clic.
+- Cálculo automático de MRR mensual proyectado sumando la contribución de todas las tiendas en estado `ACTIVE`.
+- Migración aplicada a base de datos Neon: `20261105200000_subscription_plans`.
+
 
 
 - **Objetivo:** demostración comercial en la nube y PDF de accesos listo para usar en cualquier sesión.

@@ -27,12 +27,38 @@ model Store {
   payment_note String?
   industry   String     @default("PHARMACY")
   theme_color String    @default("blue")
+  plan       String     @default("EMPRENDEDOR")
+  plan_price Decimal    @default(15.0) @db.Decimal(12, 2)
+  billing_cycle String  @default("MONTHLY")
+  subscription_status String @default("TRIAL")
+  trial_ends_at DateTime?
+  next_billing_date DateTime?
+  subscription_notes String?
   categories Category[]
   orders     Order[]
   products   Product[]
   users      User[]
   drivers    Driver[]
   deliveryZones DeliveryZone[]
+  subscriptionPayments SubscriptionPayment[]
+}
+
+model SubscriptionPayment {
+  id                Int      @id @default(autoincrement())
+  store_id          Int
+  amount            Decimal  @db.Decimal(12, 2)
+  currency          String   @default("USD")
+  payment_method    String   @default("PAGO_MOVIL")
+  payment_reference String?
+  period_start      DateTime
+  period_end        DateTime
+  status            String   @default("APPROVED")
+  notes             String?
+  recorded_by       String?
+  created_at        DateTime @default(now())
+  store             Store    @relation(fields: [store_id], references: [id], onDelete: Cascade)
+
+  @@index([store_id])
 }
 
 model User {

@@ -134,3 +134,67 @@ test('superadmin: toggle estado de tienda y registra auditoría', async () => {
   assert.equal(restoreRes.status, 200);
   assert.equal(restoreRes.json.is_active, before);
 });
+
+test('superadmin: listar suscripciones SaaS y métricas MRR (F2B-03, F2B-09)', async () => {
+  const res = await req('GET', '/superadmin/subscriptions', { token: superadmin });
+  assert.equal(res.status, 200, JSON.stringify(res.json));
+  assert.ok(res.json.summary, 'Debe incluir resumen de métricas');
+  assert.equal(typeof res.json.summary.mrr, 'number');
+  assert.ok(Array.isArray(res.json.stores));
+  assert.ok(res.json.stores.length >= 1);
+  assert.ok(res.json.stores[0].plan !== undefined);
+  assert.ok(res.json.stores[0].product_usage !== undefined);
+});
+
+test('superadmin: actualizar plan y estado de suscripción con auditoría (F2B-04, F2B-10)', async () => {
+  const stores = await req('GET', '/superadmin/stores', { token: superadmin });
+  const target = stores.json.find(s => s.slug === 'demo-farmacia');
+
+  const res = await req('PUT', `/superadmin/stores/${target.id}/subscription`, {
+    token: superadmin,
+    body: {
+      plan: 'NEGOCIO',
+      plan_price: 30,
+      subscription_status: 'ACTIVE',
+      reason: 'Upgrade comercial negociado'
+    }
+  });
+
+  assert.equal(res.status, 200, JSON.stringify(res.json));
+  assert.equal(res.json.store.plan, 'NEGOCIO');
+  assert.equal(res.json.store.subscription_status, 'ACTIVE');
+  assert.ok(res.json.audit);
+  assert.equal(res.json.audit.action, 'SUBSCRIPTION_UPDATED');
+  assert.equal(res.json.audit.new_plan, 'NEGOCIO');
+});
+
+test('superadmin: registrar pago de suscripción y consultar historial (F2B-02, F2B-08)', async () => {
+  const stores = await req('GET', '/superadmin/stores', { token: superadmin });
+  const target = stores.json.find(s => s.slug === 'demo-farmacia');
+
+  const now = new Date();
+  const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  const payRes = await req('POST', `/superadmin/stores/${target.id}/payments`, {
+    token: superadmin,
+    body: {
+      amount: 30.0,
+      currency: 'USD',
+      payment_method: 'PAGO_MOVIL',
+      payment_reference: 'TEST-RECIBO-998877',
+      period_start: now.toISOString(),
+      period_end: nextMonth.toISOString(),
+      notes: 'Mensualidad Plan Negocio'
+    }
+  });
+
+  assert.equal(payRes.status, 200, JSON.stringify(payRes.json));
+  assert.equal(payRes.json.payment.payment_reference, 'TEST-RECIBO-998877');
+  assert.equal(payRes.json.store.subscription_status, 'ACTIVE');
+
+  // Consultar historial de pagos
+  const historyRes = await req('GET', `/superadmin/stores/${target.id}/payments`, { token: superadmin });
+  assert.equal(historyRes.status, 200);
+  assert.ok(Array.isArray(historyRes.json));
+  assert.ok(historyRes.json.some(p => p.payment_reference === 'TEST-RECIBO-998877'));
+});

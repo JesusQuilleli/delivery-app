@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { cloudinary } = require('../config/cloudinary');
 const { formatProductWithStock } = require('../utils/inventory');
+const { getPlan } = require('../config/plans');
 
 // Función auxiliar para extraer el public_id de una URL de Cloudinary
 const getPublicIdFromUrl = (url) => {
@@ -123,6 +124,15 @@ const createProduct = async (req, res) => {
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
 
+    // F2B-05: Límite de productos por plan SaaS
+    const plan = getPlan(store.plan);
+    const productCount = await prisma.product.count({ where: { store_id: store.id } });
+    if (productCount >= plan.maxProducts) {
+      return res.status(403).json({
+        error: `Has alcanzado el límite de productos de tu plan (${plan.name}: máximo ${plan.maxProducts} productos). Actualiza tu plan para agregar más productos.`
+      });
+    }
+
     if (stock !== undefined && stock !== null && Number(stock) < 0) {
       return res.status(400).json({ error: 'El stock no puede ser negativo.' });
     }
@@ -170,6 +180,15 @@ const createProductsBulk = async (req, res) => {
 
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    // F2B-05: Límite de productos por plan SaaS
+    const plan = getPlan(store.plan);
+    const productCount = await prisma.product.count({ where: { store_id: store.id } });
+    if (productCount + products.length > plan.maxProducts) {
+      return res.status(403).json({
+        error: `Esta importación (${products.length} productos) excede el límite de tu plan (${plan.name}: máximo ${plan.maxProducts}, existentes: ${productCount}).`
+      });
+    }
 
     // F2-14: Validar categorías si se especificaron
     const categoryIds = [...new Set(products.map(p => p.category_id).filter(id => id !== undefined && id !== null && id !== ''))].map(Number);
@@ -286,6 +305,15 @@ const createCombo = async (req, res) => {
 
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
+
+    // F2B-05: Límite de productos por plan SaaS (los combos cuentan como producto)
+    const plan = getPlan(store.plan);
+    const productCount = await prisma.product.count({ where: { store_id: store.id } });
+    if (productCount >= plan.maxProducts) {
+      return res.status(403).json({
+        error: `Has alcanzado el límite de productos de tu plan (${plan.name}: máximo ${plan.maxProducts} productos). Actualiza tu plan para agregar más combos.`
+      });
+    }
 
     // F2-15: Validar que todos los componentes pertenezcan a la tienda y no sean combos
     const componentIds = combo_items.map(item => Number(item.product_id));

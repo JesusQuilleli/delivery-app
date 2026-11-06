@@ -6,32 +6,117 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Badge } from '../components/ui/badge';
-import { Store, Plus, ShieldAlert, Power, Loader2, LogOut, ExternalLink } from 'lucide-react';
+import {
+  Store,
+  Plus,
+  ShieldAlert,
+  Power,
+  Loader2,
+  LogOut,
+  ExternalLink,
+  DollarSign,
+  Calendar,
+  CreditCard,
+  Receipt,
+  CheckCircle2,
+  AlertTriangle,
+  RefreshCw,
+  X,
+  Copy
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AuthContext } from '../context/AuthContext';
 
+interface StoreItem {
+  id: number;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  industry: string;
+  plan: string;
+  plan_price: number;
+  billing_cycle: string;
+  subscription_status: string;
+  trial_ends_at: string | null;
+  next_billing_date: string | null;
+  subscription_notes: string | null;
+  users?: { id: number; username: string; phone: string }[];
+  _count?: { products: number; orders: number };
+  product_usage?: { current: number; limit: number; percentage: number };
+  last_payment?: {
+    id: number;
+    amount: number;
+    currency: string;
+    payment_method: string;
+    payment_reference: string;
+    period_start: string;
+    period_end: string;
+    created_at: string;
+  } | null;
+}
+
+interface SubscriptionSummary {
+  mrr: number;
+  activeCount: number;
+  trialCount: number;
+  pastDueCount: number;
+  suspendedCount: number;
+  totalStores: number;
+}
+
 export default function SuperAdmin() {
-  const [stores, setStores] = useState<any[]>([]);
+  const [stores, setStores] = useState<StoreItem[]>([]);
+  const [summary, setSummary] = useState<SubscriptionSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { logout } = useContext(AuthContext);
 
-  // Create form state
+  // Formulario creación
   const [storeName, setStoreName] = useState('');
   const [slug, setSlug] = useState('');
   const [adminUsername, setAdminUsername] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [industry, setIndustry] = useState('PHARMACY');
+  const [selectedPlan, setSelectedPlan] = useState('EMPRENDEDOR');
+  const [trialDays, setTrialDays] = useState(30);
   const [themeColor, setThemeColor] = useState('blue');
   const [creating, setCreating] = useState(false);
 
-  const fetchStores = async () => {
+  // Modal Gestión de Plan
+  const [editingStore, setEditingStore] = useState<StoreItem | null>(null);
+  const [editPlan, setEditPlan] = useState('EMPRENDEDOR');
+  const [editPrice, setEditPrice] = useState('15');
+  const [editStatus, setEditStatus] = useState('ACTIVE');
+  const [editTrialEnd, setEditTrialEnd] = useState('');
+  const [editReason, setEditReason] = useState('');
+  const [savingPlan, setSavingPlan] = useState(false);
+
+  // Modal Registrar Pago
+  const [payingStore, setPayingStore] = useState<StoreItem | null>(null);
+  const [payAmount, setPayAmount] = useState('15');
+  const [payCurrency, setPayCurrency] = useState('USD');
+  const [payMethod, setPayMethod] = useState('PAGO_MOVIL');
+  const [payRef, setPayRef] = useState('');
+  const [payPeriodStart, setPayPeriodStart] = useState(() => new Date().toISOString().slice(0, 10));
+  const [payPeriodEnd, setPayPeriodEnd] = useState(() => {
+    const next = new Date();
+    next.setMonth(next.getMonth() + 1);
+    return next.toISOString().slice(0, 10);
+  });
+  const [payNotes, setPayNotes] = useState('');
+  const [savingPayment, setSavingPayment] = useState(false);
+
+  // Modal Recibo
+  const [receiptStore, setReceiptStore] = useState<StoreItem | null>(null);
+
+  const fetchSubscriptions = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/superadmin/stores');
-      setStores(res.data);
+      const res = await api.get('/superadmin/subscriptions');
+      setStores(res.data.stores || []);
+      setSummary(res.data.summary || null);
     } catch (error: any) {
       if (error.response?.status === 403) {
         toast.error('Acceso denegado. No eres Super Administrador.');
@@ -44,7 +129,7 @@ export default function SuperAdmin() {
   };
 
   useEffect(() => {
-    fetchStores();
+    fetchSubscriptions();
   }, []);
 
   const handleLogout = async () => {
@@ -63,11 +148,13 @@ export default function SuperAdmin() {
         adminPhone,
         adminPassword,
         industry,
-        theme_color: themeColor
+        theme_color: themeColor,
+        plan: selectedPlan,
+        trialDays: Number(trialDays)
       });
-      toast.success('Tienda creada exitosamente.');
-      setStoreName(''); setSlug(''); setAdminUsername(''); setAdminPhone(''); setAdminPassword(''); setIndustry('PHARMACY'); setThemeColor('blue');
-      fetchStores();
+      toast.success('Tienda y catálogo inicial creados exitosamente.');
+      setStoreName(''); setSlug(''); setAdminUsername(''); setAdminPhone(''); setAdminPassword('');
+      fetchSubscriptions();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Error al crear la tienda.');
       console.error(error);
@@ -77,198 +164,438 @@ export default function SuperAdmin() {
   };
 
   const toggleStatus = async (id: number) => {
-    if (!window.confirm('¿Cambiar el estado de esta tienda? Si la desactivas, no podrán recibir pedidos.')) return;
+    const reason = window.prompt('Indica el motivo de activación/pausa (opcional):') || undefined;
     try {
-      await api.put(`/superadmin/stores/${id}/status`);
-      fetchStores();
+      await api.put(`/superadmin/stores/${id}/status`, { reason });
+      toast.success('Estado actualizado');
+      fetchSubscriptions();
     } catch (e) {
       console.error(e);
       toast.error('Error al cambiar el estado.');
     }
   };
 
-  // Helper to auto-generate slug
+  const openPlanModal = (store: StoreItem) => {
+    setEditingStore(store);
+    setEditPlan(store.plan || 'EMPRENDEDOR');
+    setEditPrice(String(store.plan_price || 15));
+    setEditStatus(store.subscription_status || 'TRIAL');
+    setEditTrialEnd(store.trial_ends_at ? store.trial_ends_at.slice(0, 10) : '');
+    setEditReason('');
+  };
+
+  const savePlanChanges = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStore) return;
+    setSavingPlan(true);
+    try {
+      await api.put(`/superadmin/stores/${editingStore.id}/subscription`, {
+        plan: editPlan,
+        plan_price: Number(editPrice),
+        subscription_status: editStatus,
+        trial_ends_at: editTrialEnd ? new Date(editTrialEnd).toISOString() : null,
+        reason: editReason
+      });
+      toast.success('Suscripción y plan actualizados.');
+      setEditingStore(null);
+      fetchSubscriptions();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Error al actualizar suscripción');
+    } finally {
+      setSavingPlan(false);
+    }
+  };
+
+  const openPaymentModal = (store: StoreItem) => {
+    setPayingStore(store);
+    setPayAmount(String(store.plan_price || 15));
+    setPayCurrency('USD');
+    setPayMethod('PAGO_MOVIL');
+    setPayRef('');
+    setPayPeriodStart(new Date().toISOString().slice(0, 10));
+    const next = new Date();
+    next.setMonth(next.getMonth() + 1);
+    setPayPeriodEnd(next.toISOString().slice(0, 10));
+    setPayNotes('');
+  };
+
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payingStore) return;
+    setSavingPayment(true);
+    try {
+      await api.post(`/superadmin/stores/${payingStore.id}/payments`, {
+        amount: Number(payAmount),
+        currency: payCurrency,
+        payment_method: payMethod,
+        payment_reference: payRef,
+        period_start: new Date(payPeriodStart).toISOString(),
+        period_end: new Date(payPeriodEnd).toISOString(),
+        notes: payNotes
+      });
+      toast.success('Pago de suscripción registrado exitosamente.');
+      setPayingStore(null);
+      fetchSubscriptions();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Error registrando pago');
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
+  const copyReminderText = (store: StoreItem) => {
+    const text = `Hola *${store.name}*, te saludamos de *TiendaFast*. Te recordamos que tu período de suscripción (Plan ${store.plan}) vence el ${store.next_billing_date ? new Date(store.next_billing_date).toLocaleDateString() : 'próximamente'}. El monto a renovar es de $${store.plan_price} USD (o al cambio oficial BCV). Para mantener activo tu catálogo y delivery, indícanos tu comprobante. ¡Gracias por confiar en nosotros!`;
+    navigator.clipboard.writeText(text);
+    toast.success('Mensaje copiado al portapapeles listo para WhatsApp');
+  };
+
   const generateSlug = (name: string) => {
     setStoreName(name);
     setSlug(name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, ''));
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-12">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-10 font-sans">
+      <div className="max-w-7xl mx-auto space-y-8">
         
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <ShieldAlert size={28} className="sm:w-8 sm:h-8" />
+            <div className="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <ShieldAlert size={28} />
             </div>
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-3xl font-black text-gray-900 leading-tight">Panel SuperAdmin (SaaS)</h1>
-              <p className="text-gray-500 font-medium text-sm sm:text-base">Gestiona todas las tiendas e inquilinos (Tenants) de la plataforma.</p>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">SuperAdmin & Facturación SaaS</h1>
+              <p className="text-gray-500 font-medium text-sm">Control central de clientes, planes, MRR y estados de suscripción.</p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleLogout} className="gap-2 font-bold w-full md:w-auto justify-center">
-            <LogOut size={16} />
-            Cerrar Sesión
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={fetchSubscriptions} className="gap-2 font-bold" disabled={loading}>
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+              Actualizar
+            </Button>
+            <Button variant="destructive" onClick={handleLogout} className="gap-2 font-bold">
+              <LogOut size={16} />
+              Cerrar Sesión
+            </Button>
+          </div>
         </div>
 
+        {/* SaaS KPIs Cards (F2B-09) */}
+        {summary && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="rounded-2xl border-none shadow-sm bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
+              <CardContent className="p-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider font-bold opacity-90">MRR Mensual</p>
+                    <h3 className="text-3xl font-black mt-1">${summary.mrr} <span className="text-xs font-normal opacity-80">USD/mes</span></h3>
+                  </div>
+                  <div className="p-2.5 bg-white/20 rounded-xl">
+                    <DollarSign size={22} />
+                  </div>
+                </div>
+                <p className="text-xs mt-3 opacity-90 font-medium">{summary.activeCount} tiendas activas de pago</p>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-none shadow-sm bg-white">
+              <CardContent className="p-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider font-bold text-gray-400">En Prueba Gratuita</p>
+                    <h3 className="text-3xl font-black text-blue-600 mt-1">{summary.trialCount}</h3>
+                  </div>
+                  <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                    <Calendar size={22} />
+                  </div>
+                </div>
+                <p className="text-xs mt-3 text-gray-500 font-medium">Pilotos y onboarding</p>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-none shadow-sm bg-white">
+              <CardContent className="p-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider font-bold text-gray-400">Por Vencer / Vencidas</p>
+                    <h3 className="text-3xl font-black text-amber-600 mt-1">{summary.pastDueCount}</h3>
+                  </div>
+                  <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
+                    <AlertTriangle size={22} />
+                  </div>
+                </div>
+                <p className="text-xs mt-3 text-gray-500 font-medium">Requieren recordatorio</p>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-none shadow-sm bg-white">
+              <CardContent className="p-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider font-bold text-gray-400">Suspendidas / Pausa</p>
+                    <h3 className="text-3xl font-black text-gray-700 mt-1">{summary.suspendedCount}</h3>
+                  </div>
+                  <div className="p-2.5 bg-gray-100 text-gray-600 rounded-xl">
+                    <Power size={22} />
+                  </div>
+                </div>
+                <p className="text-xs mt-3 text-gray-500 font-medium">Total: {summary.totalStores} negocios</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Create New Store Form */}
+          
+          {/* Asistente de Alta SaaS (F2B-07) */}
           <div className="lg:col-span-1">
             <Card className="shadow-lg border-0 rounded-2xl sticky top-8">
               <CardHeader className="bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-t-2xl">
-                <CardTitle className="flex items-center gap-2"><Plus /> Nueva Tienda</CardTitle>
-                <CardDescription className="text-gray-300">Da de alta a un nuevo cliente en la plataforma.</CardDescription>
+                <CardTitle className="flex items-center gap-2"><Plus size={20} /> Asistente de Alta SaaS</CardTitle>
+                <CardDescription className="text-gray-300">Registra un nuevo negocio con catálogo inicial y plan.</CardDescription>
               </CardHeader>
               <CardContent className="p-6">
                 <form onSubmit={handleCreateStore} className="space-y-4">
                   
-                  <div className="space-y-2">
-                    <Label className="font-bold text-gray-700">Nombre del Negocio</Label>
-                    <Input required value={storeName} onChange={(e) => generateSlug(e.target.value)} placeholder="Ej: Farmacia Los Andes" className="h-12 bg-gray-50" />
+                  <div className="space-y-1.5">
+                    <Label className="font-bold text-gray-700 text-xs">Nombre del Negocio</Label>
+                    <Input required value={storeName} onChange={(e) => generateSlug(e.target.value)} placeholder="Ej: Farmacia Central" className="h-10 bg-gray-50" />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="font-bold text-gray-700">URL / Slug</Label>
-                    <Input required value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="farmacia-los-andes" className="h-12 bg-gray-50" />
-                    <p className="text-xs text-gray-400">tiendafast.com/{slug}</p>
+                  <div className="space-y-1.5">
+                    <Label className="font-bold text-gray-700 text-xs">URL / Slug</Label>
+                    <Input required value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="farmacia-central" className="h-10 bg-gray-50" />
+                    <p className="text-[11px] text-gray-400 font-mono">tiendafast.com/{slug}</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="font-bold text-gray-700">Tipo de Negocio</Label>
-                    <select 
-                      value={industry}
-                      onChange={(e) => setIndustry(e.target.value)}
-                      className="w-full h-12 rounded-md border border-input bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="PHARMACY">Farmacia</option>
-                      <option value="RESTAURANT">Restaurante / Comida</option>
-                      <option value="SUPERMARKET">Supermercado / Bodegón</option>
-                    </select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="font-bold text-gray-700 text-xs">Tipo de Negocio</Label>
+                      <select 
+                        value={industry}
+                        onChange={(e) => setIndustry(e.target.value)}
+                        className="w-full h-10 rounded-md border border-input bg-gray-50 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="PHARMACY">Farmacia</option>
+                        <option value="RESTAURANT">Restaurante</option>
+                        <option value="SUPERMARKET">Supermercado</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="font-bold text-gray-700 text-xs">Plan SaaS</Label>
+                      <select 
+                        value={selectedPlan}
+                        onChange={(e) => setSelectedPlan(e.target.value)}
+                        className="w-full h-10 rounded-md border border-input bg-gray-50 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="EMPRENDEDOR">Emprendedor ($15)</option>
+                        <option value="NEGOCIO">Negocio ($30)</option>
+                        <option value="PRO">Pro / Cadena ($50)</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="font-bold text-gray-700">Color Principal (Tema)</Label>
-                    <div className="flex gap-3 mt-2">
+                  <div className="space-y-1.5">
+                    <Label className="font-bold text-gray-700 text-xs">Días de Prueba Inicial</Label>
+                    <Input type="number" min={0} max={90} value={trialDays} onChange={(e) => setTrialDays(Number(e.target.value))} className="h-10 bg-gray-50" />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="font-bold text-gray-700 text-xs">Color Principal (Tema)</Label>
+                    <div className="flex gap-2.5 mt-1">
                       {[
-                        { id: 'blue', label: 'Azul (Original)', hex: '#2563eb' },
-                        { id: 'red', label: 'Rojo', hex: '#dc2626' },
-                        { id: 'green', label: 'Verde', hex: '#16a34a' },
-                        { id: 'purple', label: 'Morado', hex: '#9333ea' },
-                        { id: 'orange', label: 'Naranja', hex: '#ea580c' },
-                        { id: 'coral', label: 'Coral', hex: '#f43f5e' }
+                        { id: 'blue', hex: '#2563eb' },
+                        { id: 'red', hex: '#dc2626' },
+                        { id: 'green', hex: '#16a34a' },
+                        { id: 'purple', hex: '#9333ea' },
+                        { id: 'orange', hex: '#ea580c' },
+                        { id: 'coral', hex: '#f43f5e' }
                       ].map(color => (
                         <button
                           key={color.id}
                           type="button"
                           onClick={() => setThemeColor(color.id)}
-                          className={`w-8 h-8 rounded-full border-2 transition-all ${themeColor === color.id ? 'border-gray-900 scale-110 shadow-md' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                          className={`w-7 h-7 rounded-full border-2 transition-all ${themeColor === color.id ? 'border-gray-900 scale-110 shadow-md' : 'border-transparent opacity-80 hover:opacity-100'}`}
                           style={{ backgroundColor: color.hex }}
-                          title={color.label}
                         />
                       ))}
                     </div>
                   </div>
 
-                  <hr className="my-4" />
-                  <h4 className="font-black text-sm text-gray-500 uppercase">Cuenta del Administrador</h4>
+                  <hr className="my-3" />
+                  <p className="font-black text-xs text-gray-400 uppercase tracking-wider">Cuenta de Administración</p>
 
-                  <div className="space-y-2">
-                    <Label className="font-bold text-gray-700">Usuario de Ingreso</Label>
-                    <Input required value={adminUsername} onChange={(e) => setAdminUsername(e.target.value)} placeholder="admin_losandes" className="h-12 bg-gray-50" />
+                  <div className="space-y-1.5">
+                    <Label className="font-bold text-gray-700 text-xs">Usuario</Label>
+                    <Input required value={adminUsername} onChange={(e) => setAdminUsername(e.target.value)} placeholder="admin_tienda" className="h-10 bg-gray-50" />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="font-bold text-gray-700">Teléfono (WhatsApp)</Label>
-                    <Input required value={adminPhone} onChange={(e) => setAdminPhone(e.target.value)} placeholder="+584141234567" className="h-12 bg-gray-50" />
+                  <div className="space-y-1.5">
+                    <Label className="font-bold text-gray-700 text-xs">Teléfono (WhatsApp)</Label>
+                    <Input required value={adminPhone} onChange={(e) => setAdminPhone(e.target.value)} placeholder="+584141234567" className="h-10 bg-gray-50" />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="font-bold text-gray-700">Contraseña</Label>
-                    <Input required type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="h-12 bg-gray-50" />
+                  <div className="space-y-1.5">
+                    <Label className="font-bold text-gray-700 text-xs">Contraseña</Label>
+                    <Input required type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="h-10 bg-gray-50" />
                   </div>
 
-                  <Button type="submit" disabled={creating} className="w-full h-12 text-lg font-black bg-blue-600 hover:bg-blue-700 rounded-xl mt-4">
-                    {creating ? <Loader2 className="animate-spin" /> : 'Registrar Tienda'}
+                  <Button type="submit" disabled={creating} className="w-full h-11 text-base font-black bg-blue-600 hover:bg-blue-700 rounded-xl mt-3">
+                    {creating ? <Loader2 className="animate-spin" /> : 'Dar de Alta Tienda'}
                   </Button>
-
                 </form>
               </CardContent>
             </Card>
           </div>
 
-          {/* List of Stores */}
+          {/* Lista de Tiendas y Suscripciones (F2B-03) */}
           <div className="lg:col-span-2">
-             <Card className="shadow-lg border-0 rounded-2xl h-full">
-              <CardHeader className="bg-white border-b border-gray-100 rounded-t-2xl">
-                <CardTitle className="flex items-center gap-2 text-xl"><Store className="text-blue-600" /> Tiendas ({stores.length})</CardTitle>
+            <Card className="shadow-lg border-0 rounded-2xl">
+              <CardHeader className="bg-white border-b border-gray-100 rounded-t-2xl flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-xl"><Store className="text-blue-600" /> Clientes y Suscripciones ({stores.length})</CardTitle>
+                  <CardDescription className="text-xs mt-1">Gestión de planes, límites de catálogo y control de cobro.</CardDescription>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader className="bg-gray-50/50">
+                    <TableHeader className="bg-gray-50/70">
                       <TableRow>
                         <TableHead className="font-black text-gray-900 pl-6">Negocio</TableHead>
-                        <TableHead className="font-black text-gray-900">Administrador</TableHead>
-                        <TableHead className="font-black text-gray-900">Stats</TableHead>
-                        <TableHead className="font-black text-gray-900">Estado</TableHead>
-                        <TableHead className="font-black text-gray-900 text-right pr-6">Acción</TableHead>
+                        <TableHead className="font-black text-gray-900">Plan / Cupo</TableHead>
+                        <TableHead className="font-black text-gray-900">Estado SaaS</TableHead>
+                        <TableHead className="font-black text-gray-900">Próx. Cobro</TableHead>
+                        <TableHead className="font-black text-gray-900 text-right pr-6">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {loading ? (
-                        <TableRow><TableCell colSpan={5} className="text-center py-10 font-bold text-gray-400">Cargando tiendas...</TableCell></TableRow>
-                      ) : stores.map(store => (
-                        <TableRow key={store.id} className="hover:bg-gray-50/50">
-                          <TableCell className="pl-6">
-                            <p className="font-black text-lg">{store.name}</p>
-                            <a href={`/${store.slug}`} target="_blank" className="text-sm text-blue-500 hover:underline flex items-center gap-1">
-                              /{store.slug} <ExternalLink size={12} />
-                            </a>
-                          </TableCell>
-                          <TableCell>
-                            {store.users && store.users[0] ? (
-                              <div>
-                                <p className="font-bold text-gray-800">@{store.users[0].username}</p>
-                                <p className="text-xs text-gray-500 font-medium">{store.users[0].phone}</p>
-                              </div>
-                            ) : (
-                              <span className="text-red-500 text-xs font-bold">Sin Admin</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Badge variant="outline" className="bg-orange-50 text-orange-700">{store._count?.orders || 0} pdos</Badge>
-                              <Badge variant="outline" className="bg-purple-50 text-purple-700">{store._count?.products || 0} prods</Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={store.is_active ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}>
-                              {store.is_active ? 'ACTIVA' : 'INACTIVA'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right pr-6">
-                            <div className="flex gap-2 justify-end">
-                              <a href={`/admin/${store.slug}`} target="_blank">
-                                <Button variant="outline" size="sm" className="rounded-lg shadow-sm font-bold gap-1">
-                                  <ExternalLink size={14} />
-                                  Admin
-                                </Button>
+                        <TableRow><TableCell colSpan={5} className="text-center py-12 font-bold text-gray-400">Cargando suscripciones...</TableCell></TableRow>
+                      ) : stores.map(store => {
+                        const statusBadge = {
+                          ACTIVE: <Badge className="bg-emerald-500 font-bold">ACTIVA</Badge>,
+                          TRIAL: <Badge className="bg-blue-500 font-bold">PRUEBA</Badge>,
+                          PAST_DUE: <Badge className="bg-amber-500 font-bold">POR VENCER</Badge>,
+                          SUSPENDED: <Badge className="bg-red-500 font-bold">SUSPENDIDA</Badge>,
+                          CANCELLED: <Badge className="bg-gray-400 font-bold">CANCELADA</Badge>
+                        }[store.subscription_status] || <Badge>{store.subscription_status}</Badge>;
+
+                        return (
+                          <TableRow key={store.id} className="hover:bg-gray-50/50">
+                            <TableCell className="pl-6 py-4">
+                              <p className="font-black text-base text-gray-900">{store.name}</p>
+                              <a href={`/${store.slug}`} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline flex items-center gap-1 font-mono mt-0.5">
+                                /{store.slug} <ExternalLink size={10} />
                               </a>
-                              <Button 
-                                variant={store.is_active ? "destructive" : "default"} 
-                                size="sm" 
-                                onClick={() => toggleStatus(store.id)}
-                                className="rounded-lg shadow-sm font-bold"
-                              >
-                                <Power size={14} className="mr-1" />
-                                {store.is_active ? 'Pausar' : 'Activar'}
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                              {store.users?.[0] && (
+                                <p className="text-[11px] text-gray-500 font-medium mt-1">
+                                  @{store.users[0].username} • {store.users[0].phone}
+                                </p>
+                              )}
+                            </TableCell>
+
+                            <TableCell>
+                              <Badge variant="outline" className="font-black text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
+                                {store.plan} (${store.plan_price}/m)
+                              </Badge>
+                              {store.product_usage && (
+                                <div className="mt-1.5 w-28">
+                                  <div className="flex justify-between text-[10px] text-gray-500 font-semibold mb-0.5">
+                                    <span>{store.product_usage.current} prods</span>
+                                    <span>max {store.product_usage.limit}</span>
+                                  </div>
+                                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div 
+                                      className={`h-full ${store.product_usage.percentage > 90 ? 'bg-red-500' : 'bg-blue-500'}`}
+                                      style={{ width: `${store.product_usage.percentage}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </TableCell>
+
+                            <TableCell>
+                              <div className="space-y-1">
+                                {statusBadge}
+                                {!store.is_active && (
+                                  <p className="text-[10px] text-red-500 font-bold">Tienda en pausa</p>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            <TableCell className="text-xs text-gray-600 font-medium">
+                              {store.next_billing_date ? (
+                                <span>{new Date(store.next_billing_date).toLocaleDateString()}</span>
+                              ) : store.trial_ends_at ? (
+                                <span className="text-blue-600 font-bold">Fin prueba: {new Date(store.trial_ends_at).toLocaleDateString()}</span>
+                              ) : (
+                                <span className="text-gray-400">Sin definir</span>
+                              )}
+                            </TableCell>
+
+                            <TableCell className="text-right pr-6">
+                              <div className="flex gap-1.5 justify-end">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => openPaymentModal(store)}
+                                  title="Registrar Pago"
+                                  className="h-8 px-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200"
+                                >
+                                  <CreditCard size={13} className="mr-1" />
+                                  Cobro
+                                </Button>
+
+                                {store.last_payment && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => setReceiptStore(store)}
+                                    title="Ver Último Recibo"
+                                    className="h-8 px-2 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border-blue-200"
+                                  >
+                                    <Receipt size={13} className="mr-1" />
+                                    Recibo
+                                  </Button>
+                                )}
+
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => openPlanModal(store)}
+                                  title="Gestionar Plan"
+                                  className="h-8 px-2 text-xs font-bold"
+                                >
+                                  Plan
+                                </Button>
+
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => copyReminderText(store)}
+                                  title="Copiar recordatorio WhatsApp"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Copy size={13} />
+                                </Button>
+
+                                <Button 
+                                  variant={store.is_active ? "destructive" : "default"} 
+                                  size="sm" 
+                                  onClick={() => toggleStatus(store.id)}
+                                  className="h-8 px-2 text-xs font-bold"
+                                >
+                                  <Power size={12} className="mr-1" />
+                                  {store.is_active ? 'Pausar' : 'Activar'}
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                       {stores.length === 0 && !loading && (
                         <TableRow><TableCell colSpan={5} className="text-center py-10 font-bold text-gray-400">No hay tiendas registradas.</TableCell></TableRow>
                       )}
@@ -278,9 +605,232 @@ export default function SuperAdmin() {
               </CardContent>
             </Card>
           </div>
+
         </div>
 
       </div>
+
+      {/* Modal: Gestionar Plan (F2B-04) */}
+      {editingStore && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="max-w-md w-full bg-white rounded-2xl shadow-2xl border-none">
+            <CardHeader className="flex flex-row justify-between items-center border-b pb-4">
+              <div>
+                <CardTitle className="text-lg font-black">Plan SaaS: {editingStore.name}</CardTitle>
+                <CardDescription className="text-xs">Modifica el plan comercial, precios y estado.</CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setEditingStore(null)} className="h-8 w-8 p-0">
+                <X size={18} />
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <form onSubmit={savePlanChanges} className="space-y-4">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold">Plan</Label>
+                  <select 
+                    value={editPlan}
+                    onChange={(e) => {
+                      setEditPlan(e.target.value);
+                      if (e.target.value === 'EMPRENDEDOR') setEditPrice('15');
+                      if (e.target.value === 'NEGOCIO') setEditPrice('30');
+                      if (e.target.value === 'PRO') setEditPrice('50');
+                    }}
+                    className="w-full h-10 rounded-md border border-input bg-gray-50 px-3 text-sm font-semibold"
+                  >
+                    <option value="EMPRENDEDOR">Emprendedor (Hasta 50 prods, $15/m)</option>
+                    <option value="NEGOCIO">Negocio (Hasta 250 prods, $30/m)</option>
+                    <option value="PRO">Pro / Cadena (Hasta 1000 prods, $50/m)</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Precio Mensual ($ USD)</Label>
+                    <Input type="number" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="h-10" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Estado Suscripción</Label>
+                    <select 
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value)}
+                      className="w-full h-10 rounded-md border border-input bg-gray-50 px-3 text-sm font-semibold"
+                    >
+                      <option value="TRIAL">Prueba (Trial)</option>
+                      <option value="ACTIVE">Activa (Al día)</option>
+                      <option value="PAST_DUE">Por Vencer / Vencida</option>
+                      <option value="SUSPENDED">Suspendida por impago</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold">Fin de Período de Prueba</Label>
+                  <Input type="date" value={editTrialEnd} onChange={(e) => setEditTrialEnd(e.target.value)} className="h-10" />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold">Motivo del Cambio (Auditoría)</Label>
+                  <Input value={editReason} onChange={(e) => setEditReason(e.target.value)} placeholder="Ej: Renovación acordada, descuento comercial" className="h-10" />
+                </div>
+
+                <div className="flex gap-2 justify-end pt-2">
+                  <Button type="button" variant="outline" onClick={() => setEditingStore(null)}>Cancelar</Button>
+                  <Button type="submit" disabled={savingPlan} className="font-bold">
+                    {savingPlan ? <Loader2 className="animate-spin" /> : 'Guardar Cambios'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal: Registrar Pago (F2B-02) */}
+      {payingStore && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="max-w-md w-full bg-white rounded-2xl shadow-2xl border-none">
+            <CardHeader className="flex flex-row justify-between items-center border-b pb-4">
+              <div>
+                <CardTitle className="text-lg font-black">Registrar Pago: {payingStore.name}</CardTitle>
+                <CardDescription className="text-xs">Extiende el período activo y genera recibo.</CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setPayingStore(null)} className="h-8 w-8 p-0">
+                <X size={18} />
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <form onSubmit={handleRecordPayment} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Monto</Label>
+                    <Input type="number" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} required className="h-10" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Moneda</Label>
+                    <select 
+                      value={payCurrency}
+                      onChange={(e) => setPayCurrency(e.target.value)}
+                      className="w-full h-10 rounded-md border border-input bg-gray-50 px-3 text-sm font-semibold"
+                    >
+                      <option value="USD">USD ($)</option>
+                      <option value="VES">Bolívares (Bs)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Método</Label>
+                    <select 
+                      value={payMethod}
+                      onChange={(e) => setPayMethod(e.target.value)}
+                      className="w-full h-10 rounded-md border border-input bg-gray-50 px-3 text-sm font-semibold"
+                    >
+                      <option value="PAGO_MOVIL">Pago Móvil</option>
+                      <option value="TRANSFER">Transferencia</option>
+                      <option value="CASH">Efectivo USD</option>
+                      <option value="ZELLE">Zelle</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Referencia / Comprobante</Label>
+                    <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="Ej: 987654" className="h-10" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Inicio Período</Label>
+                    <Input type="date" value={payPeriodStart} onChange={(e) => setPayPeriodStart(e.target.value)} required className="h-10" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold">Fin Período (Próx. Cobro)</Label>
+                    <Input type="date" value={payPeriodEnd} onChange={(e) => setPayPeriodEnd(e.target.value)} required className="h-10" />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold">Notas del Recibo</Label>
+                  <Input value={payNotes} onChange={(e) => setPayNotes(e.target.value)} placeholder="Ej: Pago mensualidad Plan Emprendedor" className="h-10" />
+                </div>
+
+                <div className="flex gap-2 justify-end pt-2">
+                  <Button type="button" variant="outline" onClick={() => setPayingStore(null)}>Cancelar</Button>
+                  <Button type="submit" disabled={savingPayment} className="font-bold bg-emerald-600 hover:bg-emerald-700 text-white">
+                    {savingPayment ? <Loader2 className="animate-spin" /> : 'Confirmar y Activar'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal: Recibo de Pago (F2B-08) */}
+      {receiptStore && receiptStore.last_payment && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="max-w-md w-full bg-white rounded-2xl shadow-2xl border-none">
+            <CardHeader className="flex flex-row justify-between items-center border-b pb-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="text-emerald-500" size={24} />
+                <div>
+                  <CardTitle className="text-lg font-black">Comprobante de Suscripción</CardTitle>
+                  <CardDescription className="text-xs">Recibo oficial de pago SaaS</CardDescription>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setReceiptStore(null)} className="h-8 w-8 p-0">
+                <X size={18} />
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4 text-sm">
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Cliente:</span>
+                  <span className="font-bold text-gray-900">{receiptStore.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Plan:</span>
+                  <span className="font-bold text-blue-600">{receiptStore.plan}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Monto Recibido:</span>
+                  <span className="font-black text-emerald-600">${receiptStore.last_payment.amount} {receiptStore.last_payment.currency}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Método:</span>
+                  <span className="font-semibold text-gray-800">{receiptStore.last_payment.payment_method}</span>
+                </div>
+                {receiptStore.last_payment.payment_reference && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Referencia:</span>
+                    <span className="font-mono text-gray-800">{receiptStore.last_payment.payment_reference}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Período Cubierto:</span>
+                  <span className="font-semibold text-gray-800">
+                    {new Date(receiptStore.last_payment.period_start).toLocaleDateString()} al {new Date(receiptStore.last_payment.period_end).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-400 pt-1 border-t">
+                  <span>Fecha de Emisión:</span>
+                  <span>{new Date(receiptStore.last_payment.created_at).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-2">
+                <Button variant="outline" onClick={() => window.print()} className="font-bold">
+                  Imprimir Comprobante
+                </Button>
+                <Button onClick={() => setReceiptStore(null)} className="font-bold bg-primary text-white">
+                  Cerrar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
     </div>
   );
 }
