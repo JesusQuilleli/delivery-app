@@ -3,8 +3,8 @@
 > Documento vivo. Actualizar después de cada tarea.
 > Si se pierde la sesión: leer este archivo, revisar `git status` y `git log`, y continuar desde la primera casilla sin marcar.
 
-- **Última actualización:** 2026-11-05
-- **Rama actual:** `feature/security-hardening`
+- **Última actualización:** 2026-11-06
+- **Rama actual:** `feature/operational-enhancements`
 - **Rama principal:** `main`
 - **Estrategia de despliegue y validación:**
   1. **Hito 1 (Inmediato / En curso):** Sistema 100% listo, probado y validable en **Localhost** y en el entorno de pruebas existente en la nube (**Netlify** para frontend + **Render** para backend + **Neon** para PostgreSQL). Con esta base lista y pulida se realizarán las demostraciones presenciales y la validación comercial con negocios de comida rápida, víveres y farmacias de Puerto Ayacucho.
@@ -477,16 +477,39 @@ Optimización de la búsqueda y precisión de la dirección del cliente en el ch
 
 ---
 
-### Fase 2C — Requisitos de farmacia (condicional, 0–5 días)
+### Fase 2C — Módulo Operativo de Farmacias: Récipe Médico y Control de Lotes (3 días)
 
-Solo si el discovery con 5 farmacias lo confirma.
+Flujo integral de medicamentos con récipe médico, evaluación por farmaceuta y entrega física al motorizado:
 
-- [ ] F2C-01 Validar necesidad de receta médica y lotes/vencimiento.
-- [ ] F2C-02 Implementar carga y revisión de recetas.
-- [ ] F2C-03 Implementar lotes y fechas de vencimiento.
-- [ ] F2C-04 Implementar alertas de vencimiento.
-- [ ] F2C-05 Bloquear venta de productos vencidos.
-- [ ] F2C-06 Documentar exclusión de medicamentos controlados.
+- [ ] F2C-01 **Schema de BD para Récipes y Lotes:** Flag `Product.requires_prescription Boolean @default(false)`, campos `Order.prescription_url String?`, `Order.prescription_status String @default("NOT_REQUIRED")` (`NOT_REQUIRED`, `PENDING_REVIEW`, `APPROVED`, `REJECTED`), `Order.prescription_notes String?`, `Product.lot_number String?`, `Product.expires_at DateTime?`.
+- [ ] F2C-02 **Checkout con Subida de Récipe:** Si el carrito contiene productos con `requires_prescription === true`, solicitar obligatoriamente la carga fotográfica del récipe médico (subida segura a Cloudinary / JPEG-PNG-WEBP hasta 5MB).
+- [ ] F2C-03 **Aviso Legal y Compromiso de Entrega:** Mensaje explícito al cliente en Checkout y comprobante: *"Al recibir tu pedido, deberás entregar el récipe médico original en físico al motorizado para poder entregarte tus medicamentos"*.
+- [ ] F2C-04 **Modal de Evaluación en Dashboard / OrderDetails:** El farmaceuta visualiza la foto del récipe ampliada y dispone de acciones: *"Aprobar Récipe"* (habilita preparación) o *"Rechazar Récipe"* (solicita motivo explicativo: fecha expirada, dosis ilegible, etc.).
+- [ ] F2C-05 **Notificación en Tiempo Real al Cliente:** Notificación inmediata del resultado de evaluación de su récipe en `/checkout` y `/mis-pedidos`.
+- [ ] F2C-06 **Comprobante y Hoja de Ruta para Motorizado:** Indicador destacado *"⚠️ RETENER RÉCIPE FÍSICO"* en la comanda del motorizado con confirmación de recepción física al entregar.
+- [ ] F2C-07 **Control de Lotes y Vencimiento en Inventario:** Registro de `lot_number` y fecha de caducidad en el inventario de farmacias con alerta visual de próximos a vencer (<60 días).
+- [ ] F2C-08 **Bloqueo de Venta de Vencidos:** Bloqueo transaccional de venta para medicamentos con fecha de vencimiento cumplida (`expires_at < hoy`).
+
+---
+
+### Fase 2D — Correcciones Operativas Críticas y Experiencia en Vivo (Bloque A - Inmediato)
+
+- [ ] F2D-01 **Mapas sin marcas de agua (OpenStreetMap Standard):** Sustituir Carto basemaps (que exige API key) por OpenStreetMap en `Checkout.tsx`, `OrderDetails.tsx`, `Dashboard.tsx` y `Settings.tsx`.
+- [ ] F2D-02 **Campanita Sonora ante Nuevos Pedidos en Dashboard:** Generador de audio de dos tonos (ding-dong 880Hz / 1320Hz) con Web Audio API sintetizado en el cliente (cero dependencias de red, nunca falla por 404), archivo mp3 de respaldo en `frontend/public/notification.mp3` y botón activador de audio amigable ante políticas de autoplay del navegador.
+- [ ] F2D-03 **Sincronización en Tiempo Real sin Refrescar:** Inyectar JWT token en `socket.ts` handshake auth para superar el bloqueo de cookies de terceros en cross-domain (Netlify ↔ Render), asegurar reconexión reactiva en `RealtimeContext.tsx`, y activar polling de alta frecuencia (cada 4s) en `Checkout.tsx` (Paso 5) y modal de `MyOrders.tsx` cuando una orden está activa.
+- [ ] F2D-04 **Cola de Pedidos por Urgencia (FIFO):** Ordenar los pedidos pendientes (`PENDING` y `AWAITING_PAYMENT`) por `createdAt ASC` (el que lleva más tiempo esperando de primero arriba) en backend y en `Dashboard.tsx`, agregando badges dinámicos de tiempo transcurrido (Verde <10m, Ámbar 10-20m, Rojo parpadeante >20m con alerta de urgencia).
+
+---
+
+### Fase 2E — CMS de Personalización Visual y Multi-Sucursales (Bloque B - SaaS)
+
+- [ ] F2E-01 **Modelo `landing_config` en Prisma:** Campo `landing_config Json?` en `Store` (slogan, subtitle, hero_image, banner_url, badge_promo, badge_delivery, whatsapp_contact, about_text).
+- [ ] F2E-02 **Módulo interactivo "Diseño & Landing" en SuperAdmin y Configuración de Tienda:** Formulario visual con subida de imágenes a Cloudinary y previsualizador en vivo sin tocar código.
+- [ ] F2E-03 **Integración dinámica en Plantillas:** Actualizar `PharmacyTemplate.tsx`, `Hero.tsx`, `RestaurantTemplate.tsx` y `SupermarketTemplate.tsx` para consumir `store.landing_config` con fallback estándar.
+- [ ] F2E-04 **Estrategia comercial SaaS de personalización:** Nivel estándar incluido en Emprendedor, personalización de textos/badges en Negocio ($30/m), diseño completo de banners y marca en PRO ($50/m) o Add-on de Branding ($15 único).
+- [ ] F2E-05 **Arquitectura Multi-Sucursales:** Campo `parent_store_id Int?` en `Store`, vinculación de sedes secundarias (ej. Farma-Ayacucho Centro vs Sur).
+- [ ] F2E-06 **Enrutamiento por Proximidad y Selector de Sede:** Detección de distancia Haversine a la sede más cercana o modal selector para que el cliente compre en la sucursal correcta.
+- [ ] F2E-07 **Monetización Multi-Sucursal:** Esquema de add-on de sucursal adicional (+ $10/mes por sede extra en vez de tienda completa).
 
 ---
 
@@ -794,6 +817,7 @@ npm run build
 
 | Fecha | Fase / ID | Estado | Notas |
 |---|---|---|---|
+| 2026-11-06 | F2C, F2D, F2E planificados | En curso | Incorporados al plan: flujo completo de récipes y lotes de farmacia (con retención física), correcciones operativas críticas (OSM, campanita, realtime, cola FIFO) y módulo SaaS (CMS visual y multi-sucursal) |
 | 2026-11-01 | Plan creado | Hecho | Decisiones comerciales y técnicas cerradas |
 | 2026-11-01 | Fase 0 | Hecho | Línea base `c7c0377`, `.env.example`, scripts y CI |
 | 2026-11-01 | Fase 0 pruebas | Hecho | Backend 86/86, frontend 32/32, lint sin errores, build OK |
