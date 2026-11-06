@@ -7,8 +7,8 @@
 - **Rama actual:** `feature/operational-enhancements`
 - **Rama principal:** `main`
 - **Estrategia de despliegue y validación:**
-  1. **Hito 1 (Inmediato / En curso):** Sistema 100% listo, probado y validable en **Localhost** y en el entorno de pruebas existente en la nube (**Netlify** para frontend + **Render** para backend + **Neon** para PostgreSQL). Con esta base lista y pulida se realizarán las demostraciones presenciales y la validación comercial con negocios de comida rápida, víveres y farmacias de Puerto Ayacucho.
-  2. **Hito 2 (Final / Producción autónoma):** Migración y despliegue definitivo a **VPS propio** (PostgreSQL 16 local, Nginx, Let's Encrypt, backups automáticos). Los accesos SSH y credenciales del VPS se solicitarán al usuario en el momento exacto de ejecutar esta fase.
+  1. **Hito 1 (Inmediato / En curso - Demostración y Validación Comercial):** Sistema 100% listo, probado y validable en **Localhost** y en el entorno de pruebas existente en la nube (**Netlify** para frontend + **Render** para backend + **Neon** para PostgreSQL). **Este entorno en Netlify y Render es estrictamente para la demostración presencial y validación con los primeros clientes de comida rápida, víveres y farmacias de Puerto Ayacucho.**
+  2. **Hito 2 (Final / Producción Real con Clientes en VPS mediante Docker):** Empaquetado completo de la aplicación (Frontend, Backend, base de datos PostgreSQL 16 y Nginx SSL) mediante **Docker y Docker Compose**. Despliegue en VPS propio para iniciar la operación comercial real y cobro a clientes, logrando un despliegue portable con un solo comando (`docker compose up -d`), sin costos recurrentes de PaaS, con backups automáticos en volúmenes persistentes y máxima soberanía de datos.
 - **Estado general:** F1-34, Fase 1B, bugs C-07/C-08/C-09 corregidos, C-10 verificado y tiendas demo creadas con seed idempotente. PDF de accesos y guion de demostración generado (`Accesos_Demo_TiendaFast.pdf`). En curso: Fase 2 restante (inventario/combos, configuración de tienda, pedidos/paginación y analytics).
 - **Zona del piloto:** Puerto Ayacucho, Estado Amazonas
 - **Verticales comerciales prioritarias:**
@@ -634,9 +634,27 @@ Personalización estructural de la landing page para clientes en planes avanzado
 
 ---
 
-### Fase 4 — Producción Definitiva en VPS con PostgreSQL local (Diferida al despliegue final)
+### Fase 4 — Producción Definitiva en VPS Contenedorizado con Docker y PostgreSQL local (Diferida al despliegue final con clientes reales)
 
-> **Nota de ejecución:** Esta fase se mantiene completamente planificada y documentada con sus 45 sub-tareas. Se ejecutará una vez concluidas las demostraciones comerciales y validaciones del piloto en el entorno de pruebas actual (Netlify + Render + Neon). **Al momento de iniciar esta fase, el asistente solicitará al usuario la IP, accesos SSH y credenciales del VPS para proceder con el aprovisionamiento y migración.**
+> **Nota de ejecución:** Esta fase se mantiene completamente planificada y documentada para su ejecución posterior (tarea pendiente por hacer, no ejecutar de inmediato). **Netlify y Render se reservan exclusivamente para la demostración y validación comercial.** Para atender a clientes reales y cobro de suscripciones, la app se empaquetará con Docker y Docker Compose (frontend, backend, base de datos PostgreSQL 16 y Nginx) para desplegarse fácilmente en un VPS propio en minutos. **Al momento de iniciar esta fase, el asistente solicitará al usuario la IP, accesos SSH y credenciales del VPS para proceder con el aprovisionamiento y despliegue.**
+
+#### 4-Docker — Empaquetado Integral con Docker y Docker Compose para VPS (Pendiente por hacer)
+
+- [ ] F4-D01 **Orquestación con Docker Compose de Producción (`docker-compose.prod.yml`):**
+  - Servicio `db`: Contenedor `postgres:16-alpine` con volumen persistente `postgres_data`, red privada interna `delivery_net` (puerto 5432 no expuesto al exterior) y healthcheck con `pg_isready`.
+  - Servicio `api`: Contenedor backend Node.js 20 con auto-ejecución de migraciones Prisma (`npx prisma migrate deploy` al iniciar), conexión interna a `db:5432`, healthcheck `/api/health` y reinicio automático (`restart: always`).
+  - Servicio `web`: Contenedor Nginx Alpine optimizado sirviendo el build compilado de React (`dist/`), actuando como Reverse Proxy para `/api` y WebSocket en `/socket.io`.
+  - Servicio `certbot`: Renovación automática de certificados SSL Let's Encrypt con webroot compartido.
+  - Servicio `db-backup`: Contenedor liviano o cron programado para volcar diariamente dumps comprimidos de PostgreSQL (`pg_dump | gzip`) a almacenamiento persistente con retención de 30 días.
+- [ ] F4-D02 **Dockerfiles Multi-Stage de Producción:**
+  - `backend/Dockerfile`: Multi-stage build con `node:20-alpine`, instalación limpia con `npm ci --omit=dev`, generación de cliente Prisma y usuario de sistema no-root (`nodejs`).
+  - `frontend/Dockerfile`: Multi-stage build con Node en etapa de build (`npm run build`) y Nginx Alpine ligero en etapa final con compresión Gzip y headers de seguridad.
+- [ ] F4-D03 **Script de Despliegue Automatizado en VPS (`scripts/vps-deploy.sh`):**
+  - Script bash de un solo comando en el servidor: `git pull`, validación de variables en `.env.production`, `docker compose -f docker-compose.prod.yml up -d --build` y comprobación de salud de contenedores sin tiempo de inactividad visible.
+- [ ] F4-D04 **Migración de Datos Neon → PostgreSQL Docker:**
+  - Exportación de la data de demostración y clientes piloto desde Neon y restauración dentro del volumen persistente del contenedor PostgreSQL en el VPS.
+- [ ] F4-D05 **Estrategia de Backups y Volúmenes Persistentes:**
+  - Montaje de volumen persistente en disco seguro del host (`/var/lib/docker/volumes/delivery_postgres_data`) con script automatizado de copia externa de seguridad.
 
 #### 4A — Provisionamiento del VPS
 
@@ -856,6 +874,7 @@ npm run build
 
 | Fecha | Fase / ID | Estado | Notas |
 |---|---|---|---|
+| 2026-11-06 | F4-D01 a F4-D05 (Planificado) | Pendiente | Incorporada al plan la estrategia de empaquetado total con Docker Compose (Frontend, Backend, PostgreSQL 16 y Nginx) para despliegue ágil en VPS con clientes reales (Netlify/Render se mantienen para demo) |
 | 2026-11-06 | F2D-05 | Hecho | Récipes médicos y lotes restringidos estrictamente a farmacias (ocultos en Comida y Víveres) |
 | 2026-11-06 | F2D-06 | Hecho | Sistema integral de tarifas por zona: preset Puerto Ayacucho, simulador en panel admin y desglose transparente de delivery en Checkout |
 | 2026-11-06 | F2D-01 (Despliegue) | Hecho | Merge y push a rama `main` en GitHub para que Netlify actualice `test.shop-mg.com/admin/demo-comida/order/391` con OpenStreetMap y auto-bounds sin marcas de agua |
