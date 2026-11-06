@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
-import { getSocketURL } from '../lib/socket';
+import { getSocketURL, createSocket } from '../lib/socket';
+import { playOrderChime } from '../lib/notifications';
 import api from '../api';
 import { Bell, MapPin, CheckCircle, Package, Clock, Phone, XCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Truck, User, X, Utensils, Check, Navigation } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -133,9 +134,9 @@ export default function Dashboard() {
   // llegaron mientras el admin estaba offline o con el socket desconectado),
   // igual que si hubieran llegado en vivo, sin duplicar las ya alertadas.
   const enqueuePendingAlerts = useCallback((orders: Order[]) => {
-    const newPending = orders.filter(
-      o => isNuevas(o.status) && !o.viewed && !alertedPendingIds.current.has(o.id)
-    );
+    const newPending = orders
+      .filter(o => isNuevas(o.status) && !o.viewed && !alertedPendingIds.current.has(o.id))
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     if (newPending.length === 0) return;
 
     setAlertQueue(prev => {
@@ -145,6 +146,7 @@ export default function Dashboard() {
     });
     newPending.forEach(o => alertedPendingIds.current.add(o.id));
 
+    playOrderChime();
     if (audioRef.current) {
       audioRef.current.play().catch(() => {});
     }
@@ -213,7 +215,7 @@ export default function Dashboard() {
     let reconnectTimer: ReturnType<typeof setTimeout>;
 
     function connectSocket() {
-      const socket: Socket = io(socketURL, { reconnection: false });
+      const socket: Socket = createSocket();
       socketRef.current = socket;
 
       socket.on('connect', () => {
@@ -236,6 +238,7 @@ export default function Dashboard() {
         setOrders(prev => [order, ...prev]);
         setAlertQueue(prev => [...prev, order]);
 
+        playOrderChime();
         if (audioRef.current) {
           audioRef.current.play().catch(() => {});
         }
@@ -382,8 +385,13 @@ export default function Dashboard() {
     }
   };
 
+  // F2D-04: Cola de pedidos pendientes ordenada por tiempo de espera (FIFO: el más antiguo primero)
   const getOrdersForColumn = (status: string) => {
-    return orders.filter(o => o.status === status);
+    const filtered = orders.filter(o => o.status === status);
+    if (status === 'PENDING' || status === 'AWAITING_PAYMENT') {
+      return filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
+    return filtered;
   };
 
   // Atajos de teclado para la cola de alertas
@@ -412,7 +420,20 @@ export default function Dashboard() {
 
   return (
     <AdminLayout title="Panel de Despachos">
-      <ConnectionStatus connected={connected} />
+      <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+        <ConnectionStatus connected={connected} />
+        <Button
+          variant="outline"
+          size="sm"
+          className="font-bold text-xs h-8 gap-1.5 border-dashed border-primary/40 hover:bg-primary/5 text-primary"
+          onClick={() => {
+            playOrderChime();
+            toast.success("🔔 Campanita de pedidos probada y activa");
+          }}
+        >
+          🔔 Probar campanita
+        </Button>
+      </div>
 
       {/* Tarjeta Flotante de Alertas (reemplaza el modal bloqueante) */}
       {alertQueue.length > 0 && (

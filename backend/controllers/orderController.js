@@ -315,6 +315,7 @@ const updateOrderStatus = async (req, res) => {
 
     const io = req.app.get('io');
     io.to(`client_${order.user_id}`).emit('estado_actualizado', order);
+    io.to(`order_${order.id}`).emit('estado_actualizado', order);
     io.to(`store_${order.store_id}`).emit('pedido_actualizado', order);
 
     res.json({ message: 'Estado actualizado', order });
@@ -455,6 +456,7 @@ const rateOrder = async (req, res) => {
     const io = req.app.get('io');
     const clientRoom = `client_${order.user_id}`;
     io.to(clientRoom).emit('estado_actualizado', order);
+    io.to(`order_${order.id}`).emit('estado_actualizado', order);
 
     const storeRoom = `store_${order.store_id}`;
     io.to(storeRoom).emit('pedido_actualizado', order);
@@ -538,6 +540,7 @@ const cancelOrderClient = async (req, res) => {
 
     const io = req.app.get('io');
     io.to(`client_${order.user_id}`).emit('estado_actualizado', order);
+    io.to(`order_${order.id}`).emit('estado_actualizado', order);
     io.to(`store_${order.store_id}`).emit('pedido_actualizado', order);
 
     res.json({ message: 'Pedido cancelado', order });
@@ -615,6 +618,7 @@ const batchUpdateStatus = async (req, res) => {
 
     for (const order of updatedOrders) {
       io.to(`client_${order.user_id}`).emit('estado_actualizado', order);
+      io.to(`order_${order.id}`).emit('estado_actualizado', order);
       io.to(`store_${order.store_id}`).emit('pedido_actualizado', order);
     }
 

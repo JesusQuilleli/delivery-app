@@ -55,6 +55,9 @@ const getStoreProducts = async (req, res) => {
     let currentPage = 1;
     let totalProducts = 0;
 
+        const isUrgencySort = sort === 'asc' || sort === 'fifo' || (!sort && (status === 'PENDING' || status === 'AWAITING_PAYMENT'));
+    const sortOrder = isUrgencySort ? 'asc' : 'desc';
+
     if (page && limit) {
       currentPage = Number(page);
       const parsedLimit = Number(limit);
@@ -129,7 +132,7 @@ const getStoreProducts = async (req, res) => {
 const getStoreOrders = async (req, res) => {
   try {
     const { slug } = req.params;
-    const { status, payment_method, search, page, limit } = req.query;
+    const { status, payment_method, search, page, limit, sort } = req.query;
 
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
@@ -183,7 +186,7 @@ const getStoreOrders = async (req, res) => {
           include,
           skip,
           take: limitNum,
-          orderBy: { createdAt: 'desc' }
+          orderBy: { createdAt: sortOrder }
         })
       ]);
 
@@ -202,7 +205,7 @@ const getStoreOrders = async (req, res) => {
     const orders = await prisma.order.findMany({
       where,
       include,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: sortOrder }
     });
 
     res.json({ storeId: store.id, orders });

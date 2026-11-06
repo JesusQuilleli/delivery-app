@@ -6,6 +6,7 @@ import { AuthContext } from '../context/AuthContext';
 import { formatPrice, getConversions } from '../utils/currency';
 import { parsePhone } from '../utils/phone';
 import { useClientRealtime } from '../context/RealtimeContext';
+import { createSocket } from '../lib/socket';
 import { requestNotificationPermission } from '../lib/notifications';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -182,8 +183,8 @@ export default function Checkout() {
 
   useEffect(() => {
     if (isInitializing) return;
-    if (currentStep === 5 && user?.id) {
-      // Carga el estado REAL desde la BD al entrar (no depender solo del socket)
+    if (currentStep === 5 && (user?.id || orderId)) {
+      // Carga el estado REAL desde la BD y activa polling de 4s para actualizar sin refrescar
       const syncFromDb = async () => {
         try {
           const res = await api.get('/orders/my-orders');
@@ -200,8 +201,28 @@ export default function Checkout() {
         }
       };
       syncFromDb();
+
+      const pollInterval = setInterval(syncFromDb, 4000);
+      return () => clearInterval(pollInterval);
     }
   }, [currentStep, isInitializing, user?.id, orderId]);
+
+  useEffect(() => {
+    if (currentStep !== 5 || !orderId) return;
+    const socket = createSocket();
+    socket.on('connect', () => {
+      socket.emit('join_order', orderId);
+    });
+    socket.on('estado_actualizado', (updatedOrder: any) => {
+      if (updatedOrder.id === orderId) {
+        setOrderStatus(updatedOrder.status);
+        if (updatedOrder.estimated_minutes) setEstimatedMinutes(updatedOrder.estimated_minutes);
+      }
+    });
+    return () => {
+      socket.disconnect();
+    };
+  }, [currentStep, orderId]);
 
   useEffect(() => {
     if (currentStep !== 5 || !user?.id) return;

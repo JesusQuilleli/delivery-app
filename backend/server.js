@@ -173,6 +173,15 @@ io.on('connection', (socket) => {
     socket.join(room);
   });
 
+  // F2D-03: Sala de seguimiento en vivo por orden (sin refrescar)
+  socket.on('join_order', (order_id) => {
+    const numericOrderId = Number(order_id);
+    if (!Number.isInteger(numericOrderId) || numericOrderId <= 0) {
+      return socket.emit('error', { message: 'ID de orden inválido' });
+    }
+    socket.join(`order_${numericOrderId}`);
+  });
+
   socket.on('disconnect', () => {});
 });
 

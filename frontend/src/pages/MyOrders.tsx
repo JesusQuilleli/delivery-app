@@ -10,6 +10,7 @@ import { ArrowLeft, Clock, MapPin, Package, X, Store, CreditCard, Star, XCircle,
 import { toast } from 'sonner';
 import { formatPrice } from '../utils/currency';
 import { useClientRealtime } from '../context/RealtimeContext';
+import { createSocket } from '../lib/socket';
 
 export default function MyOrders() {
   const { token, user, isInitializing } = useContext(AuthContext);
@@ -88,6 +89,41 @@ export default function MyOrders() {
       setSelectedOrder((prev: any) => prev?.id === updatedOrder.id ? { ...prev, ...updatedOrder } : prev);
     });
   }, [user?.id, subscribe]);
+
+  // F2D-03: Polling de alta frecuencia y escucha por sala de orden cuando el modal de pedido está abierto
+  useEffect(() => {
+    if (!selectedOrder?.id) return;
+    const isOrderActive = !['DELIVERED', 'CANCELLED'].includes(selectedOrder.status);
+    if (!isOrderActive) return;
+
+    const socket = createSocket();
+    socket.on('connect', () => {
+      socket.emit('join_order', selectedOrder.id);
+    });
+    socket.on('estado_actualizado', (updatedOrder: any) => {
+      if (updatedOrder.id === selectedOrder.id) {
+        setSelectedOrder((prev: any) => ({ ...prev, ...updatedOrder }));
+        setOrders(prev => prev.map((o: any) => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o));
+      }
+    });
+
+    const pollTimer = setInterval(async () => {
+      try {
+        const res = await api.get('/orders/my-orders');
+        const latest = Array.isArray(res.data) ? res.data : [];
+        const current = latest.find((o: any) => o.id === selectedOrder.id);
+        if (current && current.status !== selectedOrder.status) {
+          setSelectedOrder(current);
+          setOrders(latest);
+        }
+      } catch (err) {}
+    }, 4000);
+
+    return () => {
+      clearInterval(pollTimer);
+      socket.disconnect();
+    };
+  }, [selectedOrder?.id, selectedOrder?.status]);
 
   const timelineSteps = [
     { status: 'PENDING', title: 'Pedido Recibido', desc: 'Confirmando tu orden.', icon: '📦' },

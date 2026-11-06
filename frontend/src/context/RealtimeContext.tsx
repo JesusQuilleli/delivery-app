@@ -35,7 +35,7 @@ const RealtimeContext = createContext<RealtimeContextValue>({
 export const useClientRealtime = () => useContext(RealtimeContext);
 
 export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const handlersRef = useRef<Set<OrderHandler>>(new Set());
   const lastStatusRef = useRef<Map<number, string>>(new Map());
   const seededRef = useRef(false);
@@ -54,7 +54,7 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
     lastStatusRef.current = new Map();
     seededRef.current = false;
     let cancelled = false;
-    const socket = createSocket();
+    const socket = createSocket(token || undefined);
 
     const dispatch = (order: RealtimeOrder, notify: boolean) => {
       if (!order?.id) return;
@@ -101,10 +101,11 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
     socket.on('disconnect', () => setConnected(false));
     socket.on('connect_error', () => setConnected(false));
     socket.on('estado_actualizado', (order: RealtimeOrder) => dispatch(order, true));
+    socket.on('pedido_actualizado', (order: RealtimeOrder) => dispatch(order, true));
 
     const interval = window.setInterval(() => {
       if (!socket.connected) void syncFromDb();
-    }, 30000);
+    }, 10000);
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && !socket.connected) {

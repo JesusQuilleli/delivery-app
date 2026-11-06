@@ -494,10 +494,10 @@ Flujo integral de medicamentos con récipe médico, evaluación por farmaceuta y
 
 ### Fase 2D — Correcciones Operativas Críticas y Experiencia en Vivo (Bloque A - Inmediato)
 
-- [ ] F2D-01 **Mapas sin marcas de agua (OpenStreetMap Standard):** Sustituir Carto basemaps (que exige API key) por OpenStreetMap en `Checkout.tsx`, `OrderDetails.tsx`, `Dashboard.tsx` y `Settings.tsx`.
-- [ ] F2D-02 **Campanita Sonora ante Nuevos Pedidos en Dashboard:** Generador de audio de dos tonos (ding-dong 880Hz / 1320Hz) con Web Audio API sintetizado en el cliente (cero dependencias de red, nunca falla por 404), archivo mp3 de respaldo en `frontend/public/notification.mp3` y botón activador de audio amigable ante políticas de autoplay del navegador.
-- [ ] F2D-03 **Sincronización en Tiempo Real sin Refrescar:** Inyectar JWT token en `socket.ts` handshake auth para superar el bloqueo de cookies de terceros en cross-domain (Netlify ↔ Render), asegurar reconexión reactiva en `RealtimeContext.tsx`, y activar polling de alta frecuencia (cada 4s) en `Checkout.tsx` (Paso 5) y modal de `MyOrders.tsx` cuando una orden está activa.
-- [ ] F2D-04 **Cola de Pedidos por Urgencia (FIFO):** Ordenar los pedidos pendientes (`PENDING` y `AWAITING_PAYMENT`) por `createdAt ASC` (el que lleva más tiempo esperando de primero arriba) en backend y en `Dashboard.tsx`, agregando badges dinámicos de tiempo transcurrido (Verde <10m, Ámbar 10-20m, Rojo parpadeante >20m con alerta de urgencia).
+- [x] F2D-01 **Mapas sin marcas de agua (OpenStreetMap Standard):** Sustituir Carto basemaps (que exige API key) por OpenStreetMap en `Checkout.tsx`, `OrderDetails.tsx`, `Dashboard.tsx` y `Settings.tsx`.
+- [x] F2D-02 **Campanita Sonora ante Nuevos Pedidos en Dashboard:** Generador de audio de dos tonos (ding-dong 880Hz / 1320Hz) con Web Audio API sintetizado en el cliente (cero dependencias de red, nunca falla por 404), archivo mp3 de respaldo en `frontend/public/notification.mp3` y botón activador de audio amigable ante políticas de autoplay del navegador.
+- [x] F2D-03 **Sincronización en Tiempo Real sin Refrescar:** Inyectar JWT token en `socket.ts` handshake auth para superar el bloqueo de cookies de terceros en cross-domain (Netlify ↔ Render), asegurar reconexión reactiva en `RealtimeContext.tsx`, y activar polling de alta frecuencia (cada 4s) en `Checkout.tsx` (Paso 5) y modal de `MyOrders.tsx` cuando una orden está activa.
+- [x] F2D-04 **Cola de Pedidos por Urgencia (FIFO):** Ordenar los pedidos pendientes (`PENDING` y `AWAITING_PAYMENT`) por `createdAt ASC` (el que lleva más tiempo esperando de primero arriba) en backend y en `Dashboard.tsx`, agregando badges dinámicos de tiempo transcurrido (Verde <10m, Ámbar 10-20m, Rojo parpadeante >20m con alerta de urgencia).
 
 ---
 
@@ -818,6 +818,10 @@ npm run build
 | Fecha | Fase / ID | Estado | Notas |
 |---|---|---|---|
 | 2026-11-06 | F2C, F2D, F2E planificados | En curso | Incorporados al plan: flujo completo de récipes y lotes de farmacia (con retención física), correcciones operativas críticas (OSM, campanita, realtime, cola FIFO) y módulo SaaS (CMS visual y multi-sucursal) |
+| 2026-11-06 | F2D-01 | Hecho | Tiles Carto reemplazados por OpenStreetMap Standard en Checkout, OrderDetails y Settings (sin API key ni marca de agua) |
+| 2026-11-06 | F2D-02 | Hecho | Campanita sintetizada Web Audio API (880/1320Hz ding-dong), archivos notification.mp3/wav en public y botón de prueba en Dashboard |
+| 2026-11-06 | F2D-03 | Hecho | Token auth en socket handshake, sala join_order, emisión multi-sala y polling de respaldo cada 4s en Checkout y MyOrders (sin refrescar) |
+| 2026-11-06 | F2D-04 | Hecho | Cola FIFO para pedidos pendientes (más antiguo primero en backend y dashboard) con badges dinámicos de tiempo de espera |
 | 2026-11-01 | Plan creado | Hecho | Decisiones comerciales y técnicas cerradas |
 | 2026-11-01 | Fase 0 | Hecho | Línea base `c7c0377`, `.env.example`, scripts y CI |
 | 2026-11-01 | Fase 0 pruebas | Hecho | Backend 86/86, frontend 32/32, lint sin errores, build OK |
