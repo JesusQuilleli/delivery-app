@@ -54,7 +54,26 @@ export default function Landing() {
   }
 
   if (storeConfig?.industry === 'RESTAURANT') {
-    return (
+    
+      {/* F2E-06: Selector de Sucursales Multi-Branch */}
+      {storeConfig?.branches && storeConfig.branches.length > 0 && (
+        <div className="bg-primary/10 border-b border-primary/20 py-2.5 px-4 text-center text-xs md:text-sm font-semibold flex items-center justify-center gap-2 flex-wrap">
+          <span>📍 Esta tienda cuenta con varias sucursales:</span>
+          <span className="font-bold underline">{storeConfig.name}</span>
+          <span className="text-muted-foreground">• Otras sedes:</span>
+          {storeConfig.branches.map((b: any) => (
+            <a
+              key={b.id}
+              href={`/${b.slug}`}
+              className="inline-flex items-center gap-1 bg-white text-primary px-3 py-1 rounded-full border border-primary/30 font-bold hover:bg-primary hover:text-white transition-colors"
+            >
+              📍 {b.name}
+            </a>
+          ))}
+        </div>
+      )}
+
+      return (
       <>
         {storeConfig?.theme_color && <ThemeProvider themeColor={storeConfig.theme_color} />}
         <RestaurantTemplate store={storeConfig} categories={categories} offers={offers} combos={combos} />

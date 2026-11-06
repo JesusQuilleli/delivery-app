@@ -29,14 +29,18 @@ export default function RestaurantTemplate({ store, categories }: any) {
               >
                 <span className="inline-flex items-center gap-2 rounded-full bg-orange-100 text-orange-700 px-3 py-1 text-sm font-bold">
                   <Flame className="w-4 h-4 text-orange-500" />
-                  Caliente y recién hecho
+                  {store?.landing_config?.badge_promo || "Caliente y recién hecho"}
                 </span>
                 <h1 className="mt-6 font-display font-black text-5xl lg:text-7xl leading-[1.1] text-gray-900">
-                  El sabor que amas, <br/>
-                  <span className="text-orange-600">directo a tu mesa.</span>
+                  {store?.landing_config?.slogan || (
+                    <>
+                      El sabor que amas, <br/>
+                      <span className="text-orange-600">directo a tu mesa.</span>
+                    </>
+                  )}
                 </h1>
                 <p className="mt-6 text-lg text-gray-600 max-w-xl">
-                  Disfruta de nuestros mejores platillos sin salir de casa. Delivery súper rápido para que tu comida llegue perfecta.
+                  {store?.landing_config?.subtitle || "Disfruta de nuestros mejores platillos sin salir de casa. Delivery súper rápido para que tu comida llegue perfecta."}
                 </p>
                 <div className="mt-8 flex gap-4">
                   <Link

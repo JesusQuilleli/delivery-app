@@ -26,11 +26,15 @@ export default function SupermarketTemplate({ store, categories }: any) {
                 transition={{ duration: 0.5 }}
               >
                 <h1 className="font-display font-black text-5xl lg:text-7xl text-gray-900 leading-tight">
-                  Tu despensa llena <br className="hidden sm:block"/>
-                  <span className="text-green-600">sin salir de casa.</span>
+                  {store?.landing_config?.slogan || (
+                    <>
+                      Tu despensa llena <br className="hidden sm:block"/>
+                      <span className="text-green-600">sin salir de casa.</span>
+                    </>
+                  )}
                 </h1>
                 <p className="mt-6 text-xl text-gray-600">
-                  Frescura garantizada, miles de productos y entrega en la puerta de tu hogar. Todo lo que necesitas para tu semana está aquí.
+                  {store?.landing_config?.subtitle || "Frescura garantizada, miles de productos y entrega en la puerta de tu hogar. Todo lo que necesitas para tu semana está aquí."}
                 </p>
                 <div className="mt-10 flex justify-center gap-4">
                   <Link

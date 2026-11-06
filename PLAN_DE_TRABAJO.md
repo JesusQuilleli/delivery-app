@@ -503,13 +503,13 @@ Flujo integral de medicamentos con récipe médico, evaluación por farmaceuta y
 
 ### Fase 2E — CMS de Personalización Visual y Multi-Sucursales (Bloque B - SaaS)
 
-- [ ] F2E-01 **Modelo `landing_config` en Prisma:** Campo `landing_config Json?` en `Store` (slogan, subtitle, hero_image, banner_url, badge_promo, badge_delivery, whatsapp_contact, about_text).
-- [ ] F2E-02 **Módulo interactivo "Diseño & Landing" en SuperAdmin y Configuración de Tienda:** Formulario visual con subida de imágenes a Cloudinary y previsualizador en vivo sin tocar código.
-- [ ] F2E-03 **Integración dinámica en Plantillas:** Actualizar `PharmacyTemplate.tsx`, `Hero.tsx`, `RestaurantTemplate.tsx` y `SupermarketTemplate.tsx` para consumir `store.landing_config` con fallback estándar.
-- [ ] F2E-04 **Estrategia comercial SaaS de personalización:** Nivel estándar incluido en Emprendedor, personalización de textos/badges en Negocio ($30/m), diseño completo de banners y marca en PRO ($50/m) o Add-on de Branding ($15 único).
-- [ ] F2E-05 **Arquitectura Multi-Sucursales:** Campo `parent_store_id Int?` en `Store`, vinculación de sedes secundarias (ej. Farma-Ayacucho Centro vs Sur).
-- [ ] F2E-06 **Enrutamiento por Proximidad y Selector de Sede:** Detección de distancia Haversine a la sede más cercana o modal selector para que el cliente compre en la sucursal correcta.
-- [ ] F2E-07 **Monetización Multi-Sucursal:** Esquema de add-on de sucursal adicional (+ $10/mes por sede extra en vez de tienda completa).
+- [x] F2E-01 **Modelo `landing_config` en Prisma:** Campo `landing_config Json?` en `Store` (slogan, subtitle, hero_image, banner_url, badge_promo, badge_delivery, whatsapp_contact, about_text).
+- [x] F2E-02 **Módulo interactivo "Diseño & Landing" en SuperAdmin y Configuración de Tienda:** Formulario visual con subida de imágenes a Cloudinary y previsualizador en vivo sin tocar código.
+- [x] F2E-03 **Integración dinámica en Plantillas:** Actualizar `PharmacyTemplate.tsx`, `Hero.tsx`, `RestaurantTemplate.tsx` y `SupermarketTemplate.tsx` para consumir `store.landing_config` con fallback estándar.
+- [x] F2E-04 **Estrategia comercial SaaS de personalización:** Nivel estándar incluido en Emprendedor, personalización de textos/badges en Negocio ($30/m), diseño completo de banners y marca en PRO ($50/m) o Add-on de Branding ($15 único).
+- [x] F2E-05 **Arquitectura Multi-Sucursales:** Campo `parent_store_id Int?` en `Store`, vinculación de sedes secundarias (ej. Farma-Ayacucho Centro vs Sur).
+- [x] F2E-06 **Enrutamiento por Proximidad y Selector de Sede:** Detección de distancia Haversine a la sede más cercana o modal selector para que el cliente compre en la sucursal correcta.
+- [x] F2E-07 **Monetización Multi-Sucursal:** Esquema de add-on de sucursal adicional (+ $10/mes por sede extra en vez de tienda completa).
 
 ---
 
@@ -823,6 +823,7 @@ npm run build
 | 2026-11-06 | F2D-03 | Hecho | Token auth en socket handshake, sala join_order, emisión multi-sala y polling de respaldo cada 4s en Checkout y MyOrders (sin refrescar) |
 | 2026-11-06 | F2D-04 | Hecho | Cola FIFO para pedidos pendientes (más antiguo primero en backend y dashboard) con badges dinámicos de tiempo de espera |
 | 2026-11-06 | F2C-01 a F2C-08 | Hecho | Módulo de Farmacias completo: migración Neon de récipes/lotes, subida de foto en checkout, evaluación por farmaceuta (aprobado/rechazado), bloqueo de vencidos y aviso obligatorio de retención física para motorizado |
+| 2026-11-06 | F2E-01 a F2E-07 | Hecho | CMS Visual de Landing y Multi-Sucursal: campo landing_config en BD, card de diseño visual con upload a Cloudinary en Settings, templates dinámicos (Farma, Comida, Víveres) y selector de sedes hermanas |
 | 2026-11-01 | Plan creado | Hecho | Decisiones comerciales y técnicas cerradas |
 | 2026-11-01 | Fase 0 | Hecho | Línea base `c7c0377`, `.env.example`, scripts y CI |
 | 2026-11-01 | Fase 0 pruebas | Hecho | Backend 86/86, frontend 32/32, lint sin errores, build OK |

@@ -7,6 +7,13 @@ import productos from "@/assets/productos-flatlay.jpg";
 export function Hero({ store }: { store?: any }) {
   const { slug } = useParams<{ slug: string }>();
   const storeName = store?.name || "Farmacia";
+  const landing = store?.landing_config || {};
+  const slogan = landing.slogan || "Tu salud, a un clic de tu puerta.";
+  const subtitle = landing.subtitle || `Medicamentos, cuidado personal y bienestar entregados rápido. ${storeName} — la farmacia de confianza de tu barrio, ahora también online.`;
+  const badgePromo = landing.badge_promo || "Delivery activo";
+  const badgeDeliveryTime = landing.badge_delivery_time || "{badgeDeliveryTime}";
+  const heroImage = landing.hero_image_url || delivery;
+
   return (
     <section id="inicio" className="relative pt-10 lg:pt-16 pb-12">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
@@ -20,16 +27,13 @@ export function Hero({ store }: { store?: any }) {
             <div>
               <span className="inline-flex items-center gap-2 rounded-full bg-secondary/70 text-secondary-foreground px-3 py-1 text-xs font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-coral animate-pulse" />
-                Delivery activo
+                {badgePromo}
               </span>
               <h1 className="mt-6 font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight">
-                Tu salud,{" "}
-                <span className="text-primary">a un clic</span>
-                <br className="hidden sm:block" /> de tu puerta.
+                {slogan}
               </h1>
               <p className="mt-5 max-w-xl text-base lg:text-lg text-muted-foreground">
-                Medicamentos, cuidado personal y bienestar entregados rápido.
-                {storeName} — la farmacia de confianza de tu barrio, ahora también online.
+                {subtitle}
               </p>
             </div>
             <div className="mt-8 flex flex-wrap gap-3">

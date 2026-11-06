@@ -73,6 +73,40 @@ export default function Settings() {
   const [bankHolder, setBankHolder] = useState('');
   const [paymentNote, setPaymentNote] = useState('');
 
+  // F2E-02: Configuración visual y landing
+  const [landingConfig, setLandingConfig] = useState({
+    slogan: '',
+    subtitle: '',
+    badge_promo: '',
+    badge_delivery_time: '',
+    hero_image_url: '',
+    whatsapp_contact: ''
+  });
+  const [isUploadingHero, setIsUploadingHero] = useState(false);
+
+  const handleHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La imagen supera los 5 MB");
+      return;
+    }
+    setIsUploadingHero(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setLandingConfig(prev => ({ ...prev, hero_image_url: res.data.imageUrl }));
+      toast.success("Banner principal cargado");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Error al subir imagen");
+    } finally {
+      setIsUploadingHero(false);
+    }
+  };
+
   // Notificaciones y Seguridad
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -98,6 +132,16 @@ export default function Settings() {
           if (res.data.store.ves_rate) setVesRate(res.data.store.ves_rate);
           if (res.data.store.cop_rate) setCopRate(res.data.store.cop_rate);
           if (res.data.store.delivery_fee !== undefined) setDeliveryFee(Number(res.data.store.delivery_fee));
+          if (res.data.store.landing_config) {
+            setLandingConfig({
+              slogan: res.data.store.landing_config.slogan || '',
+              subtitle: res.data.store.landing_config.subtitle || '',
+              badge_promo: res.data.store.landing_config.badge_promo || '',
+              badge_delivery_time: res.data.store.landing_config.badge_delivery_time || '',
+              hero_image_url: res.data.store.landing_config.hero_image_url || '',
+              whatsapp_contact: res.data.store.landing_config.whatsapp_contact || ''
+            });
+          }
           setBankName(res.data.store.bank_name || '');
           setBankCode(res.data.store.bank_code || '');
           setBankPhone(res.data.store.bank_phone || '');
@@ -137,7 +181,8 @@ export default function Settings() {
         bank_phone: bankPhone,
         bank_id_number: bankIdNumber,
         bank_holder: bankHolder,
-        payment_note: paymentNote
+        payment_note: paymentNote,
+        landing_config: landingConfig
       };
       if (mapPosition) {
         payload.latitude = mapPosition[0];

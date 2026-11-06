@@ -113,7 +113,10 @@ const getStoreProducts = async (req, res) => {
         bank_holder: store.bank_holder,
         payment_note: store.payment_note,
         industry: store.industry,
-        theme_color: store.theme_color
+        theme_color: store.theme_color,
+        landing_config: store.landing_config,
+        parent_store_id: store.parent_store_id,
+        branches: store.branches || []
       },
       products: formattedProducts,
       categories: store.categories,
@@ -403,7 +406,9 @@ const updateStoreSettings = async (req, res) => {
       bank_phone,
       bank_id_number,
       bank_holder,
-      payment_note
+      payment_note,
+      landing_config,
+      parent_store_id
     } = req.body;
     const user = req.user;
 
@@ -456,6 +461,8 @@ const updateStoreSettings = async (req, res) => {
         bank_id_number: cleanOptionalText(bank_id_number, 30),
         bank_holder: cleanOptionalText(bank_holder),
         payment_note: cleanOptionalText(payment_note, 300),
+        landing_config: landing_config !== undefined ? landing_config : undefined,
+        parent_store_id: parent_store_id !== undefined ? (parent_store_id ? Number(parent_store_id) : null) : undefined,
       }
     });
 
