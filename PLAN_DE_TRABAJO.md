@@ -481,14 +481,14 @@ Optimización de la búsqueda y precisión de la dirección del cliente en el ch
 
 Flujo integral de medicamentos con récipe médico, evaluación por farmaceuta y entrega física al motorizado:
 
-- [ ] F2C-01 **Schema de BD para Récipes y Lotes:** Flag `Product.requires_prescription Boolean @default(false)`, campos `Order.prescription_url String?`, `Order.prescription_status String @default("NOT_REQUIRED")` (`NOT_REQUIRED`, `PENDING_REVIEW`, `APPROVED`, `REJECTED`), `Order.prescription_notes String?`, `Product.lot_number String?`, `Product.expires_at DateTime?`.
-- [ ] F2C-02 **Checkout con Subida de Récipe:** Si el carrito contiene productos con `requires_prescription === true`, solicitar obligatoriamente la carga fotográfica del récipe médico (subida segura a Cloudinary / JPEG-PNG-WEBP hasta 5MB).
-- [ ] F2C-03 **Aviso Legal y Compromiso de Entrega:** Mensaje explícito al cliente en Checkout y comprobante: *"Al recibir tu pedido, deberás entregar el récipe médico original en físico al motorizado para poder entregarte tus medicamentos"*.
-- [ ] F2C-04 **Modal de Evaluación en Dashboard / OrderDetails:** El farmaceuta visualiza la foto del récipe ampliada y dispone de acciones: *"Aprobar Récipe"* (habilita preparación) o *"Rechazar Récipe"* (solicita motivo explicativo: fecha expirada, dosis ilegible, etc.).
-- [ ] F2C-05 **Notificación en Tiempo Real al Cliente:** Notificación inmediata del resultado de evaluación de su récipe en `/checkout` y `/mis-pedidos`.
-- [ ] F2C-06 **Comprobante y Hoja de Ruta para Motorizado:** Indicador destacado *"⚠️ RETENER RÉCIPE FÍSICO"* en la comanda del motorizado con confirmación de recepción física al entregar.
-- [ ] F2C-07 **Control de Lotes y Vencimiento en Inventario:** Registro de `lot_number` y fecha de caducidad en el inventario de farmacias con alerta visual de próximos a vencer (<60 días).
-- [ ] F2C-08 **Bloqueo de Venta de Vencidos:** Bloqueo transaccional de venta para medicamentos con fecha de vencimiento cumplida (`expires_at < hoy`).
+- [x] F2C-01 **Schema de BD para Récipes y Lotes:** Flag `Product.requires_prescription Boolean @default(false)`, campos `Order.prescription_url String?`, `Order.prescription_status String @default("NOT_REQUIRED")` (`NOT_REQUIRED`, `PENDING_REVIEW`, `APPROVED`, `REJECTED`), `Order.prescription_notes String?`, `Product.lot_number String?`, `Product.expires_at DateTime?`.
+- [x] F2C-02 **Checkout con Subida de Récipe:** Si el carrito contiene productos con `requires_prescription === true`, solicitar obligatoriamente la carga fotográfica del récipe médico (subida segura a Cloudinary / JPEG-PNG-WEBP hasta 5MB).
+- [x] F2C-03 **Aviso Legal y Compromiso de Entrega:** Mensaje explícito al cliente en Checkout y comprobante: *"Al recibir tu pedido, deberás entregar el récipe médico original en físico al motorizado para poder entregarte tus medicamentos"*.
+- [x] F2C-04 **Modal de Evaluación en Dashboard / OrderDetails:** El farmaceuta visualiza la foto del récipe ampliada y dispone de acciones: *"Aprobar Récipe"* (habilita preparación) o *"Rechazar Récipe"* (solicita motivo explicativo: fecha expirada, dosis ilegible, etc.).
+- [x] F2C-05 **Notificación en Tiempo Real al Cliente:** Notificación inmediata del resultado de evaluación de su récipe en `/checkout` y `/mis-pedidos`.
+- [x] F2C-06 **Comprobante y Hoja de Ruta para Motorizado:** Indicador destacado *"⚠️ RETENER RÉCIPE FÍSICO"* en la comanda del motorizado con confirmación de recepción física al entregar.
+- [x] F2C-07 **Control de Lotes y Vencimiento en Inventario:** Registro de `lot_number` y fecha de caducidad en el inventario de farmacias con alerta visual de próximos a vencer (<60 días).
+- [x] F2C-08 **Bloqueo de Venta de Vencidos:** Bloqueo transaccional de venta para medicamentos con fecha de vencimiento cumplida (`expires_at < hoy`).
 
 ---
 
@@ -822,6 +822,7 @@ npm run build
 | 2026-11-06 | F2D-02 | Hecho | Campanita sintetizada Web Audio API (880/1320Hz ding-dong), archivos notification.mp3/wav en public y botón de prueba en Dashboard |
 | 2026-11-06 | F2D-03 | Hecho | Token auth en socket handshake, sala join_order, emisión multi-sala y polling de respaldo cada 4s en Checkout y MyOrders (sin refrescar) |
 | 2026-11-06 | F2D-04 | Hecho | Cola FIFO para pedidos pendientes (más antiguo primero en backend y dashboard) con badges dinámicos de tiempo de espera |
+| 2026-11-06 | F2C-01 a F2C-08 | Hecho | Módulo de Farmacias completo: migración Neon de récipes/lotes, subida de foto en checkout, evaluación por farmaceuta (aprobado/rechazado), bloqueo de vencidos y aviso obligatorio de retención física para motorizado |
 | 2026-11-01 | Plan creado | Hecho | Decisiones comerciales y técnicas cerradas |
 | 2026-11-01 | Fase 0 | Hecho | Línea base `c7c0377`, `.env.example`, scripts y CI |
 | 2026-11-01 | Fase 0 pruebas | Hecho | Backend 86/86, frontend 32/32, lint sin errores, build OK |

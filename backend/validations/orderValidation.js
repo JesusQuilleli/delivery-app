@@ -11,7 +11,8 @@ const placeOrderSchema = z.object({
   latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
   longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
   payment_method: z.enum(['CASH', 'TRANSFER'], { errorMap: () => ({ message: 'Método de pago inválido' }) }),
-  payment_reference: z.string().max(50).optional().nullable()
+  payment_reference: z.string().max(50).optional().nullable(),
+  prescription_url: z.string().max(1000).optional().nullable()
 }).superRefine((data, ctx) => {
   if (data.payment_method !== 'TRANSFER') return;
   const reference = (data.payment_reference || '').trim();
@@ -36,4 +37,9 @@ const batchStatusSchema = z.object({
   cancel_reason: z.string().max(500).optional()
 });
 
-module.exports = { placeOrderSchema, updateOrderStatusSchema, batchStatusSchema };
+const prescriptionReviewSchema = z.object({
+  status: z.enum(['APPROVED', 'REJECTED'], { errorMap: () => ({ message: 'El estado debe ser APPROVED o REJECTED' }) }),
+  notes: z.string().max(500).optional().nullable()
+});
+
+module.exports = { placeOrderSchema, updateOrderStatusSchema, batchStatusSchema, prescriptionReviewSchema };

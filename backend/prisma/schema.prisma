@@ -34,6 +34,10 @@ model Store {
   trial_ends_at DateTime?
   next_billing_date DateTime?
   subscription_notes String?
+  landing_config Json?
+  parent_store_id Int?
+  parent     Store?     @relation("StoreBranches", fields: [parent_store_id], references: [id])
+  branches   Store[]    @relation("StoreBranches")
   categories Category[]
   orders     Order[]
   products   Product[]
@@ -101,6 +105,9 @@ model Product {
   is_combo     Boolean     @default(false)
   stock        Int?
   category_id  Int?
+  requires_prescription Boolean @default(false)
+  lot_number   String?
+  expires_at   DateTime?
   comboItems   ComboItem[] @relation("ComboItems")
   partOfCombos ComboItem[] @relation("ProductInCombo")
   orderItems   OrderItem[]
@@ -135,6 +142,9 @@ model Order {
   distance_km       Float?
   estimated_minutes Int?
   cancel_reason     String?
+  prescription_url  String?
+  prescription_status String @default("NOT_REQUIRED")
+  prescription_notes String?
   driver_id         Int?
   store             Store       @relation(fields: [store_id], references: [id])
   user              User        @relation(fields: [user_id], references: [id])

@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { checkEmailSchema, verifyOtpSchema, adminLoginSchema } = require('../validations/authValidation');
-const { placeOrderSchema, updateOrderStatusSchema, batchStatusSchema } = require('../validations/orderValidation');
+const { placeOrderSchema, updateOrderStatusSchema, batchStatusSchema, prescriptionReviewSchema } = require('../validations/orderValidation');
 const { storeSettingsSchema, driverSchema, changePasswordSchema, superadminStoreSchema } = require('../validations/storeValidation');
 
 test('AUTH: checkEmailSchema acepta email válido', () => {
@@ -127,4 +127,10 @@ test('SUPERADMIN: superadminStoreSchema valida slug y requeridos', () => {
   assert.equal(superadminStoreSchema.safeParse(valid).success, true);
   assert.equal(superadminStoreSchema.safeParse({ ...valid, slug: 'SLUG CON ESPACIO' }).success, false);
   assert.equal(superadminStoreSchema.safeParse({ ...valid, adminPassword: '123' }).success, false);
+});
+test('ORDER: prescriptionReviewSchema valida estados de récipe y notas', () => {
+  assert.equal(prescriptionReviewSchema.safeParse({ status: 'APPROVED', notes: 'Dosis validada' }).success, true);
+  assert.equal(prescriptionReviewSchema.safeParse({ status: 'REJECTED', notes: 'Récipe expirado' }).success, true);
+  assert.equal(prescriptionReviewSchema.safeParse({ status: 'PENDING' }).success, false);
+  assert.equal(prescriptionReviewSchema.safeParse({ status: 'INVALID' }).success, false);
 });

@@ -67,11 +67,21 @@ function formatProductWithStock(product) {
 
   const effectiveStock = product.is_combo ? computeComboStock(product) : (product.stock !== undefined ? product.stock : null);
 
+  const isExpired = Boolean(product.expires_at && new Date(product.expires_at).getTime() < Date.now());
+  const isExpiringSoon = Boolean(
+    !isExpired &&
+    product.expires_at &&
+    new Date(product.expires_at).getTime() - Date.now() < 60 * 24 * 60 * 60 * 1000
+  );
+
   return {
     ...product,
     stock: effectiveStock,
     is_low_stock: isLowStock(effectiveStock),
-    is_out_of_stock: isOutOfStock(effectiveStock)
+    is_out_of_stock: isOutOfStock(effectiveStock),
+    is_expired: isExpired,
+    is_expiring_soon: isExpiringSoon,
+    is_available: isExpired ? false : product.is_available
   };
 }
 

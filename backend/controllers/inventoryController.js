@@ -119,7 +119,7 @@ const getInventory = async (req, res) => {
 const createProduct = async (req, res) => {
   try {
     const { slug } = req.params;
-    const { name, price, description, stock, image_url, is_available, category_id } = req.body;
+    const { name, price, description, stock, image_url, is_available, category_id, requires_prescription, lot_number, expires_at } = req.body;
     
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
@@ -237,7 +237,7 @@ const createProductsBulk = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, description, stock, image_url, is_available, category_id } = req.body;
+    const { name, price, description, stock, image_url, is_available, category_id, requires_prescription, lot_number, expires_at } = req.body;
 
     const oldProduct = await prisma.product.findUnique({ where: { id: Number(id) } });
     if (!oldProduct) {
@@ -267,6 +267,9 @@ const updateProduct = async (req, res) => {
     if (image_url !== undefined) dataToUpdate.image_url = image_url;
     if (is_available !== undefined) dataToUpdate.is_available = is_available;
     if (category_id !== undefined) dataToUpdate.category_id = category_id === null ? null : Number(category_id);
+    if (requires_prescription !== undefined) dataToUpdate.requires_prescription = Boolean(requires_prescription);
+    if (lot_number !== undefined) dataToUpdate.lot_number = lot_number ? String(lot_number).trim() : null;
+    if (expires_at !== undefined) dataToUpdate.expires_at = expires_at ? new Date(expires_at) : null;
 
     const updatedProduct = await prisma.product.update({
       where: { id: Number(id) },

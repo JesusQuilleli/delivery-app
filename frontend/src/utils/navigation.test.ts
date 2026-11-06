@@ -48,4 +48,15 @@ describe('navigation', () => {
     expect(message).toContain('Calle 1');
     expect(message).not.toContain('Link GMaps');
   });
+
+  it('incluye advertencia de retención de récipe si el pedido lo requiere', () => {
+    const message = buildDriverMessage({
+      latitude: 5.6631,
+      longitude: -67.6236,
+      user: { name: 'Pedro' },
+      delivery_address: 'Av. 23 de Enero',
+      prescription_url: 'https://cloudinary.com/recipe.jpg'
+    });
+    expect(message).toContain('Retener el récipe médico original');
+  });
 });

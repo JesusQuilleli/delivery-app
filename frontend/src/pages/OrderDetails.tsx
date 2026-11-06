@@ -32,6 +32,9 @@ interface Order {
   payment_reference: string | null;
   status: string;
   cancel_reason?: string | null;
+  prescription_url?: string | null;
+  prescription_status?: string | null;
+  prescription_notes?: string | null;
   distance_km?: number | null;
   estimated_minutes?: number | null;
   createdAt: string;
@@ -143,6 +146,23 @@ export default function OrderDetails() {
       socket.disconnect();
     };
   }, [storeData, orderId]);
+
+  const handleReviewPrescription = async (status: 'APPROVED' | 'REJECTED') => {
+    if (!order) return;
+    let notes = '';
+    if (status === 'REJECTED') {
+      const input = window.prompt("Motivo de rechazo del récipe (ej: fecha vencida, dosis ilegible, medicamento controlado):");
+      if (input === null) return;
+      notes = input.trim();
+    }
+    try {
+      await api.put(`/orders/${order.id}/prescription-review`, { status, notes });
+      setOrder(prev => prev ? { ...prev, prescription_status: status, prescription_notes: notes } : prev);
+      toast.success(status === 'APPROVED' ? 'Récipe aprobado exitosamente' : 'Récipe marcado como rechazado');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Error al evaluar el récipe');
+    }
+  };
 
   const changeStatus = async (newStatus: string, driverId?: number) => {
     if (!order) return;

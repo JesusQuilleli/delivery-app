@@ -109,6 +109,22 @@ const placeOrder = async (req, res) => {
       }
     });
 
+        // F2C-08: Bloquear venta de medicamentos vencidos
+    const now = new Date();
+    for (const p of products) {
+      if (p.expires_at && new Date(p.expires_at) < now) {
+        return res.status(400).json({ error: `El producto "${p.name}" está vencido y no puede ser comercializado.` });
+      }
+    }
+
+    // F2C-02: Validar récipe médico obligatorio si algún producto lo requiere
+    const requiresPrescription = products.some(p => p.requires_prescription);
+    if (requiresPrescription && !prescription_url) {
+      return res.status(400).json({
+        error: 'Uno o más medicamentos en tu pedido requieren récipe médico. Por favor adjunta la fotografía del récipe para continuar.'
+      });
+    }
+
     if (products.length !== productIds.length) {
       return res.status(400).json({ error: 'Uno o más productos no existen, no están disponibles o no pertenecen a esta tienda.' });
     }
@@ -654,6 +670,54 @@ const markOrderViewed = async (req, res) => {
   } catch (error) {
     console.error('Error marking order viewed:', error);
     res.status(500).json({ error: 'Error interno' });
+  }
+};
+
+
+const reviewPrescription = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+    const user = req.user;
+
+    const orderId = Number(id);
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return res.status(400).json({ error: 'ID de orden inválido' });
+    }
+
+    const existing = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { store: true, user: true, items: { include: { product: true } } }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Orden no encontrada' });
+    }
+
+    if (user.role !== 'SUPERADMIN' && (user.role !== 'ADMIN' || user.store_id !== existing.store_id)) {
+      return res.status(403).json({ error: 'No autorizado para evaluar récipes de esta tienda' });
+    }
+
+    const updated = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        prescription_status: status,
+        prescription_notes: notes || null
+      },
+      include: { user: true, driver: true, items: { include: { product: true } } }
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`client_${updated.user_id}`).emit('estado_actualizado', updated);
+      io.to(`order_${updated.id}`).emit('estado_actualizado', updated);
+      io.to(`store_${updated.store_id}`).emit('pedido_actualizado', updated);
+    }
+
+    return res.json({ message: 'Evaluación de récipe guardada exitosamente', order: updated });
+  } catch (err) {
+    console.error('Error al evaluar récipe:', err);
+    return res.status(500).json({ error: 'Error al evaluar el récipe' });
   }
 };
 

@@ -130,6 +130,32 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState('');
   const [cashCurrency, setCashCurrency] = useState('USD');
   const [paymentReference, setPaymentReference] = useState('');
+  const [prescriptionUrl, setPrescriptionUrl] = useState<string>('');
+  const [isUploadingPrescription, setIsUploadingPrescription] = useState<boolean>(false);
+  const requiresPrescription = cart.some(i => i.requires_prescription);
+
+  const handlePrescriptionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("El archivo supera el límite de 5 MB");
+      return;
+    }
+    setIsUploadingPrescription(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setPrescriptionUrl(res.data.imageUrl);
+      toast.success("Foto del récipe cargada correctamente");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Error al subir la imagen del récipe");
+    } finally {
+      setIsUploadingPrescription(false);
+    }
+  };
   const [orderStatus, setOrderStatus] = useState<string>('PENDING');
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
   const [orderId, setOrderId] = useState<number | null>(null);
@@ -467,6 +493,10 @@ export default function Checkout() {
       toast.error('Tu ubicación está fuera del rango de entrega de esta tienda.');
       return;
     }
+    if (requiresPrescription && !prescriptionUrl) {
+      toast.error('Debes adjuntar la fotografía de tu récipe médico para continuar.');
+      return;
+    }
     setLoading(true);
     try {
       const res = await api.post('/orders/place', {
@@ -478,7 +508,8 @@ export default function Checkout() {
         longitude: longitude,
         total_amount: grandTotal,
         payment_method: paymentMethod,
-        payment_reference: paymentMethod === 'TRANSFER' ? paymentReference : `Efectivo en ${cashCurrency}`
+        payment_reference: paymentMethod === 'TRANSFER' ? paymentReference : `Efectivo en ${cashCurrency}`,
+        prescription_url: requiresPrescription ? prescriptionUrl : null
       });
       
       if (res.data.estimated_minutes) {

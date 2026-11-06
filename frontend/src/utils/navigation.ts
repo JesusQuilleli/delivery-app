@@ -42,16 +42,21 @@ export function buildDriverMessage(order: {
   longitude?: number | string | null;
   user?: { name?: string | null; phone?: string | null };
   delivery_address?: string | null;
+  prescription_url?: string | null;
 }, store?: Coordinates | null): string {
   const mapsUrl = buildGoogleMapsUrl(order, store);
-  return [
+  const lines = [
     'Hola! Nuevo pedido para entregar.',
     '',
     `👤 *Cliente:* ${order.user?.name || 'Sin nombre'}`,
     `📞 *Teléfono:* ${order.user?.phone || 'No registrado'}`,
     `🏠 *Dirección:* ${(order.delivery_address || '').split(' | Link GMaps:')[0]}`,
-    '',
-    '📍 *Iniciar Navegación GPS:*',
-    mapsUrl || 'Ubicación no disponible',
-  ].join('\n');
+  ];
+
+  if (order.prescription_url) {
+    lines.push('', '⚠️ *OBLIGATORIO: Retener el récipe médico original del cliente al entregar.*');
+  }
+
+  lines.push('', '📍 *Iniciar Navegación GPS:*', mapsUrl || 'Ubicación no disponible');
+  return lines.join('\n');
 }

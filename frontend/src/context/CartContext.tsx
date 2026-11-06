@@ -6,11 +6,12 @@ export interface CartItem {
   name: string;
   unit_price: number;
   quantity: number;
+  requires_prescription?: boolean;
 }
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: { id: number; name: string; price: number; stock?: number | null }) => void;
+  addToCart: (product: { id: number; name: string; price: number; stock?: number | null; requires_prescription?: boolean }) => void;
   removeFromCart: (productId: number) => void;
   clearCart: () => void;
   total: number;
@@ -69,7 +70,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           item.product_id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { product_id: product.id, name: product.name, unit_price: product.price, quantity: 1 }];
+      return [...prev, { product_id: product.id, name: product.name, unit_price: product.price, quantity: 1, requires_prescription: Boolean(product.requires_prescription) }];
     });
   };
 
