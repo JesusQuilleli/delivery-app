@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { checkEmailSchema, verifyOtpSchema, adminLoginSchema } = require('../validations/authValidation');
 const { placeOrderSchema, updateOrderStatusSchema, batchStatusSchema } = require('../validations/orderValidation');
+const { storeSettingsSchema, driverSchema, changePasswordSchema, superadminStoreSchema } = require('../validations/storeValidation');
 
 test('AUTH: checkEmailSchema acepta email válido', () => {
   const r = checkEmailSchema.safeParse({ email: 'a@b.com', store_id: 5 });
@@ -93,4 +94,37 @@ test('ORDER: batchStatusSchema acepta >1 ids y rechaza vacío', () => {
   assert.equal(batchStatusSchema.safeParse({ order_ids: [1, 2], status: 'ACCEPTED' }).success, true);
   assert.equal(batchStatusSchema.safeParse({ order_ids: [], status: 'ACCEPTED' }).success, false);
   assert.equal(batchStatusSchema.safeParse({ order_ids: [1, 2], status: 'DELIVERED' }).success, true);
+});
+
+test('STORE: storeSettingsSchema valida campos y rechaza coordenadas/industria inválidas', () => {
+  assert.equal(storeSettingsSchema.safeParse({ industry: 'RESTAURANT', delivery_fee: 2.5 }).success, true);
+  assert.equal(storeSettingsSchema.safeParse({ industry: 'AEROLINEA' }).success, false);
+  assert.equal(storeSettingsSchema.safeParse({ latitude: 150 }).success, false);
+  assert.equal(storeSettingsSchema.safeParse({ delivery_fee: -5 }).success, false);
+});
+
+test('DRIVER: driverSchema valida nombre y teléfono', () => {
+  assert.equal(driverSchema.safeParse({ name: 'Carlos', phone: '+584121234567' }).success, true);
+  assert.equal(driverSchema.safeParse({ name: '', phone: '+584121234567' }).success, false);
+  assert.equal(driverSchema.safeParse({ name: 'Carlos', phone: '123' }).success, false);
+});
+
+test('AUTH: changePasswordSchema exige 6 caracteres mínimos', () => {
+  assert.equal(changePasswordSchema.safeParse({ currentPassword: 'old', newPassword: '123' }).success, false);
+  assert.equal(changePasswordSchema.safeParse({ currentPassword: 'old', newPassword: 'securePass1' }).success, true);
+});
+
+test('SUPERADMIN: superadminStoreSchema valida slug y requeridos', () => {
+  const valid = {
+    storeName: 'Farmacia Nueva',
+    slug: 'farmacia-nueva',
+    adminUsername: 'admin_nueva',
+    adminPassword: 'password123',
+    adminPhone: '+584141234567',
+    industry: 'PHARMACY',
+    plan: 'EMPRENDEDOR'
+  };
+  assert.equal(superadminStoreSchema.safeParse(valid).success, true);
+  assert.equal(superadminStoreSchema.safeParse({ ...valid, slug: 'SLUG CON ESPACIO' }).success, false);
+  assert.equal(superadminStoreSchema.safeParse({ ...valid, adminPassword: '123' }).success, false);
 });

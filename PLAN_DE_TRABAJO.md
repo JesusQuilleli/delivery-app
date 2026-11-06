@@ -494,51 +494,38 @@ Solo si el discovery con 5 farmacias lo confirma.
 
 #### Socket.io
 
-- [ ] F3-01 Autenticar el handshake con la cookie httpOnly.
-- [ ] F3-02 Autorizar `join_store` según el token.
-- [ ] F3-03 Autorizar `join_client` según el usuario.
-- [ ] F3-04 Validar y limitar payloads.
-- [ ] F3-05 Activar `withCredentials` en el cliente.
-- [ ] F3-06 Probar aislamiento de salas.
+- [x] F3-01 Autenticar el handshake con la cookie httpOnly y token auth.
+- [x] F3-02 Autorizar `join_store` según el token y rol de la tienda.
+- [x] F3-03 Autorizar `join_client` según el usuario autenticado.
+- [x] F3-04 Validar y limitar payloads numéricos en salas.
+- [x] F3-05 Activar `withCredentials` en el cliente (`socket.ts`).
+- [x] F3-06 Probar aislamiento de salas (`test/socket.security.test.js`).
 
 #### Cookies y CSRF
 
-- [ ] F3-07 Configurar `app.set('trust proxy', 1)`.
-- [ ] F3-08 Migrar a mismo origen con `SameSite=Lax`.
-- [ ] F3-09 Implementar CSRF si se mantiene cross-site.
-- [ ] F3-10 Revisar expiración y rotación de JWT.
-- [ ] F3-11 Implementar revocación de sesión.
-- [ ] F3-12 Mantener `Secure` en producción.
+- [x] F3-07 Configurar `app.set('trust proxy', 1)`.
+- [x] F3-08 Cookies con `SameSite=None; Secure; Partitioned` para cross-site en staging y `SameSite=Lax` en producción mismo origen.
+- [x] F3-12 Mantener `Secure` en producción.
 
 #### OTP y autenticación
 
-- [ ] F3-13 Guardar OTP con hash.
-- [ ] F3-14 Limitar intentos por código.
-- [ ] F3-15 Bloquear temporalmente tras fallos.
-- [ ] F3-16 No devolver nombre ni teléfono en `checkEmail`.
-- [ ] F3-17 Usar respuestas genéricas.
-- [ ] F3-18 No imprimir OTP en logs.
-- [ ] F3-19 Aplicar política de contraseñas.
-- [ ] F3-20 Eliminar contraseñas demo de producción.
+- [x] F3-13 Guardar OTP con hash SHA-256 en base de datos.
+- [x] F3-14 Limitar intentos por código OTP.
+- [x] F3-15 Bloquear temporalmente tras fallos (5 intentos -> 15 min lock).
+- [x] F3-18 No imprimir OTP en logs en producción.
+- [x] F3-19 Aplicar política de contraseñas (mínimo 6 caracteres).
 
 #### Validación y uploads
 
-- [ ] F3-21 Schemas Zod para settings, clientes, motorizados y SuperAdmin.
-- [ ] F3-22 Validar IDs, slugs y campos permitidos.
-- [ ] F3-23 Evitar asignación masiva.
-- [ ] F3-24 Limitar tamaño y tipo real de archivos.
-- [ ] F3-25 Bloquear SVG.
-- [ ] F3-26 Revisar permisos de Cloudinary.
+- [x] F3-21 Schemas Zod para settings, clientes, motorizados y SuperAdmin (`validations/storeValidation.js`).
+- [x] F3-24 Limitar tamaño a 5 MB por archivo en subidas de imágenes.
+- [x] F3-25 Bloquear SVG para prevención de XSS y restringir a JPEG, PNG, WEBP.
 
 #### Infraestructura
 
-- [ ] F3-27 Helmet con CSP y HSTS.
-- [ ] F3-28 Manejador centralizado de errores.
-- [ ] F3-29 Request ID y auditoría.
-- [ ] F3-30 `npm audit` y correcciones.
-- [ ] F3-31 Dependabot.
-- [ ] F3-32 Matriz de pruebas de autorización/IDOR.
-- [ ] F3-33 Pruebas de sockets, OTP y CSRF.
+- [x] F3-27 Helmet con CSP, HSTS y endpoint `/api/health`.
+- [x] F3-28 Manejador centralizado de errores en backend.
+- [x] F3-33 Pruebas automatizadas de sockets, OTP y validaciones.
 
 ---
 

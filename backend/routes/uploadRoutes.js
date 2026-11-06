@@ -4,16 +4,16 @@ const { upload } = require('../config/cloudinary');
 const { requireAdmin } = require('../middleware/authMiddleware');
 const { uploadLimiter } = require('../middleware/rateLimiter');
 
-router.post('/', requireAdmin, uploadLimiter, upload.single('image'), (req, res) => {
-  try {
+router.post('/', requireAdmin, uploadLimiter, (req, res) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || 'Error en la subida de imagen' });
+    }
     if (!req.file) {
       return res.status(400).json({ error: 'No se envió ninguna imagen' });
     }
     res.json({ imageUrl: req.file.path });
-  } catch (error) {
-    console.error('Error en la subida de imagen:', error);
-    res.status(500).json({ error: 'Error interno subiendo la imagen' });
-  }
+  });
 });
 
 module.exports = router;

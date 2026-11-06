@@ -61,13 +61,21 @@ test('check-email: 400 sin store_id', async () => {
   assert.equal(res.status, 400, JSON.stringify(res.json));
 });
 
-test('check-email: 200 y genera código en DB', async () => {
+let firstStoreOtp = null;
+let secondStoreOtp = null;
+
+test('check-email: 200 y genera código hasheado con SHA-256 en DB (F3-13)', async () => {
   const res = await req('POST', '/auth/check-email', { body: { email: EMAIL, store_id: firstStoreId } });
   assert.equal(res.status, 200, JSON.stringify(res.json));
   assert.equal(res.json.is_registered, false);
+  firstStoreOtp = res.json._dev_otp;
+  assert.ok(firstStoreOtp, 'Debe devolver código OTP de prueba');
+  assert.equal(firstStoreOtp.length, 6);
+
   const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL, store_id: firstStoreId } });
   assert.ok(code, 'debe existir código en DB');
-  assert.equal(code.code.length, 6);
+  assert.equal(code.code.length, 64, 'El código en la base de datos debe ser un hash SHA-256 de 64 caracteres');
+  assert.notEqual(code.code, firstStoreOtp, 'La base de datos nunca debe guardar el código en texto plano');
 });
 
 test('check-email: redosificación bloqueada (429) dentro del minuto', async () => {
@@ -81,9 +89,8 @@ test('check-email: 400 con email inválido', async () => {
 });
 
 test('verify-otp: 200 crea usuario cliente y devuelve cookie', async () => {
-  const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL, store_id: firstStoreId } });
   const res = await req('POST', '/auth/verify-otp', {
-    body: { email: EMAIL, code: code.code, store_id: firstStoreId, name: 'Test Auth', phone: PHONE }
+    body: { email: EMAIL, code: firstStoreOtp, store_id: firstStoreId, name: 'Test Auth', phone: PHONE }
   });
   assert.equal(res.status, 200, JSON.stringify(res.json));
   assert.equal(res.json.user.name, 'Test Auth');
@@ -97,8 +104,7 @@ test('verify-otp: 400 con código inválido', async () => {
 });
 
 test('verify-otp: el mismo código no se puede reutilizar', async () => {
-  const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL, store_id: firstStoreId } });
-  const res = await req('POST', '/auth/verify-otp', { body: { email: EMAIL, code: code?.code || '123456', store_id: firstStoreId } });
+  const res = await req('POST', '/auth/verify-otp', { body: { email: EMAIL, code: firstStoreOtp || '123456', store_id: firstStoreId } });
   assert.equal(res.status, 400);
 });
 
@@ -106,20 +112,20 @@ test('check-email: el mismo correo no está registrado en otra tienda', async ()
   const res = await req('POST', '/auth/check-email', { body: { email: EMAIL, store_id: secondStoreId } });
   assert.equal(res.status, 200, JSON.stringify(res.json));
   assert.equal(res.json.is_registered, false);
+  secondStoreOtp = res.json._dev_otp;
+  assert.ok(secondStoreOtp);
 });
 
 test('verify-otp: un código de una tienda no sirve en otra', async () => {
-  const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL, store_id: secondStoreId } });
   const res = await req('POST', '/auth/verify-otp', {
-    body: { email: EMAIL, code: code.code, store_id: firstStoreId, name: 'Test Auth', phone: PHONE }
+    body: { email: EMAIL, code: secondStoreOtp, store_id: firstStoreId, name: 'Test Auth', phone: PHONE }
   });
   assert.equal(res.status, 400, JSON.stringify(res.json));
 });
 
 test('verify-otp: mismo correo y teléfono se registran en otra tienda', async () => {
-  const code = await prisma.verificationCode.findFirst({ where: { email: EMAIL, store_id: secondStoreId } });
   const res = await req('POST', '/auth/verify-otp', {
-    body: { email: EMAIL, code: code.code, store_id: secondStoreId, name: 'Test Auth Store 2', phone: PHONE }
+    body: { email: EMAIL, code: secondStoreOtp, store_id: secondStoreId, name: 'Test Auth Store 2', phone: PHONE }
   });
   assert.equal(res.status, 200, JSON.stringify(res.json));
   assert.notEqual(res.json.user.id, createdUserIds[0]);

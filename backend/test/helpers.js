@@ -23,7 +23,7 @@ function clientToken(userId, storeId = DEMO_STORE_ID) {
 }
 
 async function req(method, path, { body, token } = {}) {
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = { 'Content-Type': 'application/json', 'x-test-suite': '1' };
   if (token) headers.Cookie = `auth_token=${token}`;
   let res;
   try {
