@@ -1,6 +1,6 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { req, superadminToken, adminToken, prisma } = require('./helpers');
+const { req, superadminToken, adminToken, clientToken, prisma } = require('./helpers');
 
 const superadmin = superadminToken();
 const admin = adminToken(1);
@@ -92,12 +92,45 @@ test('superadmin: crear tienda con contraseña corta da 400', async () => {
   assert.equal(res.status, 400, JSON.stringify(res.json));
 });
 
-test('superadmin: toggle estado de tienda', async () => {
+test('superadmin: toggle estado de tienda y registra auditoría', async () => {
   const stores = await req('GET', '/superadmin/stores', { token: superadmin });
   const target = stores.json.find(s => s.slug === 'demo-farmacia');
   const before = target.is_active;
-  const res = await req('PUT', `/superadmin/stores/${target.id}/status`, { token: superadmin });
+
+  // Desactivar con razón
+  const res = await req('PUT', `/superadmin/stores/${target.id}/status`, {
+    token: superadmin,
+    body: { reason: 'Mantenimiento de prueba' }
+  });
   assert.equal(res.status, 200, JSON.stringify(res.json));
   assert.equal(res.json.is_active, !before);
-  await req('PUT', `/superadmin/stores/${target.id}/status`, { token: superadmin });
+  assert.ok(res.json.audit, 'Debe incluir registro de auditoría');
+  assert.equal(res.json.audit.store_id, target.id);
+  assert.equal(res.json.audit.new_status, !before);
+  assert.equal(res.json.audit.reason, 'Mantenimiento de prueba');
+  assert.ok(res.json.audit.timestamp);
+
+  // Si quedó inactiva, verificar que el catálogo público responde 404 y pedidos responden 400
+  if (res.json.is_active === false) {
+    const catalogRes = await req('GET', `/stores/${target.slug}/products`);
+    assert.equal(catalogRes.status, 404, 'Catálogo de tienda inactiva debe ser 404');
+
+    const orderRes = await req('POST', '/orders/place', {
+      token: clientToken(999, target.id),
+      body: {
+        store_id: target.id,
+        items: [{ product_id: 1, quantity: 1, unit_price: 1.0 }],
+        delivery_address: 'Av Principal #1',
+        payment_method: 'CASH',
+        total_amount: 1.0
+      }
+    });
+    assert.equal(orderRes.status, 400, 'Creación de pedido en tienda inactiva debe ser 400');
+    assert.match(orderRes.json.error, /inactiva|no disponible/i);
+  }
+
+  // Restaurar al estado original
+  const restoreRes = await req('PUT', `/superadmin/stores/${target.id}/status`, { token: superadmin });
+  assert.equal(restoreRes.status, 200);
+  assert.equal(restoreRes.json.is_active, before);
 });

@@ -133,6 +133,7 @@ export default function Checkout() {
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
   const [orderId, setOrderId] = useState<number | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
+  const [storeError, setStoreError] = useState<string | null>(null);
   const [deliveryFee, setDeliveryFee] = useState(0);
   const storeId = storeConfig?.id;
   const mapCenter: [number, number] = storeConfig?.latitude != null && storeConfig?.longitude != null
@@ -145,7 +146,12 @@ export default function Checkout() {
     api.get(`/stores/${slug}/products`).then(res => {
       setStoreConfig(res.data.store || null);
       setDeliveryFee(Number(res.data.store?.delivery_fee) || 0);
-    }).catch(console.error);
+    }).catch(err => {
+      console.error('Error cargando configuración de tienda en checkout:', err);
+      if (err.response?.status === 404 || err.response?.status === 403) {
+        setStoreError(err.response?.data?.error || 'Esta tienda se encuentra temporalmente inactiva o no disponible.');
+      }
+    });
   }, [slug]);
 
   useEffect(() => {
@@ -968,6 +974,25 @@ export default function Checkout() {
       default: return null;
     }
   };
+
+  if (storeError) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center p-4 bg-gray-50">
+        <Card className="max-w-md w-full text-center p-8 border border-gray-200 shadow-xl rounded-3xl bg-white">
+          <div className="w-16 h-16 bg-amber-500/10 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle size={32} />
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 mb-2">Tienda no disponible</h2>
+          <p className="text-gray-500 text-sm mb-6">
+            {storeError}
+          </p>
+          <Button onClick={() => navigate('/')} className="w-full rounded-2xl font-black h-12 bg-primary text-white">
+            Volver al Inicio
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pt-10 pb-20 min-h-[80vh] flex flex-col justify-center bg-gray-50">

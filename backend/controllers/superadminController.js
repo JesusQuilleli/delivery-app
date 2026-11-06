@@ -86,6 +86,7 @@ const createStore = async (req, res) => {
 const toggleStoreStatus = async (req, res) => {
   try {
     const { id } = req.params;
+    const { reason } = req.body || {};
     const store = await prisma.store.findUnique({ where: { id: Number(id) } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
 
@@ -94,10 +95,30 @@ const toggleStoreStatus = async (req, res) => {
       data: { is_active: !store.is_active }
     });
 
-    res.json({ message: 'Estado actualizado', is_active: updated.is_active });
+    const actor = req.user?.username || req.user?.name || 'SUPERADMIN';
+    const action = updated.is_active ? 'STORE_ACTIVATED' : 'STORE_DEACTIVATED';
+    const auditRecord = {
+      store_id: store.id,
+      store_slug: store.slug,
+      store_name: store.name,
+      previous_status: store.is_active,
+      new_status: updated.is_active,
+      action,
+      actor,
+      reason: typeof reason === 'string' && reason.trim() ? reason.trim() : null,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log(`[AUDIT] ${action}: Tienda '${store.name}' (ID: ${store.id}, Slug: '${store.slug}') cambiada a ${updated.is_active ? 'ACTIVA' : 'INACTIVA'} por ${actor}. Razón: ${auditRecord.reason || 'No especificada'}. Fecha: ${auditRecord.timestamp}`);
+
+    res.json({
+      message: `Tienda ${updated.is_active ? 'activada' : 'desactivada'} exitosamente`,
+      is_active: updated.is_active,
+      audit: auditRecord
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error actualizando estado' });
+    console.error('Error actualizando estado de tienda:', error);
+    res.status(500).json({ error: 'Error actualizando estado de tienda' });
   }
 };
 

@@ -293,7 +293,7 @@ const adminLogin = async (req, res) => {
         username: user.username,
         role: user.role,
         store_id: user.store_id,
-        store: user.store ? { slug: user.store.slug } : null
+        store: user.store ? { slug: user.store.slug, name: user.store.name, is_active: user.store.is_active } : null
       }
     });
   } catch (error) {
@@ -375,7 +375,7 @@ const refreshToken = async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      include: { store: { select: { slug: true } } }
+      include: { store: { select: { slug: true, name: true, is_active: true } } }
     });
 
     res.json({

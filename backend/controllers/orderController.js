@@ -67,7 +67,7 @@ const placeOrder = async (req, res) => {
     // 2.5 Verificar la tienda y calcular distancia/tiempo
     const store = await prisma.store.findUnique({ where: { id: storeId } });
     if (!store || !store.is_active) {
-      return res.status(400).json({ error: 'Tienda no disponible' });
+      return res.status(400).json({ error: 'Tienda inactiva o no disponible' });
     }
 
     const delivery = await resolveDeliveryFee({ store, latitude, longitude });

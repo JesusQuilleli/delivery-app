@@ -14,7 +14,7 @@ interface User {
   email?: string;
   role?: string;
   store_id?: number;
-  store?: { slug: string } | null;
+  store?: { slug: string; name?: string; is_active?: boolean } | null;
   username?: string;
 }
 

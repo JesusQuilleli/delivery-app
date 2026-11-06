@@ -444,10 +444,10 @@ Optimización de la búsqueda y precisión de la dirección del cliente en el ch
 
 #### Tiendas inactivas
 
-- [ ] F2-25B Bloquear catálogo y checkout de tiendas inactivas.
-- [ ] F2-26 Bloquear recepción de pedidos en tiendas inactivas.
-- [ ] F2-27 Definir acceso del admin de tienda inactiva.
-- [ ] F2-28 Auditar activaciones y desactivaciones.
+- [x] F2-25B Bloquear catálogo y checkout de tiendas inactivas con pantalla amigable 404/no disponible.
+- [x] F2-26 Bloquear recepción de pedidos en tiendas inactivas respondiendo 400 'Tienda inactiva o no disponible'.
+- [x] F2-27 Definir acceso del admin de tienda inactiva (permite entrar pero muestra banner de advertencia amber persistente).
+- [x] F2-28 Auditar activaciones y desactivaciones con actor, razón, slug y timestamp estructurado.
 
 #### Demo, realtime y navegación (bugs reportados 2026-11-05)
 
@@ -931,7 +931,13 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 - Los pedidos `DELIVERED` no restauran stock al eliminarse para no inflar inventario; los cancelados sí, una sola vez.
 - Migración aplicada: `20261103130000_order_stock_restore`.
 
-### Decisiones de la demo (2026-11-05)
+### Decisiones de Tiendas Inactivas (F2-25B a F2-28)
+
+- Catálogo y Checkout responden 404 cuando la tienda está inactiva y el frontend muestra una vista limpia de 'Tienda no disponible' con redirección al inicio.
+- `placeOrder` rechaza con 400 y mensaje `Tienda inactiva o no disponible`.
+- El administrador de una tienda inactiva puede iniciar sesión para consultar reportes y realizar configuraciones, pero ve un banner ámbar persistente de advertencia informando el estado inactivo.
+- SuperAdmin `toggleStoreStatus` registra eventos de auditoría estructurados con `{ store_id, store_slug, store_name, previous_status, new_status, action, actor, reason, timestamp }`.
+
 
 - **Objetivo:** demostración comercial en la nube y PDF de accesos listo para usar en cualquier sesión.
 - **Tiendas:** `demo-comida` (`RESTAURANT`), `demo-viveres` (`SUPERMARKET`) y `demo-farmacia` (`PHARMACY`), todas en Puerto Ayacucho.

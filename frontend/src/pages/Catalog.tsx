@@ -4,7 +4,7 @@ import api from '../api';
 import { CartContext } from '../context/CartContext';
 import { Card, CardContent, CardFooter } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Store, Plus, Minus, Search } from 'lucide-react';
+import { Store, Plus, Minus, Search, AlertTriangle } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { formatPrice } from '../utils/currency';
@@ -40,6 +40,7 @@ export default function Catalog() {
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [storeConfig, setStoreConfig] = useState<any>(null);
+  const [storeError, setStoreError] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -73,7 +74,12 @@ export default function Catalog() {
           setTotalPages(1);
         }
       })
-      .catch(err => console.error("Error cargando productos", err))
+      .catch(err => {
+        console.error("Error cargando productos", err);
+        if (err.response?.status === 404 || err.response?.status === 403) {
+          setStoreError(err.response?.data?.error || 'Esta tienda se encuentra temporalmente inactiva o no existe.');
+        }
+      })
       .finally(() => setIsLoading(false));
   }, [slug, debouncedSearchTerm, selectedCategory, currentPage]);
 
@@ -95,6 +101,25 @@ export default function Catalog() {
     const item = cart.find(i => i.product_id === productId);
     return item ? item.quantity : 0;
   };
+
+  if (storeError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <Card className="max-w-md w-full text-center p-8 border border-border shadow-xl rounded-3xl">
+          <div className="w-16 h-16 bg-amber-500/10 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle size={32} />
+          </div>
+          <h2 className="text-2xl font-black mb-2">Tienda no disponible</h2>
+          <p className="text-muted-foreground text-sm mb-6">
+            {storeError}
+          </p>
+          <Button onClick={() => navigate('/')} className="w-full rounded-2xl font-bold">
+            Volver al Inicio
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-in fade-in duration-500 bg-background min-h-screen pb-20">

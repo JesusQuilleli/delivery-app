@@ -1,6 +1,6 @@
 import { type ReactNode, useContext } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Package, History, Settings, LogOut, LayoutDashboard, Store, Users, Bike } from 'lucide-react';
+import { Package, History, Settings, LogOut, LayoutDashboard, Store, Users, Bike, AlertTriangle } from 'lucide-react';
 import { Button } from './ui/button';
 import { AuthContext } from '../context/AuthContext';
 
@@ -13,7 +13,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
 
   const handleLogout = async () => {
     await logout(); // Llama al endpoint /auth/logout que borra la cookie httpOnly
@@ -70,6 +70,16 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
           </Button>
         </div>
       </header>
+
+      {user?.store?.is_active === false && (
+        <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center gap-3 text-amber-900 dark:text-amber-200 print:hidden">
+          <AlertTriangle className="text-amber-600 shrink-0" size={24} />
+          <div className="text-sm">
+            <p className="font-bold">Tienda en pausa / inactiva</p>
+            <p className="text-xs opacity-90 mt-0.5">El catálogo público y la recepción de pedidos están desactivados temporalmente. Los clientes verán la tienda como no disponible.</p>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1">
         {children}
