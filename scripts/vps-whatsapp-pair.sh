@@ -30,7 +30,7 @@ echo "1️⃣ Creando/Verificando instancia '${INSTANCE_NAME}' en Evolution API.
 curl -s -X POST "${EVO_URL}/instance/create" \
      -H "Content-Type: application/json" \
      -H "apikey: ${EVOLUTION_API_KEY}" \
-     -d "{\"instanceName\": \"${INSTANCE_NAME}\", \"token\": \"${EVOLUTION_API_KEY}\", \"qrcode\": true}" || true
+     -d "{\"instanceName\": \"${INSTANCE_NAME}\", \"token\": \"${EVOLUTION_API_KEY}\", \"qrcode\": true, \"integration\": \"WHATSAPP-BAILEYS\"}" || true
 
 echo ""
 echo "2️⃣ Obteniendo código QR para escanear con la línea +58 4161804831..."
