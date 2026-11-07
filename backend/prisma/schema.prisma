@@ -55,6 +55,7 @@ model SubscriptionPayment {
   currency          String   @default("USD")
   payment_method    String   @default("PAGO_MOVIL")
   payment_reference String?
+  payment_receipt_url String?
   period_start      DateTime
   period_end        DateTime
   status            String   @default("APPROVED")

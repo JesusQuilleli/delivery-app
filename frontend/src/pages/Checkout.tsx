@@ -12,9 +12,10 @@ import { requestNotificationPermission } from '../lib/notifications';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Phone, MapPin, CreditCard, ChevronRight, CheckCircle2, ShieldCheck, User as UserIcon, LocateFixed, Home, Briefcase, AlertTriangle, Navigation } from 'lucide-react';
+import { Phone, MapPin, CreditCard, ChevronRight, CheckCircle2, ShieldCheck, User as UserIcon, LocateFixed, Home, Briefcase, AlertTriangle, Edit3, XCircle, Navigation, Mail, MessageSquare, Camera, Upload } from 'lucide-react';
 import LoadingOverlay from '../components/LoadingOverlay';
 import { toast } from 'sonner';
+import { CancelOrderModal, EditOrderModal } from '../components/OrderActionModals';
 
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -132,6 +133,45 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState('');
   const [cashCurrency, setCashCurrency] = useState('USD');
   const [paymentReference, setPaymentReference] = useState('');
+  // F2G-06: Selección de canal OTP (Correo o WhatsApp)
+  const [authChannel, setAuthChannel] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
+  const [whatsAppIdentifier, setWhatsAppIdentifier] = useState<string>('');
+  const [whatsAppFallbackLink, setWhatsAppFallbackLink] = useState<string>('');
+
+  // F2G-04 y F2G-05: Capture de Pago Móvil y OCR
+  const [paymentReceiptUrl, setPaymentReceiptUrl] = useState<string>('');
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState<boolean>(false);
+  const [ocrDetectedInfo, setOcrDetectedInfo] = useState<{ reference?: string | null; amount?: number | null } | null>(null);
+
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("El comprobante supera el límite de 5 MB");
+      return;
+    }
+    setIsUploadingReceipt(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await api.post('/upload/receipt', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setPaymentReceiptUrl(res.data.imageUrl);
+
+      if (res.data.extracted?.reference) {
+        setPaymentReference(res.data.extracted.reference);
+        setOcrDetectedInfo(res.data.extracted);
+        toast.success(`¡Capture leído! Referencia bancaria detectada: ${res.data.extracted.reference}`);
+      } else {
+        toast.success("Capture cargado correctamente. Revisa o confirma la referencia abajo.");
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Error al subir el comprobante de pago");
+    } finally {
+      setIsUploadingReceipt(false);
+    }
+  };
   const [prescriptionUrl, setPrescriptionUrl] = useState<string>('');
   const [isUploadingPrescription, setIsUploadingPrescription] = useState<boolean>(false);
   const requiresPrescription = cart.some(i => i.requires_prescription);
@@ -159,6 +199,9 @@ export default function Checkout() {
     }
   };
   const [orderStatus, setOrderStatus] = useState<string>('PENDING');
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [placedOrderItems, setPlacedOrderItems] = useState<any[]>([]);
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
   const [orderId, setOrderId] = useState<number | null>(null);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
@@ -453,10 +496,46 @@ export default function Checkout() {
     setLoading(false);
   };
 
+  const requestWhatsAppOtp = async () => {
+    if (!storeId) {
+      toast.error('Cargando información de la tienda. Intenta de nuevo.');
+      return;
+    }
+    if (!parsedPhone.isValid) {
+      toast.error('Por favor ingresa un número de teléfono válido.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/send-whatsapp-otp', {
+        phone: parsedPhone.e164,
+        store_id: storeId
+      });
+      setWhatsAppIdentifier(res.data.identifier || `wa_${parsedPhone.nationalNumber}@whatsapp.user`);
+      if (res.data.code && res.data.simulated) {
+        toast.info(`[Modo Simulado / Dev] Tu código OTP es: ${res.data.code}`);
+      } else {
+        toast.success("Código de verificación enviado a tu WhatsApp.");
+      }
+      const adminWa = String(storeConfig?.bank_phone || '584124742535').replace(/\D/g, '');
+      const waMsg = encodeURIComponent(`Hola, solicito el código de verificación para mi pedido en ${storeConfig?.name || 'la tienda'}`);
+      setWhatsAppFallbackLink(`https://wa.me/${adminWa}?text=${waMsg}`);
+      setStep(2);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || "Error al solicitar código por WhatsApp");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resendOtp = async () => {
     if (!storeId) {
       toast.error('Cargando información de la tienda. Intenta de nuevo.');
       return;
+    }
+    if (authChannel === 'WHATSAPP') {
+      return requestWhatsAppOtp();
     }
     setLoading(true);
     try {
@@ -476,14 +555,24 @@ export default function Checkout() {
     }
     setLoading(true);
     try {
-      const res = await api.post('/auth/verify-otp', { email, code: otp, store_id: storeId, name, phone });
+      const targetEmail = authChannel === 'WHATSAPP'
+        ? (whatsAppIdentifier || `wa_${parsedPhone.nationalNumber}@whatsapp.user`)
+        : email;
+      const res = await api.post('/auth/verify-otp', {
+        email: targetEmail,
+        code: otp,
+        store_id: storeId,
+        name,
+        phone: parsedPhone.isValid ? parsedPhone.e164 : phone
+      });
       login(res.data.user);
       setStep(3);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
       toast.error(err.response?.data?.error || "Código incorrecto");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const confirmOrder = async () => {
@@ -512,6 +601,7 @@ export default function Checkout() {
         total_amount: grandTotal,
         payment_method: paymentMethod,
         payment_reference: paymentMethod === 'TRANSFER' ? paymentReference : `Efectivo en ${cashCurrency}`,
+        payment_receipt_url: paymentMethod === 'TRANSFER' ? paymentReceiptUrl || null : null,
         prescription_url: requiresPrescription ? prescriptionUrl : null
       });
       
@@ -545,22 +635,81 @@ export default function Checkout() {
               <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30 transform rotate-3 hover:rotate-0 transition-transform">
                 <UserIcon className="text-white" size={36} />
               </div>
-              <CardTitle className="text-3xl font-black text-gray-900 tracking-tight">Tu Correo</CardTitle>
+              <CardTitle className="text-3xl font-black text-gray-900 tracking-tight">Acceso Rápido</CardTitle>
               <CardDescription className="text-base mt-2">Inicia sesión de forma segura y sin contraseñas.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-4">
-              <div className="flex gap-2">
-                <Input 
-                  type="email" 
-                  placeholder="Ej: correo@ejemplo.com" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="flex-1 h-16 text-xl text-left pl-4 font-bold tracking-wider rounded-2xl bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-all shadow-inner"
-                />
+              {/* F2G-06: Selector de Canal Dual (Correo o WhatsApp) */}
+              <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-2xl">
+                <button
+                  type="button"
+                  onClick={() => setAuthChannel('EMAIL')}
+                  className={`py-2.5 text-sm font-black rounded-xl transition-all flex items-center justify-center gap-2 ${authChannel === 'EMAIL' ? 'bg-white text-blue-600 shadow-md' : 'text-gray-500 hover:text-gray-900'}`}
+                >
+                  <Mail size={16} /> Correo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthChannel('WHATSAPP')}
+                  className={`py-2.5 text-sm font-black rounded-xl transition-all flex items-center justify-center gap-2 ${authChannel === 'WHATSAPP' ? 'bg-white text-emerald-600 shadow-md' : 'text-gray-500 hover:text-gray-900'}`}
+                >
+                  <MessageSquare size={16} /> WhatsApp
+                </button>
               </div>
-              <Button onClick={requestOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-xl shadow-blue-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={!email || loading}>
-                {loading ? 'Cargando...' : 'Recibir Código Seguro'} <ChevronRight className="ml-2" />
-              </Button>
+
+              {authChannel === 'EMAIL' ? (
+                <>
+                  <div className="flex gap-2">
+                    <Input 
+                      type="email" 
+                      placeholder="Ej: correo@ejemplo.com" 
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="flex-1 h-16 text-xl text-left pl-4 font-bold tracking-wider rounded-2xl bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-all shadow-inner"
+                    />
+                  </div>
+                  <Button onClick={requestOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-xl shadow-blue-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={!email || loading}>
+                    {loading ? 'Cargando...' : 'Recibir Código por Correo'} <ChevronRight className="ml-2" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
+                      <label className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <Phone size={14} /> Tu WhatsApp (con código de país)
+                      </label>
+                      <div className="flex gap-2">
+                        <select
+                          value={countryCode}
+                          onChange={(e) => setCountryCode(e.target.value)}
+                          className="h-14 px-2 text-base font-bold rounded-xl border border-emerald-200 transition-all bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 cursor-pointer outline-none"
+                        >
+                          <option value="+58">🇻🇪 +58</option>
+                          <option value="+57">🇨🇴 +57</option>
+                          <option value="+1">🇺🇸 +1</option>
+                          <option value="+34">🇪🇸 +34</option>
+                          <option value="+56">🇨🇱 +56</option>
+                          <option value="+54">🇦🇷 +54</option>
+                          <option value="+51">🇵🇪 +51</option>
+                          <option value="+593">🇪🇨 +593</option>
+                          <option value="+507">🇵🇦 +507</option>
+                        </select>
+                        <Input 
+                          type="tel" 
+                          placeholder="Ej: 4121234567" 
+                          value={rawPhone} 
+                          onChange={(e) => setRawPhone(e.target.value)}
+                          className="flex-1 min-w-0 h-14 text-lg rounded-xl transition-all bg-white focus:border-emerald-500 focus:ring-emerald-500 font-bold"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <Button onClick={requestWhatsAppOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-xl shadow-emerald-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={!parsedPhone.isValid || loading}>
+                    {loading ? 'Enviando...' : 'Recibir Código por WhatsApp'} <ChevronRight className="ml-2" />
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         );
@@ -568,14 +717,16 @@ export default function Checkout() {
         return (
           <Card className="border-none shadow-2xl backdrop-blur-xl bg-white/90 animate-in fade-in slide-in-from-right-8 duration-500">
             <CardHeader className="text-center pb-2">
-              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-orange-500/30 transform -rotate-3 hover:rotate-0 transition-transform">
+              <div className={`mx-auto w-20 h-20 bg-gradient-to-br ${authChannel === 'WHATSAPP' ? 'from-emerald-400 to-emerald-600 shadow-emerald-500/30' : 'from-orange-400 to-orange-600 shadow-orange-500/30'} rounded-2xl flex items-center justify-center mb-6 shadow-lg transform -rotate-3 hover:rotate-0 transition-transform`}>
                 <ShieldCheck className="text-white" size={36} />
               </div>
               <CardTitle className="text-3xl font-black text-gray-900 tracking-tight">
-                Verificación Segura
+                {authChannel === 'WHATSAPP' ? 'Validación por WhatsApp' : 'Verificación Segura'}
               </CardTitle>
               <CardDescription className="text-base mt-2">
-                Hemos enviado un código a tu correo.
+                {authChannel === 'WHATSAPP'
+                  ? `Hemos enviado un código de 6 dígitos a tu WhatsApp (${parsedPhone.e164})`
+                  : `Hemos enviado un código a tu correo (${email})`}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-4">
@@ -594,35 +745,37 @@ export default function Checkout() {
                 />
               </div>
 
-              <div className="mb-4 bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
-                <label className="text-sm font-bold text-orange-900 mb-2 flex items-center gap-2">
-                  <Phone size={16} /> {isRegistered && rawPhone ? 'Tu teléfono registrado (puedes corregirlo)' : 'Número de Teléfono (Para el delivery)'}
-                </label>
-                <div className="flex gap-2">
-                  <select
-                    value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
-                    className="h-14 px-2 text-lg font-bold rounded-xl border border-orange-200 transition-all bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500 cursor-pointer outline-none"
-                  >
-                    <option value="+58">🇻🇪 +58</option>
-                    <option value="+57">🇨🇴 +57</option>
-                    <option value="+1">🇺🇸 +1</option>
-                    <option value="+34">🇪🇸 +34</option>
-                    <option value="+56">🇨🇱 +56</option>
-                    <option value="+54">🇦🇷 +54</option>
-                    <option value="+51">🇵🇪 +51</option>
-                    <option value="+593">🇪🇨 +593</option>
-                    <option value="+507">🇵🇦 +507</option>
-                  </select>
-                  <Input 
-                    type="tel" 
-                    placeholder="Ej: 4120000000" 
-                    value={rawPhone} 
-                    onChange={(e) => setRawPhone(e.target.value)}
-                    className="flex-1 min-w-0 h-14 text-lg rounded-xl transition-all bg-white focus:border-orange-500 focus:ring-orange-500"
-                  />
+              {authChannel === 'EMAIL' && (
+                <div className="mb-4 bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
+                  <label className="text-sm font-bold text-orange-900 mb-2 flex items-center gap-2">
+                    <Phone size={16} /> {isRegistered && rawPhone ? 'Tu teléfono registrado (puedes corregirlo)' : 'Número de Teléfono (Para el delivery)'}
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      className="h-14 px-2 text-lg font-bold rounded-xl border border-orange-200 transition-all bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500 cursor-pointer outline-none"
+                    >
+                      <option value="+58">🇻🇪 +58</option>
+                      <option value="+57">🇨🇴 +57</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+34">🇪🇸 +34</option>
+                      <option value="+56">🇨🇱 +56</option>
+                      <option value="+54">🇦🇷 +54</option>
+                      <option value="+51">🇵🇪 +51</option>
+                      <option value="+593">🇪🇨 +593</option>
+                      <option value="+507">🇵🇦 +507</option>
+                    </select>
+                    <Input 
+                      type="tel" 
+                      placeholder="Ej: 4120000000" 
+                      value={rawPhone} 
+                      onChange={(e) => setRawPhone(e.target.value)}
+                      className="flex-1 min-w-0 h-14 text-lg rounded-xl transition-all bg-white focus:border-orange-500 focus:ring-orange-500"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
               
               <div className="mb-6">
                 <label className="text-sm font-bold text-gray-700 mb-2 block">Código de Seguridad (6 dígitos)</label>
@@ -640,10 +793,22 @@ export default function Checkout() {
                 {loading ? 'Verificando...' : 'Validar y Continuar'} <ChevronRight className="ml-2" />
               </Button>
               
-              <div className="text-center mt-4">
+              <div className="text-center mt-4 space-y-2">
                 <Button variant="link" onClick={resendOtp} disabled={loading} className="text-orange-600 font-bold hover:text-orange-700">
                   ¿No recibiste el código? Reenviar
                 </Button>
+                {authChannel === 'WHATSAPP' && whatsAppFallbackLink && (
+                  <div>
+                    <a
+                      href={whatsAppFallbackLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 transition-all"
+                    >
+                      <MessageSquare size={14} /> ¿No llegó? Solicitar código directo a WhatsApp
+                    </a>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1017,14 +1182,88 @@ export default function Checkout() {
                       {storeConfig.payment_note}
                     </p>
                   )}
-                  <Input 
-                    placeholder="Número de Referencia (4 a 10 dígitos)" 
-                    value={paymentReference} 
-                    onChange={(e) => setPaymentReference(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    className="h-14 rounded-xl font-bold tracking-widest text-center"
-                    maxLength={10}
-                    inputMode="numeric"
-                  />
+                  {/* F2G-04 y F2G-05: Subida de Capture con Extracción Asistida */}
+                  <div className="p-4 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/50 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                        <Camera size={16} className="text-blue-600" />
+                        Comprobante / Capture de Pago Móvil
+                      </span>
+                      {paymentReceiptUrl && (
+                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <CheckCircle2 size={12} /> Capture listo
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-blue-800 leading-relaxed">
+                      Sube la captura de pantalla de tu transferencia. El sistema leerá automáticamente el número de referencia para que no tengas que escribirlo.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row gap-3 items-center pt-1">
+                      <label className="w-full sm:w-auto flex-1 cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          disabled={isUploadingReceipt}
+                          onChange={handleReceiptUpload}
+                          className="hidden"
+                        />
+                        <div className="h-12 px-4 rounded-xl border border-blue-300 bg-white hover:bg-blue-50/50 text-blue-700 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm">
+                          <Upload size={16} />
+                          {paymentReceiptUrl ? 'Cambiar imagen del comprobante' : 'Seleccionar o Tomar Foto del Capture'}
+                        </div>
+                      </label>
+                      {paymentReceiptUrl && (
+                        <a
+                          href={paymentReceiptUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-bold text-blue-700 hover:text-blue-900 underline whitespace-nowrap"
+                        >
+                          Ver comprobante cargado ↗
+                        </a>
+                      )}
+                    </div>
+
+                    {isUploadingReceipt && (
+                      <p className="text-xs text-blue-700 animate-pulse font-bold flex items-center gap-1.5">
+                        <span className="inline-block w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                        Subiendo comprobante y detectando número de referencia con OCR...
+                      </p>
+                    )}
+
+                    {paymentReceiptUrl && (
+                      <div className="mt-2 flex items-center gap-3 bg-white p-2.5 rounded-xl border border-blue-200">
+                        <img
+                          src={paymentReceiptUrl}
+                          alt="Capture cargado"
+                          className="w-14 h-14 object-cover rounded-lg border border-gray-200"
+                        />
+                        <div className="text-left text-xs">
+                          <p className="font-bold text-gray-900">Comprobante adjunto correctamente</p>
+                          <p className="text-gray-500 text-[11px]">
+                            {ocrDetectedInfo?.reference
+                              ? `Referencia detectada: ${ocrDetectedInfo.reference}`
+                              : 'Revisa y confirma la referencia abajo.'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                      Número de Referencia Bancaria (4 a 10 dígitos)
+                    </label>
+                    <Input 
+                      placeholder="Ej: 00481927" 
+                      value={paymentReference} 
+                      onChange={(e) => setPaymentReference(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      className="h-14 rounded-xl font-bold tracking-widest text-center text-lg bg-white border-2 border-gray-200 focus:border-blue-500"
+                      maxLength={10}
+                      inputMode="numeric"
+                    />
+                  </div>
                   {paymentReference.length > 0 && !isTransferReferenceValid && (
                     <p className="text-xs font-bold text-red-600 text-center">
                       La referencia debe tener entre 4 y 10 dígitos.
@@ -1106,6 +1345,78 @@ export default function Checkout() {
                 })}
               </div>
               
+              {(() => {
+                const isRestaurant = storeConfig?.industry === 'RESTAURANT';
+                const canModifyOrCancel = isRestaurant
+                  ? ['PENDING', 'AWAITING_PAYMENT', 'ACCEPTED'].includes(orderStatus)
+                  : ['PENDING', 'AWAITING_PAYMENT', 'ACCEPTED', 'PREPARING'].includes(orderStatus);
+
+                if (!canModifyOrCancel) return null;
+
+                return (
+                  <div className="mt-8 pt-6 border-t border-gray-100 space-y-3">
+                    <p className="text-xs text-center text-gray-500 font-semibold">
+                      {isRestaurant
+                        ? '¿Deseas cambiar algo? Puedes modificar productos o cancelar tu pedido antes de que inicie la preparación en cocina.'
+                        : '¿Deseas cambiar algo? Puedes modificar productos o cancelar tu pedido antes de que sea entregado al repartidor.'}
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="flex-1 h-12 rounded-2xl font-black border-amber-300 bg-amber-50/50 text-amber-900 hover:bg-amber-100"
+                      >
+                        <Edit3 size={16} className="mr-2 text-amber-700" /> Modificar Pedido
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsCancelModalOpen(true)}
+                        className="flex-1 h-12 rounded-2xl font-black border-red-200 bg-red-50/50 text-red-600 hover:bg-red-100"
+                      >
+                        <XCircle size={16} className="mr-2 text-red-600" /> Cancelar Pedido
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {orderStatus === 'CANCELLED' && (
+                <div className="mt-8 p-5 bg-red-50 border border-red-200 rounded-2xl text-center space-y-3">
+                  <p className="font-black text-red-700 text-sm">Este pedido fue cancelado.</p>
+                  <Button onClick={() => navigate(`/${slug}`)} className="w-full h-12 rounded-xl font-black bg-red-600 hover:bg-red-700 text-white">
+                    Volver a la tienda
+                  </Button>
+                </div>
+              )}
+
+              <CancelOrderModal
+                isOpen={isCancelModalOpen}
+                onClose={() => setIsCancelModalOpen(false)}
+                onConfirm={async (reason: string) => {
+                  if (!orderId) return;
+                  await api.put(`/orders/${orderId}/cancel`, { cancel_reason: reason });
+                  setOrderStatus('CANCELLED');
+                  toast.success('Pedido cancelado exitosamente');
+                }}
+                orderId={orderId || 0}
+              />
+
+              <EditOrderModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSave={async (items: any[]) => {
+                  if (!orderId) return;
+                  const res = await api.put(`/orders/${orderId}/items`, { items, cancel_reason: 'Productos modificados por el cliente' });
+                  setPlacedOrderItems(res.data.order.items || items);
+                  toast.success('¡Pedido modificado con éxito!');
+                }}
+                orderId={orderId || 0}
+                currency={storeConfig?.currency}
+                initialItems={placedOrderItems}
+              />
+
               {orderStatus === 'DELIVERED' && (
                 <div className="mt-12 pt-8 border-t border-gray-100 animate-in slide-in-from-bottom-8 duration-700">
                   <Button onClick={() => navigate(`/${slug}`)} className="w-full h-16 text-lg rounded-2xl font-black bg-gradient-to-r from-orange-500 to-orange-600 shadow-xl shadow-orange-500/20 text-white hover:scale-[1.02] transition-transform">

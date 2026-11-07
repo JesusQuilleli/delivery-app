@@ -7,6 +7,7 @@ const validate = require('../middleware/validate');
 const { checkEmailSchema, verifyOtpSchema, adminLoginSchema } = require('../validations/authValidation');
 
 router.post('/check-email', authLimiter, validate(checkEmailSchema), checkEmail);
+router.post('/send-whatsapp-otp', authLimiter, sendWhatsAppOtpHandler);
 router.post('/verify-otp', authLimiter, validate(verifyOtpSchema), verifyOtp);
 router.post('/admin-login', adminLoginLimiter, validate(adminLoginSchema), adminLogin);
 router.post('/refresh', refreshToken);

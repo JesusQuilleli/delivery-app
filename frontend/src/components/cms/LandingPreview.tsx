@@ -49,14 +49,14 @@ export function LandingPreview({
 
   if (mode === 'compare') {
     return (
-      <div className="flex gap-4 overflow-x-auto pb-2">
-        <div className="min-w-[320px] flex-1">
-          <PreviewFrame device={device} label="Ahora">
+      <div className="flex flex-col 2xl:flex-row gap-6 overflow-x-auto pb-4 w-full">
+        <div className="min-w-[340px] flex-1">
+          <PreviewFrame device={device} label="Ahora (Publicado)">
             {renderStorefront(currentConfig, currentTheme)}
           </PreviewFrame>
         </div>
-        <div className="min-w-[320px] flex-1">
-          <PreviewFrame device={device} label="Con cambios">
+        <div className="min-w-[340px] flex-1">
+          <PreviewFrame device={device} label="Con cambios (Borrador)">
             {renderStorefront(draftConfig, draftTheme)}
           </PreviewFrame>
         </div>
@@ -65,7 +65,7 @@ export function LandingPreview({
   }
 
   return (
-    <PreviewFrame device={device} label={mode === 'draft' ? 'Con cambios' : 'Ahora'}>
+    <PreviewFrame device={device} label={mode === 'draft' ? 'Con cambios (Borrador)' : 'Ahora (Publicado)'}>
       {mode === 'draft'
         ? renderStorefront(draftConfig, draftTheme)
         : renderStorefront(currentConfig, currentTheme)}

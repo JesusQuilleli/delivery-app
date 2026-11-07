@@ -12,6 +12,7 @@ const placeOrderSchema = z.object({
   longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
   payment_method: z.enum(['CASH', 'TRANSFER'], { errorMap: () => ({ message: 'Método de pago inválido' }) }),
   payment_reference: z.string().max(50).optional().nullable(),
+  payment_receipt_url: z.string().max(1000).optional().nullable(),
   prescription_url: z.string().max(1000).optional().nullable()
 }).superRefine((data, ctx) => {
   if (data.payment_method !== 'TRANSFER') return;

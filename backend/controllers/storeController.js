@@ -3,6 +3,7 @@ const { getBcvRate } = require('../services/ratesService');
 const { resolveDeliveryFee } = require('../services/deliveryService');
 const { formatProductWithStock } = require('../utils/inventory');
 const { normalizeLandingConfig } = require('../utils/landing');
+const { cleanOrphanLandingImages, deleteFromCloudinary } = require('../utils/cloudinaryCleaner');
 const {
   getCaracasStartOfDay,
   getCaracasStartOfMonth,
@@ -533,6 +534,11 @@ const updateStoreLanding = async (req, res) => {
       data: { landing_config, theme_color }
     });
 
+    // F2H-02: Limpieza automática de imágenes huérfanas en Cloudinary
+    cleanOrphanLandingImages(currentLanding, landing_config).catch(err => {
+      console.warn('[CloudinaryCleaner] Error limpiando imágenes huérfanas de landing:', err.message);
+    });
+
     res.json({
       message: 'Landing actualizada exitosamente',
       landing_config: updatedStore.landing_config,
@@ -777,6 +783,7 @@ const getStoreAnalytics = async (req, res) => {
         subtotal: true,
         delivery_fee: true,
         total_amount: true,
+        payment_method: true,
         createdAt: true
       }
     });
@@ -863,6 +870,90 @@ const getStoreAnalytics = async (req, res) => {
       }
     });
 
+    // F2H-03: Desglose por método de pago (Efectivo vs Pago Móvil)
+    const paymentBreakdown = {
+      CASH: { count: 0, amount: 0 },
+      TRANSFER: { count: 0, amount: 0 }
+    };
+
+    // F2H-03: Agrupación temporal para gráfica de ventas diarias
+    const dayMap = new Map();
+
+    for (const order of deliveredOrders) {
+      const method = order.payment_method === 'CASH' ? 'CASH' : 'TRANSFER';
+      const gross = Number(order.total_amount) || 0;
+      const net = (order.subtotal !== null && order.subtotal !== undefined)
+        ? Number(order.subtotal)
+        : Math.max(0, gross - (Number(order.delivery_fee) || 0));
+
+      paymentBreakdown[method].count += 1;
+      paymentBreakdown[method].amount += gross;
+
+      const dateStr = getCaracasDateString(order.createdAt);
+      if (!dayMap.has(dateStr)) {
+        dayMap.set(dateStr, { date: dateStr, sales: 0, netSales: 0, orders: 0 });
+      }
+      const entry = dayMap.get(dateStr);
+      entry.sales += gross;
+      entry.netSales += net;
+      entry.orders += 1;
+    }
+
+    // Ordenar cronológicamente y tomar los últimos 14 días con actividad
+    const salesTimeline = Array.from(dayMap.values())
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-14)
+      .map(d => ({
+        ...d,
+        label: d.date.split('-').slice(1).reverse().join('/') // MM-DD -> DD/MM
+      }));
+
+    // Ticket promedio
+    const averageTicket = totalOrders > 0 ? (totalSales / totalOrders) : 0;
+    const averageNetTicket = totalOrders > 0 ? (totalNetSales / totalOrders) : 0;
+
+    // F2H-03: Top 5 productos más vendidos históricamente en órdenes entregadas
+    let topProducts = [];
+    try {
+      const topItems = await prisma.orderItem.groupBy({
+        by: ['product_id'],
+        where: {
+          order: {
+            store_id: store.id,
+            status: 'DELIVERED'
+          }
+        },
+        _sum: {
+          quantity: true
+        },
+        orderBy: {
+          _sum: {
+            quantity: 'desc'
+          }
+        },
+        take: 5
+      });
+
+      if (topItems.length > 0) {
+        const productIds = topItems.map(i => i.product_id);
+        const productsInfo = await prisma.product.findMany({
+          where: { id: { in: productIds } },
+          select: { id: true, name: true, price: true }
+        });
+        topProducts = topItems.map(item => {
+          const prod = productsInfo.find(p => p.id === item.product_id);
+          return {
+            id: item.product_id,
+            name: prod?.name || 'Producto',
+            price: Number(prod?.price || 0),
+            quantity: item._sum.quantity || 0
+          };
+        });
+      }
+    } catch (topErr) {
+      console.warn('Error calculando top productos en analíticas:', topErr.message);
+    }
+
     res.json({
       todaySales,
       todayNetSales,
@@ -874,7 +965,12 @@ const getStoreAnalytics = async (req, res) => {
       totalNetSales,
       totalDeliveryFees,
       totalOrders,
+      averageTicket,
+      averageNetTicket,
       cancelledOrders: cancelledOrdersCount,
+      paymentBreakdown,
+      salesTimeline,
+      topProducts,
       filtered: filteredMetrics,
       currency: store.currency
     });

@@ -1,6 +1,6 @@
 import { type ReactNode, useContext } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Package, History, Settings, LogOut, LayoutDashboard, Store, Users, Bike, AlertTriangle } from 'lucide-react';
+import { Package, History, Settings, LogOut, LayoutDashboard, Store, Users, Bike, AlertTriangle, Palette } from 'lucide-react';
 import { Button } from './ui/button';
 import { AuthContext } from '../context/AuthContext';
 
@@ -24,6 +24,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     { name: 'Tablero', icon: LayoutDashboard, path: `/admin/${slug}` },
     { name: 'Catálogo', icon: Package, path: `/admin/${slug}/inventory` },
     { name: 'Historial', icon: History, path: `/admin/${slug}/history` },
+    { name: 'Diseño CMS', icon: Palette, path: `/admin/${slug}/cms` },
     { name: 'Clientes', icon: Users, path: `/admin/${slug}/customers` },
     { name: 'Motorizados', icon: Bike, path: `/admin/${slug}/drivers` },
     { name: 'Configuración', icon: Settings, path: `/admin/${slug}/settings` },

@@ -5,10 +5,11 @@ import { AuthContext } from '../context/AuthContext';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, Clock, MapPin, Package, X, Store, CreditCard, Star, XCircle, ChevronLeft, ChevronRight, Phone } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Package, X, Store, CreditCard, Star, XCircle, ChevronLeft, ChevronRight, Phone, Edit3 } from 'lucide-react';
 
 import { toast } from 'sonner';
 import { formatPrice } from '../utils/currency';
+import { CancelOrderModal, EditOrderModal } from '../components/OrderActionModals';
 import { useClientRealtime } from '../context/RealtimeContext';
 import { createSocket } from '../lib/socket';
 
@@ -20,6 +21,8 @@ export default function MyOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState('');
@@ -45,20 +48,26 @@ export default function MyOrders() {
     }
   };
 
-  const handleCancelOrder = async () => {
-    const reason = window.prompt("¿Por qué deseas cancelar este pedido?");
-    if (!reason || !reason.trim()) {
-      toast.error("Debes proporcionar una razón para cancelar el pedido.");
-      return;
-    }
+  const confirmCancelOrder = async (reason: string) => {
     try {
       await api.put(`/orders/${selectedOrder.id}/cancel`, { cancel_reason: reason });
-      // The socket will update it, but we can do optimistic update just in case
       const updatedOrder = { ...selectedOrder, status: 'CANCELLED', cancel_reason: reason };
       setSelectedOrder(updatedOrder);
-      setOrders(prev => prev.map((o: any) => o.id === updatedOrder.id ? updatedOrder : o));
-    } catch (error) {
-      toast.error("No se pudo cancelar el pedido. Es posible que ya esté siendo preparado.");
+      setOrders((prev: any[]) => prev.map((o: any) => o.id === updatedOrder.id ? updatedOrder : o));
+      toast.success("Pedido cancelado correctamente");
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "No se pudo cancelar el pedido en su estado actual.");
+    }
+  };
+
+  const handleSaveOrderItems = async (items: { product_id: number; quantity: number }[]) => {
+    try {
+      const res = await api.put(`/orders/${selectedOrder.id}/items`, { items, cancel_reason: 'Productos actualizados por el cliente' });
+      setSelectedOrder(res.data.order);
+      setOrders((prev: any[]) => prev.map((o: any) => o.id === selectedOrder.id ? res.data.order : o));
+      toast.success("Pedido modificado exitosamente");
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Error modificando pedido");
     }
   };
 
@@ -330,15 +339,43 @@ export default function MyOrders() {
                 </div>
               </div>
 
-              {/* Botón de Cancelar para Pedidos Pendientes */}
-              {selectedOrder.status === 'PENDING' && (
-                <div className="bg-red-50 p-4 rounded-3xl border border-red-100 text-center animate-in fade-in">
-                  <p className="text-sm text-red-600 font-medium mb-3">Si te equivocaste en algo o ya no deseas el pedido, puedes cancelarlo antes de que sea aceptado por la tienda.</p>
-                  <Button onClick={handleCancelOrder} variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700 font-black h-12 rounded-xl transition-transform active:scale-95">
-                    <XCircle className="mr-2" size={20} /> Cancelar mi pedido
-                  </Button>
-                </div>
-              )}
+              {/* Acciones de Cliente: Cancelar o Modificar pedido antes del despacho/preparación */}
+              {(() => {
+                const isRestaurant = (selectedOrder.store?.industry) === 'RESTAURANT';
+                const canModifyOrCancel = isRestaurant
+                  ? ['PENDING', 'AWAITING_PAYMENT', 'ACCEPTED'].includes(selectedOrder.status)
+                  : ['PENDING', 'AWAITING_PAYMENT', 'ACCEPTED', 'PREPARING'].includes(selectedOrder.status);
+
+                if (!canModifyOrCancel) return null;
+
+                return (
+                  <div className="bg-amber-50/70 p-5 rounded-3xl border border-amber-200 text-center animate-in fade-in space-y-3">
+                    <p className="text-xs text-amber-900 font-bold leading-relaxed">
+                      {isRestaurant
+                        ? '💡 Tu pedido está recibido. Puedes modificar productos o cancelarlo antes de que comience la preparación en cocina.'
+                        : '💡 Tu pedido está en gestión. Puedes modificar productos o cancelarlo antes de que sea entregado al repartidor.'}
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="flex-1 border-amber-300 bg-white text-amber-800 hover:bg-amber-100 font-black h-11 rounded-xl shadow-xs"
+                      >
+                        <Edit3 className="mr-2" size={16} /> Modificar Pedido
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsCancelModalOpen(true)}
+                        className="flex-1 border-red-200 bg-white text-red-600 hover:bg-red-50 font-black h-11 rounded-xl shadow-xs"
+                      >
+                        <XCircle className="mr-2" size={16} /> Cancelar Pedido
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Interfaz de Calificación */}
               {(selectedOrder.status === 'DISPATCHED' || (selectedOrder.status === 'DELIVERED' && !selectedOrder.client_rating)) && (
@@ -429,6 +466,20 @@ export default function MyOrders() {
           </div>
         </div>
       )}
+      <CancelOrderModal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        onConfirm={confirmCancelOrder}
+        orderId={selectedOrder?.id || 0}
+      />
+      <EditOrderModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleSaveOrderItems}
+        orderId={selectedOrder?.id || 0}
+        currency={selectedOrder?.store?.currency}
+        initialItems={selectedOrder?.items || []}
+      />
     </div>
   );
 }

@@ -409,7 +409,60 @@ const triggerSubscriptionLifecycleCheck = async (req, res) => {
   }
 };
 
+// F2G-03: Reseteo rápido de contraseña de administrador de tienda por el SuperAdmin
+const resetStoreAdminPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const store = await prisma.store.findUnique({
+      where: { id: Number(id) },
+      include: {
+        users: {
+          where: { role: 'ADMIN' },
+          take: 1
+        }
+      }
+    });
+
+    if (!store) {
+      return res.status(404).json({ error: 'Tienda no encontrada' });
+    }
+
+    const adminUser = store.users[0];
+    if (!adminUser) {
+      return res.status(404).json({ error: 'La tienda no tiene un usuario administrador asociado' });
+    }
+
+    // Generar contraseña temporal segura: Fast2026-XXXX
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const temporaryPassword = `Fast2026-${randomSuffix}`;
+    const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
+
+    await prisma.user.update({
+      where: { id: adminUser.id },
+      data: { password: hashedPassword }
+    });
+
+    const actor = req.user?.username || 'SuperAdmin';
+    console.log(`[AUDIT] ADMIN_PASSWORD_RESET: Tienda '${store.name}' (ID: ${store.id}). Usuario: '${adminUser.username}'. Por: ${actor}`);
+
+    res.json({
+      success: true,
+      message: `Contraseña restablecida exitosamente para '${adminUser.username}'.`,
+      store_id: store.id,
+      store_name: store.name,
+      slug: store.slug,
+      admin_username: adminUser.username,
+      admin_phone: adminUser.phone || store.whatsapp || '',
+      temporary_password: temporaryPassword
+    });
+  } catch (error) {
+    console.error('Error resetting store admin password:', error);
+    res.status(500).json({ error: 'Error al restablecer la contraseña del administrador' });
+  }
+};
+
 module.exports = {
+  resetStoreAdminPassword,
   triggerSubscriptionLifecycleCheck,
   getStores,
   createStore,

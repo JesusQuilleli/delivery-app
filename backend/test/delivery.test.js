@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { ROAD_FACTOR, haversineDistanceKm, estimateMinutes, matchesZone, evaluateCoverage } = require('../services/deliveryService');
+const { ROAD_FACTOR, haversineDistanceKm, estimateMinutes, matchesZone, evaluateCoverage, isInsidePuertoAyacucho } = require('../services/deliveryService');
 
 test('delivery: distancia 0 en el mismo punto', () => {
   assert.equal(haversineDistanceKm(5.6667, -67.6333, 5.6667, -67.6333), 0);
@@ -51,4 +51,24 @@ test('delivery: sin coordenadas la cobertura queda indefinida', () => {
   const coverage = evaluateCoverage([{ min_distance_km: 0, max_distance_km: 10 }], null);
   assert.equal(coverage.in_range, null);
   assert.equal(coverage.has_zones, true);
+});
+
+test('geofence: reconoce coordenadas centricas de Puerto Ayacucho', () => {
+  const res = isInsidePuertoAyacucho(5.6667, -67.6333);
+  assert.equal(res.inside, true);
+});
+
+test('geofence: reconoce coordenadas periurbanas validas de Atures', () => {
+  const res = isInsidePuertoAyacucho(5.62, -67.61);
+  assert.equal(res.inside, true);
+});
+
+test('geofence: rechaza coordenadas de otras ciudades como Caracas', () => {
+  const res = isInsidePuertoAyacucho(10.50, -66.90);
+  assert.equal(res.inside, false);
+});
+
+test('geofence: rechaza direcciones de texto de otros estados', () => {
+  const res = isInsidePuertoAyacucho(null, null, 'Av. Francisco de Miranda, Caracas');
+  assert.equal(res.inside, false);
 });

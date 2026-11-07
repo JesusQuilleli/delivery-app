@@ -17,6 +17,7 @@ import Layout from './components/Layout';
 import Landing from './pages/Landing';
 import ProductDetails from './pages/ProductDetails';
 import Settings from './pages/Settings';
+import CmsDesign from './pages/CmsDesign';
 import SuperAdmin from './pages/SuperAdmin';
 import TiendaFastLanding from './pages/TiendaFastLanding';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -38,6 +39,7 @@ function App() {
               <Route path="/admin/:slug/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Inventory /></ProtectedRoute>} />
               <Route path="/admin/:slug/customers" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Customers /></ProtectedRoute>} />
               <Route path="/admin/:slug/drivers" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Drivers /></ProtectedRoute>} />
+              <Route path="/admin/:slug/cms" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><CmsDesign /></ProtectedRoute>} />
               <Route path="/admin/:slug/settings" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Settings /></ProtectedRoute>} />
 
               <Route path="/:slug" element={<Landing />} />

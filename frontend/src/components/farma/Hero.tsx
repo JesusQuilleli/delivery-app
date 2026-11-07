@@ -29,7 +29,7 @@ export function Hero({ store }: { store?: any }) {
                 <span className="w-1.5 h-1.5 rounded-full bg-coral animate-pulse" />
                 {badgePromo}
               </span>
-              <h1 className="mt-6 font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight">
+              <h1 className="mt-6 font-display font-extrabold text-3xl sm:text-4xl lg:text-5xl xl:text-6xl leading-[1.05] tracking-tight break-words">
                 {slogan}
               </h1>
               <p className="mt-5 max-w-xl text-base lg:text-lg text-muted-foreground">

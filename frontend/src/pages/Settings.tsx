@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import AdminLayout from '../components/AdminLayout';
-import { LandingSettings } from '../components/cms/LandingSettings';
+// LandingSettings se encuentra en su propia página dedicada /admin/:slug/cms
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
-import { Store, Bell, Shield, MapPin, Save, Loader2, DollarSign, RefreshCw, Truck, Plus, Trash2, Landmark, Volume2, LogOut, KeyRound, Calculator, Zap } from 'lucide-react';
+import { Store, Bell, Shield, MapPin, Save, Loader2, DollarSign, RefreshCw, Truck, Plus, Trash2, Landmark, Volume2, LogOut, KeyRound, Calculator, Zap, Eye, EyeOff, Palette } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -48,6 +48,7 @@ function LocationMarker({ position, setPosition }) {
 }
 
 export default function Settings() {
+  const navigate = useNavigate();
   const { slug } = useParams<{ slug: string }>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -108,6 +109,9 @@ export default function Settings() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -384,7 +388,27 @@ export default function Settings() {
         </Card>
 
         
-        <LandingSettings slug={slug || ''} />
+        <Card className="border-border shadow-sm bg-gradient-to-br from-card via-card to-primary/5 border-primary/20 overflow-hidden relative">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Palette className="text-primary" /> Diseño y Landing Page de la Tienda
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Personaliza logotipo, colores, eslogan, banners promocionales y galería en el diseñador dedicado a pantalla completa.
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                onClick={() => navigate(`/admin/${slug}/cms`)}
+                className="h-11 px-5 font-black bg-primary hover:bg-primary/90 text-white rounded-xl shadow-md shadow-primary/20 shrink-0 gap-2"
+              >
+                <Palette size={16} /> Abrir Diseñador CMS en Pantalla Completa
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
 
         <Card className="border-border shadow-sm">
           <CardHeader>
@@ -807,40 +831,70 @@ export default function Settings() {
                   <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                     Contraseña actual
                   </label>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    value={currentPassword}
-                    onChange={e => setCurrentPassword(e.target.value)}
-                    className="h-11 bg-background border-border"
-                    autoComplete="current-password"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showCurrentPw ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={currentPassword}
+                      onChange={e => setCurrentPassword(e.target.value)}
+                      className="h-11 bg-background border-border pr-10"
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPw(prev => !prev)}
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition"
+                      tabIndex={-1}
+                    >
+                      {showCurrentPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                     Nueva contraseña
                   </label>
-                  <Input
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    className="h-11 bg-background border-border"
-                    autoComplete="new-password"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showNewPw ? "text" : "password"}
+                      placeholder="Mínimo 6 caracteres"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      className="h-11 bg-background border-border pr-10"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPw(prev => !prev)}
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition"
+                      tabIndex={-1}
+                    >
+                      {showNewPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                     Confirmar nueva contraseña
                   </label>
-                  <Input
-                    type="password"
-                    placeholder="Repite la contraseña"
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    className="h-11 bg-background border-border"
-                    autoComplete="new-password"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPw ? "text" : "password"}
+                      placeholder="Repite la contraseña"
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      className="h-11 bg-background border-border pr-10"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPw(prev => !prev)}
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition"
+                      tabIndex={-1}
+                    >
+                      {showConfirmPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end">

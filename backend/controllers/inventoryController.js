@@ -4,19 +4,7 @@ const { cloudinary } = require('../config/cloudinary');
 const { formatProductWithStock } = require('../utils/inventory');
 const { getPlan } = require('../config/plans');
 
-// Función auxiliar para extraer el public_id de una URL de Cloudinary
-const getPublicIdFromUrl = (url) => {
-  if (!url || !url.includes('cloudinary')) return null;
-  try {
-    const parts = url.split('/');
-    const file = parts.pop();
-    const folder = parts.pop();
-    const publicId = file.split('.')[0];
-    return `${folder}/${publicId}`;
-  } catch (error) {
-    return null;
-  }
-};
+const { getPublicIdFromUrl, deleteFromCloudinary } = require('../utils/cloudinaryCleaner');
 
 // Obtener inventario de una tienda (productos y combos)
 const getInventory = async (req, res) => {

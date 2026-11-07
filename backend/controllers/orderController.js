@@ -1,6 +1,6 @@
 const { Prisma } = require('@prisma/client');
 const prisma = require('../prismaClient');
-const { resolveDeliveryFee } = require('../services/deliveryService');
+const { resolveDeliveryFee, isInsidePuertoAyacucho } = require('../services/deliveryService');
 const { buildStockBreakdown, restoreOrderStock } = require('../services/orderStockService');
 
 const validTransitions = {
@@ -36,6 +36,7 @@ const placeOrder = async (req, res) => {
       longitude,
       payment_method,
       payment_reference,
+      payment_receipt_url,
       prescription_url
     } = req.body;
 
@@ -71,6 +72,14 @@ const placeOrder = async (req, res) => {
       return res.status(400).json({ error: 'Tienda inactiva o no disponible' });
     }
 
+    // F2I-01: Delimitación geográfica estricta a Puerto Ayacucho (Municipio Atures, Amazonas)
+    const geoValidation = isInsidePuertoAyacucho(latitude, longitude, delivery_address);
+    if (!geoValidation.inside) {
+      return res.status(400).json({
+        error: 'TiendaFast opera exclusivamente en Puerto Ayacucho (Municipio Atures, Estado Amazonas). La dirección o ubicación indicada se encuentra fuera del área metropolitana de cobertura.',
+        reason: geoValidation.reason
+      });
+    }
     const delivery = await resolveDeliveryFee({ store, latitude, longitude });
     const { distance_km, estimated_minutes } = delivery;
 
@@ -241,6 +250,7 @@ const placeOrder = async (req, res) => {
           stock_breakdown: buildStockBreakdown(requiredStock),
           payment_method,
           payment_reference: payment_reference || null,
+          payment_receipt_url: payment_receipt_url || null,
           status: payment_method === 'TRANSFER' ? 'AWAITING_PAYMENT' : 'PENDING',
           prescription_url: prescription_url || null,
           prescription_status: requiresPrescription ? 'PENDING_REVIEW' : 'NOT_REQUIRED',
@@ -537,20 +547,41 @@ const cancelOrderClient = async (req, res) => {
     const user = req.user;
     if (!user) return res.status(401).json({ error: 'No autenticado' });
 
-    const existingOrder = await prisma.order.findUnique({ where: { id: Number(id) } });
+    const existingOrder = await prisma.order.findUnique({
+      where: { id: Number(id) },
+      include: { store: true }
+    });
     
     if (!existingOrder || existingOrder.user_id !== user.id) {
       return res.status(403).json({ error: 'No tienes permiso para cancelar este pedido' });
     }
 
-    if (!['PENDING', 'AWAITING_PAYMENT'].includes(existingOrder.status)) {
-      return res.status(400).json({ error: 'Solo se pueden cancelar pedidos pendientes de pago o de aprobación' });
+    const isRestaurant = existingOrder.store?.industry === 'RESTAURANT';
+    // Comida: antes de entrar a preparación. Víveres/Farmacia: antes de despachar al motorizado.
+    const cancellableStatuses = isRestaurant
+      ? ['PENDING', 'AWAITING_PAYMENT', 'ACCEPTED']
+      : ['PENDING', 'AWAITING_PAYMENT', 'ACCEPTED', 'PREPARING'];
+
+    if (!cancellableStatuses.includes(existingOrder.status)) {
+      if (isRestaurant && existingOrder.status === 'PREPARING') {
+        return res.status(400).json({ error: 'El restaurante ya inició la preparación de tu comida. En negocios de comida no se puede cancelar una vez en preparación.' });
+      }
+      if (!isRestaurant && existingOrder.status === 'ON_THE_WAY') {
+        return res.status(400).json({ error: 'Tu pedido ya fue entregado al motorizado y va en camino. No es posible cancelarlo.' });
+      }
+      if (existingOrder.status === 'DELIVERED') {
+        return res.status(400).json({ error: 'No se puede cancelar un pedido que ya fue entregado.' });
+      }
+      if (existingOrder.status === 'CANCELLED') {
+        return res.status(400).json({ error: 'Este pedido ya se encuentra cancelado.' });
+      }
+      return res.status(400).json({ error: 'El pedido no puede cancelarse en su estado actual.' });
     }
 
     const order = await prisma.$transaction(async (tx) => {
       const updated = await tx.order.updateMany({
         where: { id: Number(id), status: existingOrder.status },
-        data: { status: 'CANCELLED', cancel_reason: cancel_reason || null }
+        data: { status: 'CANCELLED', cancel_reason: cancel_reason || 'Cancelado por el cliente' }
       });
 
       if (updated.count !== 1) {
@@ -568,9 +599,11 @@ const cancelOrderClient = async (req, res) => {
     }, { maxWait: 10000, timeout: 20000 });
 
     const io = req.app.get('io');
-    io.to(`client_${order.user_id}`).emit('estado_actualizado', order);
-    io.to(`order_${order.id}`).emit('estado_actualizado', order);
-    io.to(`store_${order.store_id}`).emit('pedido_actualizado', order);
+    if (io) {
+      io.to(`client_${order.user_id}`).emit('estado_actualizado', order);
+      io.to(`order_${order.id}`).emit('estado_actualizado', order);
+      io.to(`store_${order.store_id}`).emit('pedido_actualizado', order);
+    }
 
     res.json({ message: 'Pedido cancelado', order });
   } catch (error) {
@@ -579,6 +612,172 @@ const cancelOrderClient = async (req, res) => {
     }
     console.error('Error al cancelar pedido:', error);
     res.status(500).json({ error: 'Error interno al cancelar pedido' });
+  }
+};
+
+const editOrderClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { items, cancel_reason } = req.body;
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'No autenticado' });
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Debes incluir al menos un producto en el pedido modificado' });
+    }
+
+    const existingOrder = await prisma.order.findUnique({
+      where: { id: Number(id) },
+      include: {
+        store: true,
+        items: { include: { product: true } }
+      }
+    });
+
+    if (!existingOrder || existingOrder.user_id !== user.id) {
+      return res.status(403).json({ error: 'No tienes permiso para modificar este pedido' });
+    }
+
+    const isRestaurant = existingOrder.store?.industry === 'RESTAURANT';
+    const editableStatuses = isRestaurant
+      ? ['PENDING', 'AWAITING_PAYMENT', 'ACCEPTED']
+      : ['PENDING', 'AWAITING_PAYMENT', 'ACCEPTED', 'PREPARING'];
+
+    if (!editableStatuses.includes(existingOrder.status)) {
+      if (isRestaurant && existingOrder.status === 'PREPARING') {
+        return res.status(400).json({ error: 'El restaurante ya inició la preparación de tu orden y no puede modificarse.' });
+      }
+      if (!isRestaurant && existingOrder.status === 'ON_THE_WAY') {
+        return res.status(400).json({ error: 'Tu pedido ya está en camino con el motorizado y no puede modificarse.' });
+      }
+      return res.status(400).json({ error: 'No se puede modificar el pedido en su estado actual.' });
+    }
+
+    const requested = new Map();
+    for (const item of items) {
+      const productId = Number(item.product_id);
+      const qty = Number(item.quantity);
+      if (!Number.isInteger(productId) || productId <= 0 || !Number.isInteger(qty) || qty <= 0) {
+        return res.status(400).json({ error: 'Productos o cantidades inválidas en la modificación.' });
+      }
+      requested.set(productId, (requested.get(productId) || 0) + qty);
+    }
+
+    const productIds = [...requested.keys()];
+    const products = await prisma.product.findMany({
+      where: {
+        id: { in: productIds },
+        store_id: existingOrder.store_id,
+        is_available: true
+      },
+      include: {
+        comboItems: {
+          include: {
+            product: { select: { id: true, name: true, stock: true, is_available: true, store_id: true } }
+          }
+        }
+      }
+    });
+
+    if (products.length !== productIds.length) {
+      return res.status(400).json({ error: 'Uno o más productos no existen, no están disponibles o no pertenecen a esta tienda.' });
+    }
+
+    const now = new Date();
+    for (const p of products) {
+      if (p.expires_at && new Date(p.expires_at) < now) {
+        return res.status(400).json({ error: `El producto "${p.name}" está vencido y no puede ser comercializado.` });
+      }
+    }
+
+    const updatedOrder = await prisma.$transaction(async (tx) => {
+      await restoreOrderStock(tx, existingOrder.id);
+
+      const requiredStock = new Map();
+      for (const [productId, qty] of requested.entries()) {
+        const product = products.find(p => p.id === productId);
+        if (product.is_combo) {
+          for (const component of product.comboItems || []) {
+            if (component.product && component.product.stock !== null) {
+              const needed = qty * component.quantity;
+              requiredStock.set(component.product.id, (requiredStock.get(component.product.id) || 0) + needed);
+            }
+          }
+        } else if (product.stock !== null) {
+          requiredStock.set(productId, (requiredStock.get(productId) || 0) + qty);
+        }
+      }
+
+      for (const [prodId, neededQty] of requiredStock.entries()) {
+        const p = await tx.product.findUnique({
+          where: { id: prodId },
+          select: { id: true, name: true, stock: true }
+        });
+        if (p && p.stock !== null && p.stock < neededQty) {
+          throw new StockError(`Stock insuficiente para "${p.name}". Solicitado: ${neededQty}, disponible: ${p.stock}`);
+        }
+      }
+
+      for (const [prodId, neededQty] of requiredStock.entries()) {
+        await tx.product.update({
+          where: { id: prodId },
+          data: { stock: { decrement: neededQty } }
+        });
+      }
+
+      let newSubtotal = new Prisma.Decimal(0);
+      for (const [prodId, qty] of requested.entries()) {
+        const prod = products.find(p => p.id === prodId);
+        newSubtotal = newSubtotal.plus(new Prisma.Decimal(prod.price).mul(qty));
+      }
+      const deliveryFee = new Prisma.Decimal(existingOrder.delivery_fee || 0);
+      const newTotal = newSubtotal.plus(deliveryFee);
+
+      await tx.orderItem.deleteMany({ where: { order_id: existingOrder.id } });
+      for (const [prodId, qty] of requested.entries()) {
+        const prod = products.find(p => p.id === prodId);
+        await tx.orderItem.create({
+          data: {
+            order_id: existingOrder.id,
+            product_id: prodId,
+            quantity: qty,
+            unit_price: prod.price
+          }
+        });
+      }
+
+      const newBreakdown = buildStockBreakdown(requiredStock);
+      return tx.order.update({
+        where: { id: existingOrder.id },
+        data: {
+          subtotal: newSubtotal,
+          total_amount: newTotal,
+          stock_breakdown: newBreakdown,
+          stock_restored: false,
+          cancel_reason: cancel_reason ? `Modificado: ${cancel_reason}` : existingOrder.cancel_reason
+        },
+        include: {
+          items: { include: { product: true } },
+          user: true,
+          store: true
+        }
+      });
+    }, { maxWait: 10000, timeout: 20000 });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`client_${updatedOrder.user_id}`).emit('estado_actualizado', updatedOrder);
+      io.to(`order_${updatedOrder.id}`).emit('estado_actualizado', updatedOrder);
+      io.to(`store_${updatedOrder.store_id}`).emit('pedido_actualizado', updatedOrder);
+    }
+
+    res.json({ message: 'Pedido modificado exitosamente', order: updatedOrder });
+  } catch (error) {
+    if (error.name === 'StockError') {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Error modificando pedido:', error);
+    res.status(500).json({ error: 'Error interno modificando pedido' });
   }
 };
 
@@ -827,4 +1026,4 @@ const updatePrescriptionQuote = async (req, res) => {
 module.exports = {
   createPrescriptionQuote,
   getPrescriptionQuotes,
-  updatePrescriptionQuote, placeOrder, updateOrderStatus, deleteOrder, getMyOrders, getMyAddresses, rateOrder, getOrderById, cancelOrderClient, batchUpdateStatus, markOrderViewed };
+  updatePrescriptionQuote, placeOrder, updateOrderStatus, deleteOrder, getMyOrders, getMyAddresses, rateOrder, getOrderById, cancelOrderClient, editOrderClient, batchUpdateStatus, markOrderViewed };

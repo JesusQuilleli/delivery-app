@@ -19,6 +19,50 @@ const haversineDistanceKm = (lat1, lon1, lat2, lon2) => {
   return R * c * ROAD_FACTOR;
 };
 
+const PUERTO_AYACUCHO_CENTER = { latitude: 5.6667, longitude: -67.6333 };
+const PUERTO_AYACUCHO_BBOX = { minLat: 5.40, maxLat: 5.95, minLon: -67.85, maxLon: -67.45 };
+const PUERTO_AYACUCHO_MAX_RADIUS_KM = 25;
+
+/**
+ * Valida si las coordenadas o dirección pertenecen exclusivamente a Puerto Ayacucho (Municipio Atures, Amazonas).
+ */
+const isInsidePuertoAyacucho = (latitude, longitude, addressText = '') => {
+  const lat = toFiniteNumber(latitude);
+  const lon = toFiniteNumber(longitude);
+
+  if (lat !== null && lon !== null) {
+    const inBbox = lat >= PUERTO_AYACUCHO_BBOX.minLat &&
+                   lat <= PUERTO_AYACUCHO_BBOX.maxLat &&
+                   lon >= PUERTO_AYACUCHO_BBOX.minLon &&
+                   lon <= PUERTO_AYACUCHO_BBOX.maxLon;
+    const distanceKm = haversineDistanceKm(PUERTO_AYACUCHO_CENTER.latitude, PUERTO_AYACUCHO_CENTER.longitude, lat, lon) / ROAD_FACTOR;
+    const inRadius = distanceKm <= PUERTO_AYACUCHO_MAX_RADIUS_KM;
+
+    if (!inBbox || !inRadius) {
+      return {
+        inside: false,
+        reason: 'Ubicación fuera del Municipio Atures / Puerto Ayacucho',
+        distance_from_center_km: Math.round(distanceKm * 10) / 10
+      };
+    }
+  }
+
+  if (typeof addressText === 'string' && addressText.trim()) {
+    const normalized = addressText.toLowerCase();
+    const disallowedRegions = ['caracas', 'valencia', 'maracay', 'maracaibo', 'barquisimeto', 'merida', 'san cristobal', 'maturin', 'barcelona', 'puerto la cruz', 'ciudad bolivar', 'puerto ordaz', 'apure', 'guarico'];
+    for (const region of disallowedRegions) {
+      if (normalized.includes(region)) {
+        return {
+          inside: false,
+          reason: 'Dirección corresponde a otra entidad federal (' + region + ')',
+          disallowed_region: region
+        };
+      }
+    }
+  }
+
+  return { inside: true };
+};
 const estimateMinutes = (distanceKm) => Math.round((distanceKm / 25) * 60) + 15;
 
 const matchesZone = (zone, distanceKm) => {
@@ -77,7 +121,9 @@ const resolveDeliveryFee = async ({ store, latitude, longitude }) => {
     : null;
 
   const coverage = evaluateCoverage(zones, distanceKm);
-  const inRange = coverage.in_range;
+  const geoCheck = isInsidePuertoAyacucho(lat, lon);
+  const isOutsidePuertoAyacucho = lat !== null && lon !== null && !geoCheck.inside;
+  const inRange = isOutsidePuertoAyacucho ? false : coverage.in_range;
 
   const fee = zone
     ? new Prisma.Decimal(zone.fee)
@@ -89,7 +135,12 @@ const resolveDeliveryFee = async ({ store, latitude, longitude }) => {
     delivery_fee: fee,
     zone,
     in_range: inRange,
-    coverage
+    outside_puerto_ayacucho: isOutsidePuertoAyacucho,
+    coverage: {
+      ...coverage,
+      outside_puerto_ayacucho: isOutsidePuertoAyacucho,
+      city_scope: 'Puerto Ayacucho, Municipio Atures, Estado Amazonas'
+    }
   };
 };
 
@@ -99,5 +150,7 @@ module.exports = {
   estimateMinutes,
   matchesZone,
   evaluateCoverage,
-  resolveDeliveryFee
+  resolveDeliveryFee,
+  isInsidePuertoAyacucho,
+  PUERTO_AYACUCHO_CENTER
 };

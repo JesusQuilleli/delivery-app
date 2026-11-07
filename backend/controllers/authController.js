@@ -429,4 +429,55 @@ const refreshToken = async (req, res) => {
   }
 };
 
-module.exports = { checkEmail, verifyOtp, adminLogin, logout, refreshToken, changePassword };
+const { sendWhatsAppOtp } = require('../services/whatsappService');
+
+// F2G-06: Envío de OTP por WhatsApp con protección anti-baneo
+const sendWhatsAppOtpHandler = async (req, res) => {
+  try {
+    const { phone, store_id } = req.body;
+    if (!phone || !store_id) {
+      return res.status(400).json({ error: 'Número de teléfono y tienda requeridos' });
+    }
+
+    const store = await prisma.store.findUnique({
+      where: { id: Number(store_id) }
+    });
+    if (!store || !store.is_active) {
+      return res.status(404).json({ error: 'Tienda inactiva o no encontrada' });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    const userIdentifier = `wa_${cleanPhone}@whatsapp.user`;
+
+    await prisma.verificationCode.create({
+      data: {
+        email: userIdentifier,
+        store_id: Number(store_id),
+        code: hashedCode,
+        expires_at: expiresAt
+      }
+    });
+
+    const result = await sendWhatsAppOtp(phone, code, store.name);
+
+    res.json({
+      success: true,
+      message: 'Código de verificación generado para WhatsApp',
+      simulated: result.simulated || false,
+      code: process.env.NODE_ENV !== 'production' ? code : undefined,
+      phone: cleanPhone,
+      identifier: userIdentifier,
+      bot_number: result.bot_number || process.env.WHATSAPP_BOT_NUMBER || '584161804831'
+    });
+  } catch (err) {
+    console.error('Error enviando OTP por WhatsApp:', err);
+    res.status(err.status || 500).json({ error: err.message || 'Error al enviar código por WhatsApp' });
+  }
+};
+
+module.exports = {
+  sendWhatsAppOtpHandler, checkEmail, verifyOtp, adminLogin, logout, refreshToken, changePassword };

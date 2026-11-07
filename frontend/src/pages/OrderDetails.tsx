@@ -30,6 +30,7 @@ interface Order {
   total_amount: number;
   payment_method: string;
   payment_reference: string | null;
+  payment_receipt_url?: string | null;
   status: string;
   cancel_reason?: string | null;
   prescription_url?: string | null;
@@ -323,6 +324,17 @@ export default function OrderDetails() {
               </div>
               <p className="text-3xl md:text-4xl font-black tracking-tighter text-gray-900 leading-none">{formatPrice(order.total_amount, (storeData as any)?.currency)}</p>
             </div>
+            {order.payment_receipt_url && (
+              <div className="mt-4 pt-3 border-t border-blue-200/60">
+                <p className="text-xs font-bold text-blue-900 mb-2 flex items-center justify-between">
+                  <span>📸 Comprobante de Pago Móvil:</span>
+                  <a href={order.payment_receipt_url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:text-blue-900 underline text-[11px]">Abrir original ↗</a>
+                </p>
+                <a href={order.payment_receipt_url} target="_blank" rel="noopener noreferrer" className="inline-block group relative rounded-xl overflow-hidden border border-blue-300 shadow-sm bg-white">
+                  <img src={order.payment_receipt_url} alt="Comprobante de pago" className="h-32 w-auto object-contain rounded-xl hover:scale-105 transition-transform" />
+                </a>
+              </div>
+            )}
           </div>
         </div>
 

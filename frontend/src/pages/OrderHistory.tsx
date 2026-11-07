@@ -6,7 +6,8 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { Printer, Trash2, Calendar, Search, History, ChevronLeft, ChevronRight, Download, Filter } from 'lucide-react';
+import { Printer, Trash2, Calendar, Search, History, ChevronLeft, ChevronRight, Download, Filter, TrendingUp, Award, Sparkles, PieChart as PieIcon, BarChart2 } from 'lucide-react';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, PieChart, Pie, Cell } from 'recharts';
 import AdminLayout from '../components/AdminLayout';
 import { toast } from 'sonner';
 import { formatPrice } from '../utils/currency';
@@ -28,6 +29,7 @@ export default function OrderHistory() {
   const [showMonthSales, setShowMonthSales] = useState(false);
   const [showTotalSales, setShowTotalSales] = useState(false);
   const [showTotalOrders, setShowTotalOrders] = useState(false);
+  const [showCharts, setShowCharts] = useState(true);
   
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
@@ -272,6 +274,200 @@ export default function OrderHistory() {
                 </div>
               </CardContent>
             </Card>
+          )}
+        </div>
+      )}
+
+      {/* F2H-03: Sección Avanzada de Beneficio Comercial, Gráficas y Margen de Ganancias */}
+      {analytics && (
+        <div className="space-y-6 mb-8 print:hidden">
+          {/* Banner de Impacto Digital y Retorno de Inversión */}
+          <div className="bg-gradient-to-r from-emerald-950 via-gray-900 to-slate-900 text-white p-5 sm:p-6 rounded-2xl shadow-xl border border-emerald-500/30">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                  <Sparkles size={14} /> Impacto Comercial TiendaFast
+                </span>
+                <h4 className="text-xl font-black tracking-tight text-white">
+                  Resultados Canalizados por la Aplicación
+                </h4>
+                <p className="text-xs text-gray-300 max-w-2xl leading-relaxed">
+                  Ventas estructuradas y organizadas de forma automática, reduciendo pérdidas por pedidos informales en WhatsApp y agilizando la entrega a clientes.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 shrink-0">
+                <div className="bg-white/5 border border-white/10 p-3 rounded-xl">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Ticket Promedio</span>
+                  <span className="text-lg font-black text-emerald-400">
+                    {formatPrice(analytics.averageTicket || 0, storeConfig?.currency)}
+                  </span>
+                </div>
+                <div className="bg-white/5 border border-white/10 p-3 rounded-xl">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Efectividad Entrega</span>
+                  <span className="text-lg font-black text-emerald-400">
+                    {analytics.totalOrders + (analytics.cancelledOrders || 0) > 0
+                      ? Math.round((analytics.totalOrders / (analytics.totalOrders + (analytics.cancelledOrders || 0))) * 100)
+                      : 100}%
+                  </span>
+                </div>
+                <div className="bg-white/5 border border-white/10 p-3 rounded-xl col-span-2 sm:col-span-1">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Venta Neta Productos</span>
+                  <span className="text-lg font-black text-emerald-400">
+                    {formatPrice(analytics.totalNetSales || 0, storeConfig?.currency)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Gráficas Interactivas: Evolución de Ventas y Distribución de Pagos */}
+          <div className="flex items-center justify-between">
+            <h4 className="text-base font-black flex items-center gap-2 text-foreground">
+              <BarChart2 className="text-primary" size={20} />
+              Métricas y Comportamiento del Negocio
+            </h4>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCharts(!showCharts)}
+              className="text-xs font-bold h-8"
+            >
+              {showCharts ? 'Ocultar Gráficas' : 'Mostrar Gráficas'}
+            </Button>
+          </div>
+
+          {showCharts && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Gráfica de Área: Evolución de Ventas */}
+              <Card className="lg:col-span-2 border-border shadow-sm p-5 bg-card rounded-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h5 className="font-black text-sm text-foreground flex items-center gap-1.5">
+                      <TrendingUp size={16} className="text-emerald-500" />
+                      Evolución de Ingresos por Día
+                    </h5>
+                    <p className="text-xs text-muted-foreground">Últimos días con actividad de despachos entregados.</p>
+                  </div>
+                  <span className="text-xs font-bold text-muted-foreground uppercase">
+                    Moneda: {storeConfig?.currency || 'USD'}
+                  </span>
+                </div>
+
+                {analytics.salesTimeline && analytics.salesTimeline.length > 0 ? (
+                  <div className="h-64 w-full pt-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={analytics.salesTimeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                          </linearGradient>
+                          <linearGradient id="netGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="label" stroke="#888888" fontSize={11} tickLine={false} />
+                        <YAxis stroke="#888888" fontSize={11} tickLine={false} />
+                        <RechartsTooltip
+                          contentStyle={{ backgroundColor: '#1f2937', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                          formatter={(value: any) => [`${formatPrice(Number(value) || 0, storeConfig?.currency)}`]}
+                        />
+                        <Area type="monotone" dataKey="sales" name="Venta Total" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#salesGrad)" />
+                        <Area type="monotone" dataKey="netSales" name="Neto Productos" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#netGrad)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-48 flex items-center justify-center text-xs text-muted-foreground border border-dashed rounded-xl">
+                    Aún no hay suficientes ventas entregadas para graficar la tendencia diaria.
+                  </div>
+                )}
+              </Card>
+
+              {/* Gráfica Circular: Métodos de Pago */}
+              <Card className="border-border shadow-sm p-5 bg-card rounded-2xl flex flex-col justify-between">
+                <div>
+                  <h5 className="font-black text-sm text-foreground flex items-center gap-1.5 mb-1">
+                    <PieIcon size={16} className="text-blue-500" />
+                    Distribución de Pagos
+                  </h5>
+                  <p className="text-xs text-muted-foreground mb-4">Proporción de recaudación por canal.</p>
+
+                  {analytics.paymentBreakdown && (analytics.paymentBreakdown.CASH.amount > 0 || analytics.paymentBreakdown.TRANSFER.amount > 0) ? (
+                    <div>
+                      <div className="h-44 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: 'Efectivo', value: analytics.paymentBreakdown.CASH.amount, color: '#10b981' },
+                                { name: 'Pago Móvil', value: analytics.paymentBreakdown.TRANSFER.amount, color: '#3b82f6' }
+                              ]}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={45}
+                              outerRadius={65}
+                              paddingAngle={4}
+                              dataKey="value"
+                            >
+                              <Cell fill="#10b981" />
+                              <Cell fill="#3b82f6" />
+                            </Pie>
+                            <RechartsTooltip
+                              contentStyle={{ backgroundColor: '#1f2937', borderRadius: '10px', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 'bold' }}
+                              formatter={(value: any) => [`${formatPrice(Number(value) || 0, storeConfig?.currency)}`]}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t text-xs">
+                        <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/50">
+                          <span className="font-bold text-emerald-800 dark:text-emerald-400 block">💵 Efectivo</span>
+                          <span className="font-black text-sm text-emerald-900 dark:text-emerald-300">
+                            {formatPrice(analytics.paymentBreakdown.CASH.amount, storeConfig?.currency)}
+                          </span>
+                          <span className="block text-[10px] text-muted-foreground">({analytics.paymentBreakdown.CASH.count} pedidos)</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50">
+                          <span className="font-bold text-blue-800 dark:text-blue-400 block">📱 Pago Móvil</span>
+                          <span className="font-black text-sm text-blue-900 dark:text-blue-300">
+                            {formatPrice(analytics.paymentBreakdown.TRANSFER.amount, storeConfig?.currency)}
+                          </span>
+                          <span className="block text-[10px] text-muted-foreground">({analytics.paymentBreakdown.TRANSFER.count} pedidos)</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-44 flex items-center justify-center text-xs text-muted-foreground border border-dashed rounded-xl">
+                      Sin datos de pago suficientes.
+                    </div>
+                  )}
+                </div>
+
+                {analytics.topProducts && analytics.topProducts.length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <span className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1 mb-2">
+                      <Award size={14} className="text-amber-500" /> Top Productos Más Vendidos
+                    </span>
+                    <div className="space-y-1.5">
+                      {analytics.topProducts.slice(0, 3).map((prod: any, idx: number) => (
+                        <div key={prod.id} className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-foreground/90 truncate max-w-[150px]">
+                            {idx + 1}. {prod.name}
+                          </span>
+                          <Badge variant="secondary" className="font-mono text-[10px] font-bold">
+                            {prod.quantity} unids
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </div>
           )}
         </div>
       )}

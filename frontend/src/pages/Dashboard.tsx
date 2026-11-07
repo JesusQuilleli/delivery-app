@@ -14,7 +14,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import AdminLayout from '../components/AdminLayout';
 import RejectOrderDialog from '../components/RejectOrderDialog';
 import ConnectionStatus from '../components/ConnectionStatus';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import { formatPrice } from '../utils/currency';
@@ -35,6 +35,7 @@ interface Order {
   total_amount: number;
   payment_method: string;
   payment_reference: string | null;
+  payment_receipt_url?: string | null;
   status: string;
   viewed?: boolean;
   distance_km?: number | null;
@@ -98,6 +99,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [alertQueue, setAlertQueue] = useState<Order[]>([]);
   const [rejectTarget, setRejectTarget] = useState<Order | null>(null);
+  const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<Order | null>(null);
   const [activeTab, setActiveTab] = useState("PENDING");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectMode, setSelectMode] = useState(false);
@@ -835,6 +837,20 @@ export default function Dashboard() {
                             <span className={`text-[9px] font-black px-1.5 py-0.5 rounded inline-block mt-1 ${getPaymentColor(order.payment_method)}`}>
                               {getPaymentLabel(order.payment_method)}
                             </span>
+                            {order.payment_method === 'TRANSFER' && order.payment_reference && (
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                Ref: {order.payment_reference}
+                              </span>
+                            )}
+                            {order.payment_receipt_url && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setSelectedReceiptOrder(order); }}
+                                className="mt-1 flex items-center gap-1 text-[10px] font-black bg-blue-100 hover:bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded border border-blue-300 transition-colors"
+                              >
+                                📸 Ver Capture
+                              </button>
+                            )}
                           </TableCell>
                           <TableCell className="align-top py-3">
                             <Badge
@@ -1029,6 +1045,20 @@ export default function Dashboard() {
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded shadow-sm inline-flex items-center w-fit ${getPaymentColor(order.payment_method)}`}>
                             {getPaymentLabel(order.payment_method)}
                           </span>
+                          {order.payment_method === 'TRANSFER' && order.payment_reference && (
+                            <span className="text-[10px] font-mono text-muted-foreground">
+                              Ref: {order.payment_reference}
+                            </span>
+                          )}
+                          {order.payment_receipt_url && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setSelectedReceiptOrder(order); }}
+                              className="flex items-center gap-1 text-[10px] font-black bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-0.5 rounded border border-blue-300 w-fit"
+                            >
+                              📸 Ver Capture
+                            </button>
+                          )}
                           {order.estimated_minutes && (
                             <Badge variant="outline" className="font-black text-orange-600 border-orange-200 bg-orange-50 shadow-sm py-0.5 px-2 text-[10px] w-fit">
                               ETA: ~{order.estimated_minutes} min
@@ -1449,6 +1479,103 @@ export default function Dashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* F2G-04: Modal de Validación Rápida de Comprobante / Capture de Pago Móvil */}
+      {selectedReceiptOrder && (
+        <Dialog open={!!selectedReceiptOrder} onOpenChange={(open) => !open && setSelectedReceiptOrder(null)}>
+          <DialogContent className="max-w-md w-full p-6 rounded-2xl bg-white shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <span>📸 Comprobante de Pago</span>
+                <span className="text-blue-600 font-mono">#{selectedReceiptOrder.id}</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-gray-500">
+                Verificación visual del capture de pago móvil transferido por el cliente.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 my-2">
+              <div className="bg-muted/40 p-3 rounded-xl border space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Cliente:</span>
+                  <strong className="text-foreground">{selectedReceiptOrder.user.name || 'Sin nombre'} ({selectedReceiptOrder.user.phone})</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Monto:</span>
+                  <strong className="text-foreground text-sm font-black text-emerald-600">
+                    {formatPrice(selectedReceiptOrder.total_amount, storeConfig?.currency)}
+                  </strong>
+                </div>
+                {selectedReceiptOrder.payment_reference && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Referencia:</span>
+                    <strong className="font-mono bg-blue-50 text-blue-800 px-2 py-0.5 rounded border border-blue-200 text-xs">
+                      {selectedReceiptOrder.payment_reference}
+                    </strong>
+                  </div>
+                )}
+              </div>
+
+              {selectedReceiptOrder.payment_receipt_url ? (
+                <div className="space-y-2">
+                  <div className="max-h-[50vh] overflow-auto rounded-xl border bg-black/5 flex items-center justify-center p-1">
+                    <img
+                      src={selectedReceiptOrder.payment_receipt_url}
+                      alt="Comprobante de pago"
+                      className="w-full h-auto object-contain rounded-lg shadow-sm"
+                    />
+                  </div>
+                  <div className="text-center">
+                    <a
+                      href={selectedReceiptOrder.payment_receipt_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-bold text-blue-600 hover:text-blue-800 underline inline-flex items-center gap-1"
+                    >
+                      Abrir capture en tamaño completo ↗
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-center text-muted-foreground py-6">
+                  El cliente no adjuntó imagen del capture para este pedido.
+                </p>
+              )}
+            </div>
+
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
+              {selectedReceiptOrder.status === 'AWAITING_PAYMENT' && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="text-red-600 border-red-200 hover:bg-red-50 font-bold text-xs"
+                    onClick={() => {
+                      const target = selectedReceiptOrder;
+                      setSelectedReceiptOrder(null);
+                      handleQuickReject(target);
+                    }}
+                  >
+                    <XCircle size={14} className="mr-1" /> Rechazar Pago
+                  </Button>
+                  <Button
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20"
+                    onClick={() => {
+                      const id = selectedReceiptOrder.id;
+                      setSelectedReceiptOrder(null);
+                      handleQuickApprove(id);
+                    }}
+                  >
+                    <CheckCircle size={14} className="mr-1" /> Validar y Aprobar
+                  </Button>
+                </>
+              )}
+              <Button variant="ghost" onClick={() => setSelectedReceiptOrder(null)} className="font-bold text-xs">
+                Cerrar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
     </AdminLayout>
   );

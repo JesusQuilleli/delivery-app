@@ -22,7 +22,11 @@ import {
   AlertTriangle,
   RefreshCw,
   X,
-  Copy
+  Copy,
+  Eye,
+  EyeOff,
+  KeyRound,
+  MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -78,6 +82,9 @@ export default function SuperAdmin() {
   const [adminUsername, setAdminUsername] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [resetModalData, setResetModalData] = useState<any | null>(null);
+  const [resettingId, setResettingId] = useState<number | null>(null);
   const [industry, setIndustry] = useState('PHARMACY');
   const [selectedPlan, setSelectedPlan] = useState('EMPRENDEDOR');
   const [trialDays, setTrialDays] = useState(30);
@@ -161,6 +168,19 @@ export default function SuperAdmin() {
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleResetPassword = async (store: any) => {
+    if (!window.confirm(`¿Seguro que deseas restablecer la contraseña para '${store.name}'?`)) return;
+    setResettingId(store.id);
+    try {
+      const res = await api.post(`/superadmin/stores/${store.id}/reset-password`);
+      setResetModalData(res.data);
+      toast.success(res.data.message);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Error al restablecer contraseña');
+    }
+    setResettingId(null);
   };
 
   const toggleStatus = async (id: number) => {
@@ -439,7 +459,22 @@ export default function SuperAdmin() {
 
                   <div className="space-y-1.5">
                     <Label className="font-bold text-gray-700 text-xs">Contraseña</Label>
-                    <Input required type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="h-10 bg-gray-50" />
+                    <div className="relative">
+                      <Input 
+                        required 
+                        type={showAdminPassword ? "text" : "password"} 
+                        value={adminPassword} 
+                        onChange={(e) => setAdminPassword(e.target.value)} 
+                        className="h-10 bg-gray-50 pr-10" 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminPassword(prev => !prev)}
+                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-700 transition"
+                      >
+                        {showAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
 
                   <Button type="submit" disabled={creating} className="w-full h-11 text-base font-black bg-blue-600 hover:bg-blue-700 rounded-xl mt-3">
@@ -582,6 +617,17 @@ export default function SuperAdmin() {
                                   <Copy size={13} />
                                 </Button>
 
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  disabled={resettingId === store.id}
+                                  onClick={() => handleResetPassword(store)}
+                                  className="h-8 px-2 text-xs font-bold border-amber-300 text-amber-700 hover:bg-amber-50"
+                                  title="Restablecer contraseña del administrador"
+                                >
+                                  <KeyRound size={12} className="mr-1" />
+                                  {resettingId === store.id ? '...' : 'Clave'}
+                                </Button>
                                 <Button 
                                   variant={store.is_active ? "destructive" : "default"} 
                                   size="sm" 
@@ -766,6 +812,84 @@ export default function SuperAdmin() {
         </div>
       )}
 
+
+      {/* Modal: Contraseña Restablecida (F2G-03) */}
+      {resetModalData && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="max-w-md w-full bg-white rounded-2xl shadow-2xl border-none">
+            <CardHeader className="flex flex-row justify-between items-center border-b pb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-700">
+                  <KeyRound size={20} />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-black text-gray-900">Contraseña Restablecida</CardTitle>
+                  <CardDescription className="text-xs text-gray-500">Nueva clave temporal para el comercio</CardDescription>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setResetModalData(null)} className="h-8 w-8 p-0">
+                <X size={18} />
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4 text-sm">
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 text-xs">Comercio:</span>
+                  <span className="font-bold text-gray-900">{resetModalData.store_name}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 text-xs">Usuario Admin:</span>
+                  <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-xs">
+                    @{resetModalData.admin_username}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-gray-200">
+                  <span className="text-gray-500 text-xs">Nueva Contraseña:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-black text-amber-900 bg-amber-100 px-2.5 py-1 rounded text-sm tracking-wider">
+                      {resetModalData.temporary_password}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(resetModalData.temporary_password);
+                        toast.success("Contraseña copiada al portapapeles");
+                      }}
+                      className="p-1 text-gray-500 hover:text-gray-800"
+                      title="Copiar contraseña"
+                    >
+                      <Copy size={15} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setResetModalData(null)}
+                  className="font-bold text-xs"
+                >
+                  Cerrar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const phone = resetModalData.admin_phone ? resetModalData.admin_phone.replace(/\D/g, '') : '';
+                    const loginUrl = `${window.location.origin}/admin-login`;
+                    const msg = encodeURIComponent(`Hola! Desde el equipo de TiendaFast hemos restablecido el acceso de tu tienda '${resetModalData.store_name}'.\n\n🔐 *Tus nuevas credenciales:*\n👤 Usuario: ${resetModalData.admin_username}\n🔑 Contraseña: ${resetModalData.temporary_password}\n\nIngresa en: ${loginUrl}\n(Recuerda cambiar tu contraseña en Configuración una vez dentro).`);
+                    window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+                  }}
+                  className="font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                >
+                  <MessageSquare size={14} /> Enviar por WhatsApp
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       {/* Modal: Recibo de Pago (F2B-08) */}
       {receiptStore && receiptStore.last_payment && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">

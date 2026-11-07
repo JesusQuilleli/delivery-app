@@ -5,6 +5,8 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  Columns,
+  Edit3,
   ExternalLink,
   Eye,
   Image as ImageIcon,
@@ -79,6 +81,7 @@ export function LandingSettings({ slug }: { slug: string }) {
   const [device, setDevice] = useState<PreviewDevice>('desktop');
   const [uploadingField, setUploadingField] = useState<string | null>(null);
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+  const [viewLayout, setViewLayout] = useState<'split' | 'editor' | 'preview'>('split');
   const [bannerForm, setBannerForm] = useState({ title: '', subtitle: '', link_url: '', image_url: '' });
 
   const draftKey = `tiendafast:landing-draft:${slug}`;
@@ -726,14 +729,39 @@ export function LandingSettings({ slug }: { slug: string }) {
               Edita por pasos, revisa el resultado en vivo y publica solo cuando estés conforme.
             </CardDescription>
           </div>
-          <a
-            href={`/${slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-fit items-center gap-2 rounded-xl border border-primary/30 px-4 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
-          >
-            <ExternalLink size={14} /> Ver landing en vivo
-          </a>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-xl bg-muted p-1 border">
+              <button
+                type="button"
+                onClick={() => setViewLayout('split')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${viewLayout === 'split' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                <Columns size={14} /> <span className="hidden sm:inline">Dividida</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewLayout('editor')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${viewLayout === 'editor' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                <Edit3 size={14} /> <span className="hidden sm:inline">Solo Editor</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewLayout('preview')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${viewLayout === 'preview' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                <Eye size={14} /> <span className="hidden sm:inline">Solo Vista Previa</span>
+              </button>
+            </div>
+            <a
+              href={`/${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-primary/30 px-4 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
+            >
+              <ExternalLink size={14} /> Ver landing en vivo
+            </a>
+          </div>
         </div>
       </CardHeader>
 
@@ -743,8 +771,14 @@ export function LandingSettings({ slug }: { slug: string }) {
             <Loader2 className="animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-            <div className="min-w-0 space-y-4">
+          <div className={
+            viewLayout === 'editor'
+              ? 'max-w-4xl mx-auto space-y-6'
+              : viewLayout === 'preview'
+              ? 'max-w-7xl mx-auto space-y-6'
+              : 'grid grid-cols-1 gap-6 xl:grid-cols-[480px_minmax(0,1fr)] 2xl:grid-cols-[520px_minmax(0,1fr)] items-start'
+          }>
+            <div className={`min-w-0 space-y-4 ${viewLayout === 'preview' ? 'hidden' : 'block'}`}>
               <CmsStepper steps={CMS_STEPS} activeIndex={stepIndex} onSelect={goToStep} />
 
               <div className="min-h-[470px] rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
@@ -774,7 +808,7 @@ export function LandingSettings({ slug }: { slug: string }) {
               </div>
             </div>
 
-            <div className="min-w-0 space-y-3 self-start xl:sticky xl:top-6">
+            <div className={`min-w-0 space-y-3 self-start xl:sticky xl:top-6 ${viewLayout === 'editor' ? 'hidden' : 'block'}`}>
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm">
                 <div className="flex rounded-xl bg-muted p-1">
                   {([

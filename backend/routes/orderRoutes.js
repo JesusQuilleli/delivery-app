@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { placeOrder, updateOrderStatus, deleteOrder, getMyOrders, getMyAddresses, rateOrder, getOrderById, cancelOrderClient, batchUpdateStatus, markOrderViewed, reviewPrescription, createPrescriptionQuote, getPrescriptionQuotes, updatePrescriptionQuote } = require('../controllers/orderController');
+const { placeOrder, updateOrderStatus, deleteOrder, getMyOrders, getMyAddresses, rateOrder, getOrderById, cancelOrderClient, editOrderClient, batchUpdateStatus, markOrderViewed, reviewPrescription, createPrescriptionQuote, getPrescriptionQuotes, updatePrescriptionQuote } = require('../controllers/orderController');
 const { requireAuth, requireAdmin } = require('../middleware/authMiddleware');
 const { orderLimiter, adminLimiter } = require('../middleware/rateLimiter');
 const validate = require('../middleware/validate');
@@ -18,6 +18,8 @@ router.put('/batch-status', requireAdmin, adminLimiter, validate(batchStatusSche
 router.put('/:id/status', requireAdmin, adminLimiter, validate(updateOrderStatusSchema), updateOrderStatus);
 router.put('/:id/prescription-review', requireAdmin, adminLimiter, validate(prescriptionReviewSchema), reviewPrescription);
 router.put('/:id/cancel', requireAuth, cancelOrderClient);
+router.put('/:id/items', requireAuth, editOrderClient);
+router.put('/:id/edit', requireAuth, editOrderClient);
 router.put('/:id/rate', requireAuth, rateOrder);
 router.put('/:id/viewed', requireAdmin, adminLimiter, markOrderViewed);
 router.delete('/:id', requireAdmin, adminLimiter, deleteOrder);

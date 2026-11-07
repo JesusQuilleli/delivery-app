@@ -676,26 +676,71 @@ Personalización estructural de la landing page para clientes en planes avanzado
 
 ### Fase 2G — Experiencia de Pago con Capture (OCR), Validación por WhatsApp y Recuperación de Accesos Admin (2 días)
 
-- [ ] F2G-01 **Ver/Ocultar Contraseña en Login de Admin y SuperAdmin:** Botón de alternancia con icono de ojo (`Eye` / `EyeOff`) en los campos de contraseña de `/admin-login`, `/superadmin` y cambio de contraseña en `Settings.tsx`.
-- [ ] F2G-02 **Flujo "¿Olvidaste tu contraseña?" y Solicitud de Desbloqueo a SuperAdmin:**
+- [x] F2G-01 **Ver/Ocultar Contraseña en Login de Admin y SuperAdmin:** Botón de alternancia con icono de ojo (`Eye` / `EyeOff`) en los campos de contraseña de `/admin-login`, `/superadmin` y cambio de contraseña en `Settings.tsx`.
+- [x] F2G-02 **Flujo "¿Olvidaste tu contraseña?" y Solicitud de Desbloqueo a SuperAdmin:**
   - Enlace visible en `/admin-login` para administradores que hayan olvidado su contraseña.
   - Modal para ingresar usuario o slug de la tienda con botón directo a WhatsApp del Fundador (`+58 412 474 2535`) con mensaje prellenado estructurado: *"Hola SuperAdmin, soy el encargado de la tienda [Slug/Nombre] y requiero restablecer mi contraseña de acceso."*
   - Registro de auditoría/solicitud en backend (`PasswordResetRequest`).
-- [ ] F2G-03 **Módulo de Reseteo Rápido de Contraseñas en Panel SuperAdmin:**
+- [x] F2G-03 **Módulo de Reseteo Rápido de Contraseñas en Panel SuperAdmin:**
   - Pestaña o acción de 1 clic en la lista de tiendas de `SuperAdmin.tsx` para restablecer la contraseña del admin de cualquier tienda.
   - Generador de contraseña temporal aleatoria segura (ej. `Fast2026-X8Y`), cifrado en base de datos con `bcrypt` y botón de WhatsApp para enviar las nuevas credenciales al comerciante en 1 clic.
-- [ ] F2G-04 **Carga de Capture de Pago Móvil en Checkout y Visualización en Dashboard:**
+- [x] F2G-04 **Carga de Capture de Pago Móvil en Checkout y Visualización en Dashboard:**
   - Campo `Order.payment_receipt_url` en base de datos.
   - En `Checkout.tsx` (Paso 4): Zona de carga intuitiva para subir el comprobante/capture de pantalla del banco (JPEG/PNG/WEBP a Cloudinary).
   - En `Dashboard.tsx` y `OrderDetails.tsx`: Miniatura interactiva del capture en la pestaña "Por Validar", con apertura en modal ampliado para que el comerciante verifique la transferencia visualmente en 2 segundos.
-- [ ] F2G-05 **Extracción Asistida de Datos del Capture de Pago Móvil (OCR / Parser):**
+- [x] F2G-05 **Extracción Asistida de Datos del Capture de Pago Móvil (OCR / Parser):**
   - Procesamiento del comprobante para extraer automáticamente número de referencia bancaria y monto en bolívares.
   - Pre-llenado automático de la referencia y monto en el formulario de Checkout para que el cliente solo confirme con 1 clic sin tener que tipear números largos.
-- [ ] F2G-06 **Paso a Paso y Pasarela de Validación de OTP por WhatsApp:**
+- [x] F2G-06 **Paso a Paso y Pasarela de Validación de OTP por WhatsApp:**
   - Selector dual en Checkout: *"Recibir código por: [Correo] | [WhatsApp]"*.
   - Integración de pasarela para envío de código de 6 dígitos al WhatsApp del cliente (Meta Cloud API / Evolution API / WhatsApp Gateway) con contingencia asistida al WhatsApp comercial.
 
 ---
+
+### Fase 2H — Página Completa de CMS/Diseño, Optimización y Limpieza de Cloudinary, y Reportes Avanzados con Métricas de Impacto Comercial (2 días)
+
+- [x] F2H-01 **Página Dedicada de CMS y Diseñador de Tienda (`/admin/:slug/cms`):**
+  - Vista independiente `CmsDesign.tsx` con acceso desde la barra de navegación de `AdminLayout.tsx` (`Diseño CMS`).
+  - Layout expandido de pantalla completa con control de visualización: **Vista Dividida (Split Screen)**, **Solo Editor** y **Solo Vista Previa**.
+  - Corrección del viewport comprimido en la previsualización: iframes con ancho mínimo real, simulación de dispositivos (Desktop, Tablet, Mobile) fluida y modo "Comparar" lado a lado sin quiebre tipográfico vertical.
+  - Enlace rápido y tarjeta promocional en `Settings.tsx` para dirigir al diseñador CMS completo.
+- [x] F2H-02 **Evaluación de Cloudinary y Sistema de Limpieza Automática de Multimedia:**
+  - Diagnóstico de cuotas y límites del Tier Gratuito de Cloudinary (25 créditos/mes, almacenamiento y ancho de banda).
+  - Hoja de ruta para transición a almacenamiento soberano en VPS con volumen persistente Docker o Cloudflare R2 con 0 costos de salida.
+  - Módulo central `backend/utils/cloudinaryCleaner.js` para autodestrucción de imágenes huérfanas en Cloudinary:
+    - Borrado al eliminar productos o combos (`deleteProduct`).
+    - Borrado al reemplazar la imagen de un producto (`updateProduct`).
+    - Borrado al eliminar o editar categorías (`deleteCategory`, `updateCategory`).
+    - Detección y limpieza de imágenes removidas en la landing (portadas, banners y fotos de galería descartadas en `updateStoreLanding`).
+  - Auto-optimización de entrega con transformaciones `f_auto,q_auto` en URLs multimedia.
+- [x] F2H-03 **Sección Avanzada de Reportes y Analíticas con Gráficas (`OrderHistory.tsx` & `storeController.js`):**
+  - Ampliación de analíticas en backend (`getStoreAnalytics`): desglose de ventas netas vs costo de delivery, ticket promedio, ventas por día/semana y distribución por método de pago.
+  - Interfaz de analíticas enriquecida con `recharts` en `OrderHistory.tsx`:
+    - Gráfico de área de evolución de ingresos en el tiempo.
+    - Gráfico circular de distribución de pagos (Pago Móvil vs Efectivo).
+    - Métricas de impacto comercial y beneficio de TiendaFast: volumen digitalizado, ticket promedio y efectividad de despachos.
+    - Exportación a CSV con desglose detallado.
+
+---
+
+---
+
+### Fase 2I — Delimitación Geográfica en Puerto Ayacucho, Edición/Cancelación Asistida de Pedidos y Línea Oficial de WhatsApp (1 día)
+
+- [x] F2I-01 **Delimitación Geográfica Estricta a Puerto Ayacucho (Municipio Atures, Amazonas):**
+  - Módulo `isInsidePuertoAyacucho` en `deliveryService.js` con delimitador perimetral (bounding box lat [5.40, 5.95], lon [-67.85, -67.45] y radio haversine de 25 km desde el centro de Puerto Ayacucho).
+  - Bloqueo en cotización (`/delivery-quote`) y creación de pedidos (`placeOrder`) ante coordenadas o direcciones de texto fuera de Puerto Ayacucho / Atures.
+  - Alerta visual inmediata en checkout ante intentos de seleccionar direcciones fuera de la ciudad.
+- [x] F2I-02 **Cancelación y Modificación de Pedidos por el Cliente según Vertical:**
+  - Ventana de edición y cancelación basada en industria (`store.industry`):
+    - **Comida Rápida / Restaurantes:** Cancelación y edición permitidas antes de iniciar preparación en cocina (estados `AWAITING_PAYMENT`, `PENDING`, `ACCEPTED`). Bloqueo estricto una vez en `PREPARING`.
+    - **Víveres y Farmacias:** Cancelación y edición permitidas antes de entregar al repartidor (estados `AWAITING_PAYMENT`, `PENDING`, `ACCEPTED`, `PREPARING`). Bloqueo estricto una vez en `ON_THE_WAY`.
+  - Endpoint `PUT /orders/:id/items` para reajuste transaccional de productos, reversión y nuevo descuento de inventario, y recálculo de montos con emisión Socket.io en tiempo real.
+  - Modales dedicados `CancelOrderModal` y `EditOrderModal` en `OrderActionModals.tsx` integrados en el seguimiento de Checkout y en `MyOrders.tsx`.
+- [x] F2I-03 **Configuración de Línea WhatsApp Dedicada (+58 4161804831):**
+  - Número oficial `+58 4161804831` configurado como remitente/bot predeterminado en `whatsappService.js` y `authController.js`.
+  - Fallback interactivo en Checkout apuntando directamente al enlace oficial `https://wa.me/584161804831`.
+  - Guía operativa documentada para vincular el dispositivo físico vía Evolution API / Baileys.
 
 ### Fase 3 — Seguridad (4 días)
 
@@ -1039,7 +1084,8 @@ docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
 ## 10. Registro de avance
 
 | Fecha | Fase / ID | Estado | Notas |
-|---|---|---|---|
+| 2026-11-07 | F2H-01 a F2H-03 | Hecho | CMS a pantalla completa (/admin/:slug/cms) con 3 modos de vista (Dividida/Editor/Preview) y responsive real sin quiebres de texto. Limpieza automática de imágenes huérfanas en Cloudinary (productos, combos, categorías y banners/galería de landing). Reportes avanzados con recharts (evolución de ventas, donut de pago móvil vs efectivo, top 5 productos, márgenes netos y banner de impacto comercial). Backend 101/101 tests passing, Frontend 69/69 passing, typecheck 0 errores, build limpio. |
+| 2026-11-07 | F2G-01 a F2G-06 | Hecho | Ojo ver/ocultar clave, desbloqueo y reseteo 1-clic con SuperAdmin, validación OTP WhatsApp anti-baneo con fallback wa.me, subida de capture Pago Móvil con OCR automático en Checkout, visualización en 2 segundos en Dashboard/OrderDetails. Backend 95/95 unit tests passing, Frontend 69/69 passing, typecheck 0 errores, build limpio. |
 | 2026-11-06 | F2F-01 a F2F-14 | Planificado | Landing `/`, logo TiendaFast, WhatsApp comercial, contenido honesto, CMS con preview/compare/guía y PDF de cotización diferido a F6 |
 | 2026-11-06 | F4-D01 a F4-D10 (Actualizado) | Planificado | Producción con Docker + Caddy, base limpia sin Neon, bootstrap de SuperAdmin, CORS/cookies, socket same-origin y backups desde cron del host |
 | 2026-11-06 | F4-D01 a F4-D05 (Planificado) | Pendiente | Incorporada al plan la estrategia de empaquetado total con Docker Compose (Frontend, Backend, PostgreSQL 16 y Caddy 2) para despliegue ágil en VPS con clientes reales (Netlify/Render se mantienen para demo) |
