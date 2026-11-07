@@ -574,7 +574,7 @@ Personalización estructural de la landing page para clientes en planes avanzado
 - El CTA principal es “Solicitar cotización” y abre WhatsApp con mensaje prellenado.
 - El PDF comercial se genera después, en Fase 6.
 
-- [ ] F2F-01 **Landing pública de TiendaFast en `/`:**
+- [x] F2F-01 **Landing pública de TiendaFast en `/`:**
   - Reemplazar el redirect actual a `/demo-farmacia` por una landing comercial.
   - Secciones: hero, problema, qué es TiendaFast, cómo potencia al negocio, cómo funciona, verticales, funciones, programa piloto, planes resumidos, FAQ, CTA final y footer.
   - No consumir API ni base de datos; debe funcionar con la base limpia.
