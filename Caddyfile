@@ -1,0 +1,44 @@
+{
+    # Email para registro de certificados TLS automáticos de Let's Encrypt
+    email {$ACME_EMAIL:admin@shop-mg.com}
+    admin off
+}
+
+{$DOMAIN:test.shop-mg.com} {
+    # Compresión gzip y zstd
+    encode gzip zstd
+
+    # Cabeceras de seguridad
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # API Backend (Node.js Express)
+    handle /api/* {
+        reverse_proxy api:3000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # WebSockets en tiempo real (Socket.io)
+    handle /socket.io/* {
+        reverse_proxy api:3000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Frontend Single Page App (Nginx)
+    handle {
+        reverse_proxy web:80
+    }
+}

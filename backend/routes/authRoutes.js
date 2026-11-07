@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { checkEmail, verifyOtp, adminLogin, logout, refreshToken, changePassword } = require('../controllers/authController');
+const { checkEmail, verifyOtp, adminLogin, logout, refreshToken, changePassword, sendWhatsAppOtpHandler } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { authLimiter, adminLoginLimiter, adminLimiter } = require('../middleware/rateLimiter');
 const validate = require('../middleware/validate');

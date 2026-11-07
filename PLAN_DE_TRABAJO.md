@@ -824,23 +824,30 @@ Personalización estructural de la landing page para clientes en planes avanzado
 
 ---
 
-### Fase 4 — Producción Definitiva en VPS Contenedorizado con Docker y PostgreSQL local (Diferida al despliegue final con clientes reales)
+### Fase 4 — Producción Definitiva en VPS Contenedorizado con Docker y PostgreSQL local
+
+> **Evaluación Técnica de Recursos del VPS Confirmada (Ubuntu 22.04 LTS):**
+> - **CPU:** 1 vCPU (consumo base en reposo ~18%).
+> - **Memoria RAM:** 4.0 GiB (actualmente solo 934 MiB utilizados, **~3.1 GiB libres**).
+> - **Memoria SWAP:** 2.0 GiB activos.
+> - **Almacenamiento:** 58.76 GiB NVMe (solo 8.59 GiB usados, **~50.17 GiB libres**).
+> - **Diagnóstico de Viabilidad:** **100% APTO Y SOBRADO.** El stack completo contenedorizado (PostgreSQL 16: ~150MB + Node API: ~160MB + Nginx SPA: ~30MB + Caddy TLS: ~40MB + Evolution API Baileys: ~200MB) consumirá aproximadamente 600 - 800 MB de RAM, dejando más de 2.3 GiB de margen holgado para tráfico, subida de imágenes y consultas pesadas.
 
 > **Nota de ejecución:** Esta fase se mantiene completamente planificada y documentada para su ejecución posterior (tarea pendiente por hacer, no ejecutar de inmediato). **Netlify y Render se reservan exclusivamente para la demostración y validación comercial.** Para atender a clientes reales y cobro de suscripciones, la app se empaquetará con Docker y Docker Compose (frontend, backend, base de datos PostgreSQL 16 y Caddy 2) para desplegarse fácilmente en un VPS propio en minutos. **Al momento de iniciar esta fase, el asistente solicitará al usuario la IP, accesos SSH y credenciales del VPS para proceder con el aprovisionamiento y despliegue.**
 
 #### 4-Docker — Empaquetado Integral con Docker y Docker Compose para VPS (Pendiente por hacer)
 
-- [ ] F4-D01 **Orquestación con Docker Compose de Producción (`docker-compose.prod.yml`):**
+- [x] F4-D01 **Orquestación con Docker Compose de Producción (`docker-compose.prod.yml`):** (Preparado en repositorio)
   - Servicio `db`: Contenedor `postgres:16-alpine` con volumen persistente `postgres_data`, red privada interna `delivery_net` (puerto 5432 no expuesto al exterior) y healthcheck con `pg_isready`.
   - Servicio `api`: Contenedor backend Node.js 20 con `docker-entrypoint.sh`, auto-ejecución de migraciones Prisma (`npx prisma migrate deploy` al iniciar), conexión interna a `db:5432`, healthcheck `/api/health` y reinicio automático (`restart: always`).
   - Servicio `web`: Contenedor Nginx Alpine sirviendo el build de React (`dist/`) en el puerto interno 80. No hace reverse proxy; Caddy enruta `/api` y `/socket.io` al API.
   - Servicio `caddy`: Caddy 2 público en `80/443`, TLS automático, `/api/*` y `/socket.io/*` → `api:3000`, resto → `web:80`, volúmenes `caddy_data` y `caddy_config`.
   - No agregar servicios `certbot` ni `db-backup`: TLS lo gestiona Caddy y los backups se ejecutan desde cron del host.
-- [ ] F4-D02 **Dockerfiles Multi-Stage de Producción:**
+- [x] F4-D02 **Dockerfiles Multi-Stage de Producción y nginx.conf:** (Preparado en repositorio)
   - `backend/Dockerfile`: Multi-stage build con `node:20-bookworm-slim` por `bcrypt`, copiar `prismaClient.js`, `services/`, `utils/`, `scripts/` y `prisma/`, generar cliente Prisma y ejecutar con usuario no-root.
   - `frontend/Dockerfile`: Multi-stage build con Node y `nginx.conf` propio; build args `VITE_API_URL=/api` y `VITE_SOCKET_URL=https://<DOMINIO>`.
   - Ignorar `.env*` en el contexto Docker para que `frontend/.env.production` (Render) no se cuele en la imagen.
-- [ ] F4-D03 **Script de Despliegue Automatizado en VPS (`scripts/vps-deploy.sh`):**
+- [x] F4-D03 **Script de Despliegue Automatizado en VPS (`scripts/vps-deploy.sh`):** (Preparado en repositorio)
   - Script bash: `git pull`, validación de variables en `.env.production`, `docker compose -f docker-compose.prod.yml up -d --build` y comprobación de salud de contenedores.
 - [ ] F4-D04 **Base limpia de producción (sin migración Neon):**
   - Crear la base vacía en el contenedor PostgreSQL, ejecutar `prisma migrate deploy` y crear el primer SuperAdmin de forma segura.
@@ -848,12 +855,12 @@ Personalización estructural de la landing page para clientes en planes avanzado
 - [ ] F4-D05 **Backups y volúmenes persistentes:**
   - Volumen `postgres_data` para PostgreSQL y backups con cron del host usando `docker compose exec -T db pg_dump | gzip` con retención de 30 días.
   - No depender de rutas directas a `/var/lib/docker/volumes/...`.
-- [ ] F4-D06 **Bootstrap de SuperAdmin:**
+- [x] F4-D06 **Bootstrap de SuperAdmin (`backend/scripts/create-superadmin.js`):** (Preparado en repositorio)
   - Crear `backend/scripts/create-superadmin.js` con usuario, contraseña y email por variables de entorno; sin contraseña hardcodeada.
   - Endurecer o retirar `reset_superadmin.js` de producción.
 - [ ] F4-D07 **Validación de base limpia:**
   - Verificar migraciones, login de SuperAdmin, creación de tienda, creación de admin y carga de landing.
-- [ ] F4-D08 **Caddy, DNS y TLS:**
+- [x] F4-D08 **Caddyfile y Configuración TLS Automática:** (Preparado en repositorio)
   - Crear `Caddyfile`, apuntar el dominio al VPS y verificar emisión/renovación de certificados.
 - [ ] F4-D09 **Variables de producción, CORS y cookies:**
   - Exigir `ALLOWED_ORIGINS` con el dominio real y eliminar `test.shop-mg.com` del valor por defecto.

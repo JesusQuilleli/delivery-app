@@ -1,0 +1,106 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: delivery_caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-test.shop-mg.com}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@shop-mg.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+    networks:
+      - delivery_net
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api
+        - VITE_SOCKET_URL=https://${DOMAIN:-test.shop-mg.com}
+    container_name: delivery_web
+    restart: always
+    networks:
+      - delivery_net
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: delivery_api
+    restart: always
+    env_file:
+      - .env.production
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-delivery_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-delivery_db}?schema=public
+      - EVOLUTION_API_URL=http://evolution-api:8080
+      - EVOLUTION_INSTANCE=tiendafast
+      - WHATSAPP_BOT_NUMBER=584161804831
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - delivery_net
+
+  db:
+    image: postgres:16-alpine
+    container_name: delivery_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-delivery_db}
+      POSTGRES_USER: ${POSTGRES_USER:-delivery_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-delivery_user} -d ${POSTGRES_DB:-delivery_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - delivery_net
+
+  evolution-api:
+    image: atendai/evolution-api:v2.1.2
+    container_name: delivery_evolution_api
+    restart: always
+    environment:
+      - SERVER_URL=http://localhost:8080
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
+      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
+      - DATABASE_ENABLED=true
+      - DATABASE_CONNECTION_URI=postgresql://${POSTGRES_USER:-delivery_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-delivery_db}
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
+      - WA_BUSINESS_TOKEN_WEBHOOK=true
+    ports:
+      # Expuesto únicamente a loopback local (127.0.0.1) del VPS, nunca a internet abierto
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - delivery_net
+
+networks:
+  delivery_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+  evolution_instances:
+  evolution_store:
