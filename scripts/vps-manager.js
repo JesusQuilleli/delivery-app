@@ -2,20 +2,24 @@ const path = require('path');
 const fs = require('fs');
 const { Client } = require(path.resolve(__dirname, '../backend/node_modules/ssh2'));
 
+let vpsHost = process.env.VPS_HOST || '166.0.112.243';
+let vpsUser = process.env.VPS_USER || 'root';
 let vpsPassword = process.env.VPS_PASSWORD || '';
-if (!vpsPassword) {
-  const vpsTxtPath = path.resolve(__dirname, '../VPS.txt');
-  if (fs.existsSync(vpsTxtPath)) {
-    const content = fs.readFileSync(vpsTxtPath, 'utf8');
-    const match = content.match(/Contraseña:\s*([^\r\n]+)/i);
-    if (match) vpsPassword = match[1].trim();
+
+const vpsTxtPath = path.resolve(__dirname, '../VPS.txt');
+if (fs.existsSync(vpsTxtPath)) {
+  const lines = fs.readFileSync(vpsTxtPath, 'utf8').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length >= 3) {
+    vpsHost = lines[0];
+    vpsUser = lines[1];
+    vpsPassword = lines[2];
   }
 }
 
 const VPS_CONFIG = {
-  host: process.env.VPS_HOST || '166.0.112.243',
+  host: vpsHost,
   port: parseInt(process.env.VPS_PORT || '22', 10),
-  username: process.env.VPS_USER || 'root',
+  username: vpsUser,
   password: vpsPassword,
   readyTimeout: 30000
 };
