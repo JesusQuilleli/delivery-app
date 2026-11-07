@@ -21,5 +21,6 @@ router.get('/subscriptions', adminLimiter, requireSuperAdmin, getSubscriptions);
 router.put('/stores/:id/subscription', adminLimiter, requireSuperAdmin, updateStoreSubscription);
 router.get('/stores/:id/payments', adminLimiter, requireSuperAdmin, getStorePayments);
 router.post('/stores/:id/payments', adminLimiter, requireSuperAdmin, recordSubscriptionPayment);
+router.post('/subscriptions/check-lifecycle', adminLimiter, requireSuperAdmin, triggerSubscriptionLifecycleCheck);
 
 module.exports = router;

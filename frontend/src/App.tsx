@@ -18,6 +18,7 @@ import Landing from './pages/Landing';
 import ProductDetails from './pages/ProductDetails';
 import Settings from './pages/Settings';
 import SuperAdmin from './pages/SuperAdmin';
+import TiendaFastLanding from './pages/TiendaFastLanding';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'sonner';
 
@@ -49,7 +50,7 @@ function App() {
                 <Route path="/:slug/mis-pedidos" element={<MyOrders />} />
               </Route>
 
-              <Route path="/" element={<Navigate to="/demo-farmacia" />} />
+              <Route path="/" element={<TiendaFastLanding />} />
             </Routes>
           </CartProvider>
           <Toaster position="top-center" richColors />

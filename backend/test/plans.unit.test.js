@@ -14,12 +14,12 @@ test('plans: getPlan retorna plan por defecto ante código nulo o vacío', () =>
 test('plans: reconoce planes en mayúsculas y minúsculas', () => {
   const pNegocio = getPlan('negocio');
   assert.equal(pNegocio.code, 'NEGOCIO');
-  assert.equal(pNegocio.priceUSD, 30);
+  assert.equal(pNegocio.priceUSD, 19);
   assert.equal(pNegocio.maxProducts, 250);
 
   const pPro = getPlan('PRO');
   assert.equal(pPro.code, 'PRO');
-  assert.equal(pPro.priceUSD, 50);
+  assert.equal(pPro.priceUSD, 35);
   assert.equal(pPro.maxProducts, 1000);
 });
 

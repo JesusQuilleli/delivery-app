@@ -16,6 +16,7 @@ const superadminRoutes = require('./routes/superadminRoutes');
 const ratesRoutes = require('./routes/ratesRoutes');
 const geocodingRoutes = require('./routes/geocodingRoutes');
 const { globalLimiter } = require('./middleware/rateLimiter');
+const { startSubscriptionLifecycleJob } = require('./services/subscriptionService');
 const { JWT_SECRET } = require('./middleware/authMiddleware');
 const serializeDecimals = require('./middleware/serialize');
 
@@ -238,6 +239,7 @@ app.use((err, req, res, next) => {
 
 // Levantar el servidor
 server.listen(PORT, () => {
+  startSubscriptionLifecycleJob();
   console.log(`=========================================`);
   console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT}`);
   console.log(`=========================================`);

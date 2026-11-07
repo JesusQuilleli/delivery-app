@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Clock, Truck, ShieldCheck, Star, ArrowRight } from "lucide-react";
+import { Clock, Truck, ShieldCheck, Store, ArrowRight } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import delivery from "@/assets/delivery-moto.jpg";
 import productos from "@/assets/productos-flatlay.jpg";
@@ -85,8 +85,8 @@ export function Hero({ store }: { store?: any }) {
           >
             <Clock className="w-7 h-7 opacity-80" />
             <div>
-              <div className="font-display text-4xl font-extrabold">24/7</div>
-              <div className="text-sm opacity-90 mt-1">Atención continua todos los días</div>
+              <div className="font-display text-4xl font-extrabold">Online</div>
+              <div className="text-sm opacity-90 mt-1">Compra cuando tu negocio esté disponible</div>
             </div>
           </motion.div>
 
@@ -96,14 +96,10 @@ export function Hero({ store }: { store?: any }) {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="col-span-6 lg:col-span-3 rounded-3xl bg-card border border-border/60 p-6 flex flex-col justify-between min-h-[180px]"
           >
-            <div className="flex items-center gap-1 text-coral">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-4 h-4 fill-current" />
-              ))}
-            </div>
+            <Store className="w-7 h-7 text-coral" />
             <div>
-              <div className="font-display text-4xl font-extrabold">+10k</div>
-              <div className="text-sm text-muted-foreground mt-1">Clientes que confían en nosotros</div>
+              <div className="font-display text-4xl font-extrabold">Un link</div>
+              <div className="text-sm text-muted-foreground mt-1">Tu catálogo listo para compartir</div>
             </div>
           </motion.div>
 
@@ -132,9 +128,9 @@ export function Hero({ store }: { store?: any }) {
               <ShieldCheck className="w-7 h-7" />
             </span>
             <div>
-              <div className="font-display font-bold text-xl">Productos 100% originales</div>
+              <div className="font-display font-bold text-xl">Catálogo actualizado</div>
               <p className="text-sm text-muted-foreground mt-1">
-                Trabajamos con laboratorios certificados y cumplimos la normativa sanitaria.
+                Precios, disponibilidad y datos del negocio bajo su propio control.
               </p>
             </div>
           </motion.div>

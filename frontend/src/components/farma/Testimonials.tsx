@@ -1,13 +1,15 @@
-import { motion } from "framer-motion";
-import { Star } from "lucide-react";
+import { motion } from 'framer-motion';
+import { Star } from 'lucide-react';
 
-const items = [
-  { name: "María Quispe", role: "Cliente frecuente", text: "Pedí los medicamentos de mi mamá un domingo a las 10 pm y llegaron en 30 minutos. Atención impecable." },
-  { name: "Carlos Huamán", role: "Papá primerizo", text: "Siempre encuentro las fórmulas de mi bebé. Me asesoran con paciencia y el delivery nunca falla." },
-  { name: "Lucía Berrocal", role: "Profesora", text: "Sus precios en vitaminas son los mejores y los productos son originales. Mi farmacia de confianza." },
-];
+export interface TestimonialItem {
+  name: string;
+  role?: string;
+  text: string;
+}
 
-export function Testimonials() {
+export function Testimonials({ items = [] }: { items?: TestimonialItem[] }) {
+  if (items.length === 0) return null;
+
   return (
     <section className="py-20 bg-secondary/40">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
@@ -18,26 +20,26 @@ export function Testimonials() {
           </h2>
         </div>
         <div className="grid md:grid-cols-3 gap-5">
-          {items.map((t, i) => (
+          {items.map((testimonial, index) => (
             <motion.div
-              key={t.name}
+              key={`${testimonial.name}-${index}`}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.08 }}
+              transition={{ duration: 0.5, delay: index * 0.08 }}
               className="rounded-3xl bg-card border border-border/60 p-7 flex flex-col"
             >
               <div className="flex gap-0.5 text-coral mb-4">
-                {[...Array(5)].map((_, j) => <Star key={j} className="w-4 h-4 fill-current" />)}
+                {[...Array(5)].map((_, starIndex) => <Star key={starIndex} className="w-4 h-4 fill-current" />)}
               </div>
-              <p className="text-foreground/90 leading-relaxed">"{t.text}"</p>
+              <p className="text-foreground/90 leading-relaxed">"{testimonial.text}"</p>
               <div className="mt-6 flex items-center gap-3">
                 <span className="grid place-items-center w-11 h-11 rounded-full bg-primary text-primary-foreground font-bold">
-                  {t.name.charAt(0)}
+                  {testimonial.name.charAt(0)}
                 </span>
                 <div className="leading-tight">
-                  <div className="font-semibold">{t.name}</div>
-                  <div className="text-xs text-muted-foreground">{t.role}</div>
+                  <div className="font-semibold">{testimonial.name}</div>
+                  {testimonial.role && <div className="text-xs text-muted-foreground">{testimonial.role}</div>}
                 </div>
               </div>
             </motion.div>

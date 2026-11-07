@@ -3,13 +3,13 @@
 > Documento vivo. Actualizar después de cada tarea.
 > Si se pierde la sesión: leer este archivo, revisar `git status` y `git log`, y continuar desde la primera casilla sin marcar.
 
-- **Última actualización:** 2026-11-06 (Récipes avanzados, Cotizador y CMS Modular)
+- **Última actualización:** 2026-11-06 (Landing comercial, identidad visual y CMS con preview)
 - **Rama actual:** `feature/operational-enhancements`
 - **Rama principal:** `main`
 - **Estrategia de despliegue y validación:**
   1. **Hito 1 (Inmediato / En curso - Demostración y Validación Comercial):** Sistema 100% listo, probado y validable en **Localhost** y en el entorno de pruebas existente en la nube (**Netlify** para frontend + **Render** para backend + **Neon** para PostgreSQL). **Este entorno en Netlify y Render es estrictamente para la demostración presencial y validación con los primeros clientes de comida rápida, víveres y farmacias de Puerto Ayacucho.**
-  2. **Hito 2 (Final / Producción Real con Clientes en VPS mediante Docker):** Empaquetado completo de la aplicación (Frontend, Backend, base de datos PostgreSQL 16 y Nginx SSL) mediante **Docker y Docker Compose**. Despliegue en VPS propio para iniciar la operación comercial real y cobro a clientes, logrando un despliegue portable con un solo comando (`docker compose up -d`), sin costos recurrentes de PaaS, con backups automáticos en volúmenes persistentes y máxima soberanía de datos.
-- **Estado general:** F1-34, Fase 1B, bugs C-07/C-08/C-09 corregidos, C-10 verificado y tiendas demo creadas con seed idempotente. PDF de accesos y guion de demostración generado (`Accesos_Demo_TiendaFast.pdf`). En curso: Fase 2 restante (inventario/combos, configuración de tienda, pedidos/paginación y analytics).
+  2. **Hito 2 (Final / Producción Real con Clientes en VPS mediante Docker):** Empaquetado completo de la aplicación (Frontend, Backend, base de datos PostgreSQL 16 y Caddy 2 con SSL automático) mediante **Docker y Docker Compose**. Despliegue en VPS propio para iniciar la operación comercial real y cobro a clientes, logrando un despliegue portable con un solo comando (`docker compose up -d`), sin costos recurrentes de PaaS, con backups automáticos en volúmenes persistentes y máxima soberanía de datos.
+- **Estado general:** F1-34, Fase 1B, bugs C-07/C-08/C-09 corregidos, C-10 verificado y tiendas demo creadas con seed idempotente. PDF de accesos y guion de demostración generado (`Accesos_Demo_TiendaFast.pdf`). En curso: Fase 2 restante (inventario/combos, configuración de tienda, pedidos/paginación y analytics). Planificado: Fase 2F de pulido (landing `/`, logo TiendaFast, WhatsApp comercial, CMS con preview/compare/guía y PDF de cotización diferido a Fase 6).
 - **Zona del piloto:** Puerto Ayacucho, Estado Amazonas
 - **Verticales comerciales prioritarias:**
   1. **Comida Rápida:** Puestos de perros calientes, hamburgueserías, pizzerías y comida rápida nocturna (alta rotación de pedidos vespertinos/nocturnos, combos y necesidad de despacho express).
@@ -61,8 +61,8 @@ Plataforma de delivery y gestión de inventario **multitenant** para negocios ve
   - **Base de datos:** Neon (PostgreSQL serverless).
   - **Objetivo de este entorno:** Permitir el desarrollo rápido en `localhost`, el testeo continuo en la nube y la **demostración presencial/remota a comerciantes reales de Puerto Ayacucho** (dueños de puestos de hamburguesas/perros, bodegones y farmacias) desde navegadores y teléfonos móviles sin barreras de infraestructura previa.
 - **Entorno de Producción Definitiva (Objetivo):**
-  - **Servidor:** VPS propio (Ubuntu 24.04 LTS con Nginx reverse proxy y SSL Let's Encrypt).
-  - **Base de datos:** PostgreSQL 16 local en el VPS (escuchando solo en `127.0.0.1`, backups automáticos diarios).
+  - **Servidor:** VPS propio (Ubuntu 24.04 LTS) con Docker Compose: `caddy` público en `80/443` con TLS automático, `web` Nginx interno, `api` Node 20 y `db` PostgreSQL 16.
+  - **Base de datos:** PostgreSQL 16 en contenedor, con volumen persistente y puerto `5432` no expuesto. Base limpia creada con `prisma migrate deploy`; sin migración desde Neon.
   - **Objetivo de este entorno:** Salida a producción autónoma, sin costos recurrentes de PaaS, con máximo rendimiento y soberanía de los datos. Se activa tras la validación de la demo y los datos de acceso serán cargados al momento de iniciar dicho despliegue.
 - **Multimedia:** Cloudinary.
 - **Correo:** Resend.
@@ -75,26 +75,31 @@ Internet
     │
     ▼
 ┌───────────────────────────────────────┐
-│        Nginx (Reverse Proxy)          │
-│  SSL/TLS (Let's Encrypt)              │
-│  /* → frontend/dist (estático)        │
-│  /api/* → Node.js :3000               │
-│  /socket.io/* → Node.js :3000 (WS)    │
+│            Caddy 2 (Docker)           │
+│  SSL/TLS automático (80/443)          │
+│  /api/* → api:3000                    │
+│  /socket.io/* → api:3000 (WS)         │
+│  /* → web:80 (Nginx interno)          │
 └──────────┬────────────────────────────┘
            │
     ┌──────▼──────────────┐
-    │  Node.js + Express  │
-    │  PM2 (auto-restart) │
-    │  Puerto 3000        │
-    │  Socket.io (tiempo  │
-    │  real)              │
+    │  web: Nginx Alpine  │
+    │  React dist/        │
+    │  Puerto interno 80  │
+    └─────────────────────┘
+           │
+    ┌──────▼──────────────┐
+    │  api: Node.js 20    │
+    │  Express + Socket.io│
+    │  Puerto interno 3000│
+    │  restart: always    │
     └──────┬──────────────┘
            │
     ┌──────▼──────────────┐
-    │  PostgreSQL 16      │
-    │  LOCAL en el VPS     │
-    │  Puerto 5432        │
-    │  (solo 127.0.0.1)   │
+    │  db: PostgreSQL 16  │
+    │  Volumen persistente│
+    │  Puerto interno 5432│
+    │  Sin exposición     │
     │                     │
     │  UNA sola DB:       │
     │  delivery_db        │
@@ -109,18 +114,18 @@ Internet
 ```
 
 - **Slug = identidad pública de la tienda.** Catálogo en `https://dominio.com/<slug>`. Panel admin en `https://dominio.com/admin-login`.
-- **Un solo `DATABASE_URL`** apuntando a `localhost:5432`. PostgreSQL escucha solo en `127.0.0.1` (sin exposición externa).
+- **Un solo `DATABASE_URL`** apuntando a `db:5432` dentro de la red privada de Docker. PostgreSQL no se expone al exterior.
 - **Aislamiento por `store_id`:** Todas las queries (productos, pedidos, usuarios, categorías, combos, drivers, zonas) filtran por `store_id`. La identidad del cliente ya es compuesta `@@unique([store_id, email])`.
 
 ### Estado real del repositorio
 
 - El núcleo funcional existe: catálogo, carrito, checkout, OTP, pedidos, dashboard, inventario, combos, motorizados, historial y SuperAdmin.
-- La rama `feature/security-hardening` tiene mejoras sin commitear de F1-27/F1-28 (bloqueo de tiendas inactivas y admin como cliente).
+- Rama actual: `feature/operational-enhancements`, con cambios sin commitear en plan, planes, pedidos, tienda, landing, SuperAdmin, onboarding y utilidades `geo`.
 - Las migraciones Prisma ya tienen baseline; precios y totales usan `Decimal(12,2)` y las tasas `Decimal(14,6)`.
-- La base de datos actual es Neon (pruebas/staging); la de producción será PostgreSQL local en VPS.
-- No hay CI, healthchecks, backups automatizados ni pruebas E2E.
-- La documentación y los PDFs actuales prometen funciones que aún no están implementadas.
-- No existe un módulo de planes, suscripciones, límites ni cobros.
+- La base actual es Neon para demo/staging; producción usará PostgreSQL 16 en Docker con base limpia.
+- Existe `GET /api/health`; no hay CI, pruebas E2E ni backups automáticos de producción.
+- La documentación y los PDFs requieren alineación continua con el alcance real; el PDF de accesos demo ya está generado.
+- Los planes existen a nivel de datos y panel SuperAdmin (plan, precio, ciclo, estado, trial, pagos y MRR), pero faltan cobro automático, límites efectivos y ciclo de vida de suscripción.
 
 ---
 
@@ -139,8 +144,14 @@ Internet
 | Indexación | Precios en USD; cobro en Bs al BCV del día; revisión trimestral |
 | Arquitectura | Multitenant, una sola app y una sola BD PostgreSQL para todos los clientes |
 | Entorno de demo y pruebas | Netlify (frontend) + Render (API) + Neon (Postgres) para desarrollo, validación y demostraciones |
-| Base de datos producción | PostgreSQL 16 local en el VPS (no Neon, no RDS; se migra al desplegar producción) |
-| Producción definitiva | VPS propio con Nginx, PostgreSQL local, frontend y API en el mismo dominio (al concluir demostraciones) |
+| Base de datos producción | PostgreSQL 16 local en Docker, base limpia creada con `prisma migrate deploy` + bootstrap; sin migración desde Neon |
+| Producción definitiva | VPS propio con Docker Compose (web Nginx interno, API Node, PostgreSQL 16 y Caddy 2), mismo dominio y TLS automático |
+| Landing pública `/` | Landing comercial de TiendaFast, no directorio ni redirección a tienda demo |
+| WhatsApp comercial | `04124742535` → internacional `+58 412 474 2535` → `wa.me/584124742535` |
+| CTA comercial | “Solicitar cotización” abre WhatsApp con mensaje prellenado |
+| Testimonios | No mostrar testimonios ni clientes inventados hasta tener clientes reales; usar “Programa piloto” |
+| Identidad visual | Logo propio TiendaFast (bolsa + rayo, verde bosque, crema y coral), favicon y Open Graph |
+| PDF comercial | Se construye después de la landing; incluye planes, alcance, add-ons y CTA |
 | Clientes | Una cuenta por tienda; mismo correo puede existir en varias tiendas |
 | Ventas y soporte | El fundador |
 | Facturación fiscal | Se define con contador antes del primer cobro |
@@ -467,7 +478,7 @@ Optimización de la búsqueda y precisión de la dirección del cliente en el ch
 - [x] F2B-03 Crear panel SuperAdmin de clientes, planes y estados con métricas visuales.
 - [x] F2B-04 Implementar marcar pagado, extender, suspender y cambiar plan con auditoría estructurada.
 - [x] F2B-05 Aplicar límites por plan: productos (Emprendedor: 50, Negocio: 250, Pro: 1000) en creación unitaria, combos y masiva.
-- [x] F2B-06 Vencimiento automático de prueba y suspensión por impago (estados TRIAL, ACTIVE, PAST_DUE, SUSPENDED).
+- [x] F2B-06 Vencimiento automático de prueba y suspensión por impago (estados TRIAL, ACTIVE, PAST_DUE, SUSPENDED): Servicio subscriptionService.js con período de gracia de 5 días, job programado en server.js cada 12 horas, endpoint POST /api/superadmin/subscriptions/check-lifecycle y pruebas unitarias completas.
 - [x] F2B-07 Crear asistente de alta SaaS: tienda, admin, selección de plan/días prueba y categorías iniciales por industria.
 - [x] F2B-08 Crear plantilla de recibo imprimible y generador de recordatorios de pago para WhatsApp.
 - [x] F2B-09 Crear panel de MRR y clientes activos (tarjetas KPI de ingresos recurrentes proyectados).
@@ -513,9 +524,9 @@ Flujo integral de medicamentos con récipe médico, evaluación por farmaceuta y
 - [x] F2E-01 **Modelo `landing_config` en Prisma:** Campo `landing_config Json?` en `Store` (slogan, subtitle, hero_image, banner_url, badge_promo, badge_delivery, whatsapp_contact, about_text).
 - [x] F2E-02 **Módulo interactivo "Diseño & Landing" en SuperAdmin y Configuración de Tienda:** Formulario visual con subida de imágenes a Cloudinary y previsualizador en vivo sin tocar código.
 - [x] F2E-03 **Integración dinámica en Plantillas:** Actualizar `PharmacyTemplate.tsx`, `Hero.tsx`, `RestaurantTemplate.tsx` y `SupermarketTemplate.tsx` para consumir `store.landing_config` con fallback estándar.
-- [x] F2E-04 **Estrategia comercial SaaS de personalización:** Nivel estándar incluido en Emprendedor, personalización de textos/badges en Negocio ($30/m), diseño completo de banners y marca en PRO ($50/m) o Add-on de Branding ($15 único).
+- [x] F2E-04 **Estrategia comercial SaaS de personalización:** Nivel estándar incluido en Emprendedor, personalización de textos/badges en Negocio ($19/m), diseño completo de banners y marca en PRO ($35/m) o Add-on de Branding ($15 único).
 - [x] F2E-05 **Arquitectura Multi-Sucursales:** Campo `parent_store_id Int?` en `Store`, vinculación de sedes secundarias (ej. Farma-Ayacucho Centro vs Sur).
-- [x] F2E-06 **Enrutamiento por Proximidad y Selector de Sede:** Detección de distancia Haversine a la sede más cercana o modal selector para que el cliente compre en la sucursal correcta.
+- [x] F2E-06 **Enrutamiento por Proximidad y Selector de Sede:** Selector de sucursales en la landing con detección de ubicación del cliente y ordenamiento Haversine por distancia.
 - [x] F2E-07 **Monetización Multi-Sucursal:** Esquema de add-on de sucursal adicional (+ $10/mes por sede extra en vez de tienda completa).
 
 ---
@@ -536,7 +547,7 @@ Flujo avanzado de prescripción médica adaptado a la operativa real de farmacia
 - [x] F2C-14 **Bandeja de "Cotizaciones por Récipe" en Dashboard de Farmacia:**
   - El farmaceuta recibe la solicitud, visualiza el récipe y arma el carrito del cliente con el inventario en 2 clics.
   - Envía la cotización aprobada con enlace directo de pago y notificación en tiempo real.
-- [x] F2C-15 **Asistente de Detección de Medicamentos (OCR / Sugerencia automática):** Lectura asistida de nombres de medicamentos en el récipe para pre-seleccionar ítems disponibles en stock.
+- [ ] F2C-15 **Asistente de Detección de Medicamentos (OCR / Sugerencia automática):** Lectura asistida de nombres de medicamentos en el récipe para pre-seleccionar ítems disponibles en stock. Pendiente: no implementado.
 
 ---
 
@@ -549,6 +560,117 @@ Personalización estructural de la landing page para clientes en planes avanzado
 - [x] F2E-10 **Galería de Fotos del Local / Fachada:** Subida de fotografías del establecimiento físico a Cloudinary para reforzar confianza del cliente.
 - [x] F2E-11 **Consumo Modular en Plantillas:** Las plantillas de Farmacia, Restaurante y Supermercado renderizan condicionalmente los bloques según la configuración del comerciante.
 - [x] F2E-12 **Límites Comerciales por Plan SaaS:** Plan Emprendedor (plantilla fija), Plan Negocio (textos y banner principal), Plan PRO / Add-on CMS (control modular total de bloques y banners ilimitados).
+
+---
+
+### Fase 2F — Pulido de producto, landing comercial, identidad y CMS con preview (4 días)
+
+**Objetivo:** convertir `/` en una landing comercial de TiendaFast, eliminar contenido falso, mejorar la percepción de marca y dar al administrador un CMS con vista previa real antes de publicar.
+
+**Decisiones aplicadas:**
+- WhatsApp comercial: `+58 412 474 2535` (`wa.me/584124742535`).
+- No se muestran testimonios ni clientes inventados hasta tener clientes reales.
+- Se usa “Programa piloto” como sección de confianza.
+- El CTA principal es “Solicitar cotización” y abre WhatsApp con mensaje prellenado.
+- El PDF comercial se genera después, en Fase 6.
+
+- [ ] F2F-01 **Landing pública de TiendaFast en `/`:**
+  - Reemplazar el redirect actual a `/demo-farmacia` por una landing comercial.
+  - Secciones: hero, problema, qué es TiendaFast, cómo potencia al negocio, cómo funciona, verticales, funciones, programa piloto, planes resumidos, FAQ, CTA final y footer.
+  - No consumir API ni base de datos; debe funcionar con la base limpia.
+  - CTAs: “Solicitar cotización” → WhatsApp; “Ya soy cliente” → `/admin-login`.
+  - Metadatos SEO y Open Graph.
+  - Archivos: `frontend/src/pages/TiendaFastLanding.tsx`, `frontend/src/content/tiendaFastLanding.ts`, `frontend/src/App.tsx`, `frontend/index.html`.
+- [x] F2F-02 **Identidad visual TiendaFast:**
+  - Crear logo horizontal, compacto, apilado, solo icono y monocromático.
+  - Concepto: bolsa de compra con rayo en negativo.
+  - Paleta: verde bosque `#123B2F`, crema `#FCF7ED`, coral `#F26A3D`.
+  - Tipografía: Sora ExtraBold para wordmark; Manrope para tagline.
+  - Reemplazar el favicon actual de Vite.
+  - Archivos: `frontend/public/brand/*`, `frontend/public/favicon.svg`, `frontend/src/components/brand/TiendaFastLogo.tsx`.
+  - No modificar el branding propio de cada tienda en sus plantillas.
+- [x] F2F-03 **WhatsApp comercial y CTA de cotización:**
+  - Configurar `VITE_CONTACT_WHATSAPP=584124742535`.
+  - Generar enlace `wa.me` con mensaje prellenado: “Hola, quiero una cotización de TiendaFast para mi negocio.”
+  - Usarlo en hero, planes, CTA final y footer.
+  - Mostrar siempre el número en formato internacional.
+- [x] F2F-04 **Contenido honesto y sección de piloto:**
+  - Eliminar testimonios inventados de la landing y de tiendas nuevas.
+  - Ocultar “Testimonios” por defecto hasta que existan clientes reales.
+  - Agregar sección “Programa piloto” en `/`.
+  - Evitar afirmaciones no implementadas: pagos automáticos, testimonios o métricas falsas.
+- [x] F2F-05 **Storefront compartido:**
+  - Extraer el renderizador de `Landing.tsx` a `frontend/src/components/landing/Storefront.tsx`.
+  - Recibe `store`, `categories`, `offers` y `combos`.
+  - Selecciona plantilla por industria: farmacia, restaurante o supermercado.
+  - Reutilizarlo en la landing pública y en el preview del CMS.
+  - Mantener `BranchSelector`, pero desactivar navegación e interacciones dentro del preview.
+- [x] F2F-06 **Unificación de temas y aislamiento del preview:**
+  - Crear `frontend/src/lib/themes.ts` con `blue`, `red`, `green`, `purple`, `orange` y `coral`.
+  - Usar la misma lista en Settings y SuperAdmin.
+  - Corregir `emerald`, `rose` y `amber`, que hoy caen silenciosamente en azul.
+  - Crear `ThemeScope` para aplicar `--primary` dentro del preview sin cambiar el tema del panel.
+  - Exportar el mapa de colores desde un solo lugar.
+- [x] F2F-07 **Preview del CMS:**
+  - Editor a la izquierda y preview sticky a la derecha en desktop.
+  - En móvil, botón “Vista previa” que abre pantalla completa.
+  - Selector desktop / tablet / móvil.
+  - Pestañas “Ahora”, “Con cambios” y “Comparar”.
+  - Renderizar directamente con `Storefront`; no usar iframe ni duplicar plantillas.
+  - Desactivar enlaces y botones internos del preview.
+  - Componentes: `LandingPreview.tsx` y `PreviewFrame.tsx`.
+- [x] F2F-08 **Editor guiado y resumen de cambios:**
+  - Pasos: Marca y color, Portada y textos, Secciones, Banners, Galería, Revisar y publicar.
+  - Barra sticky: “Cambios sin guardar”, “Descartar”, “Vista previa” y “Publicar cambios”.
+  - Panel “Cambios detectados” con textos antes → después.
+  - Avisos si una sección está activa pero vacía.
+  - Contadores de longitud y recomendaciones de tamaño de imagen.
+  - Persistir borrador en `sessionStorage`.
+  - Advertir con `beforeunload` si hay cambios sin publicar.
+  - Componentes: `ChangeSummary.tsx`, `CmsStepper.tsx` y `landingDiff.ts`.
+- [x] F2F-09 **Aislamiento de guardados:**
+  - Separar `saveStoreSettings`, `saveRates`, `saveDelivery`, `savePaymentData` y `publishLanding`.
+  - Evitar que “Guardar Tasas” o “Guardar Delivery” pisen el borrador del CMS.
+  - Cada tarjeta envía solo sus campos.
+  - “Publicar cambios” actualiza la configuración guardada y refresca la landing pública.
+- [x] F2F-10 **Backend de landing:**
+  - Agregar `PUT /api/stores/:slug/landing`.
+  - Nuevo controlador `updateStoreLanding`.
+  - Helper `backend/utils/landing.js` para normalizar y validar textos, colores, industria, secciones, máximo 5 banners, máximo 4 imágenes de galería, URLs `https://` y rechazo de HTML/scripts.
+  - Aplicar la misma validación a `updateStoreSettings`.
+  - Tests unitarios y de autorización.
+- [x] F2F-11 **Contacto, WhatsApp y contenido editable:**
+  - Agregar input de WhatsApp en el CMS.
+  - `WhatsAppFab` y `Contact` usan `landing_config.whatsapp_contact`.
+  - El formulario de contacto abre WhatsApp con mensaje prellenado.
+  - Agregar `about_text` e imágenes de “Quiénes somos”.
+  - Ocultar “Quiénes somos” si no hay contenido real.
+  - No mostrar testimonios hardcodeados.
+- [x] F2F-12 **Pruebas, accesibilidad y rendimiento:**
+  - Tests de `landingDiff` y normalización de `landing_config`.
+  - Tests de preview: cambio de pestaña, comparación y resumen.
+  - Tests de API para guardado y validación.
+  - Revisión de teclado, foco, contraste y lectores de pantalla.
+  - Lighthouse en `/` y en el panel.
+  - Verificar que el preview no contamine el tema del admin.
+- [x] F2F-13 **Documentación:**
+  - Documentar uso del logo, favicon y Open Graph.
+  - Documentar flujo “editar → previsualizar → comparar → publicar”.
+  - Actualizar manual de onboarding si cambia la configuración de landing.
+- [ ] F2F-14 **PDF comercial de cotización:**
+  - Se cubre con F6-01 a F6-09.
+  - Incluye planes $9 / $19 / $35, alcance por plan, add-ons, implementación y soporte.
+  - CTA con WhatsApp `+58 412 474 2535` y QR.
+  - No se genera en esta fase; queda listo para después de validar la landing.
+
+**Criterio de terminado:**
+- `/` funciona con base limpia, sin API y sin redirección a demo.
+- El CTA de cotización abre WhatsApp con mensaje prellenado.
+- No se publican testimonios ni clientes inventados.
+- El logo y el favicon son propios de TiendaFast.
+- El CMS permite editar, previsualizar, comparar y publicar sin pisar otros cambios.
+- El tema seleccionado se refleja correctamente en la landing.
+- Tests, lint, typecheck y build pasan.
 
 ---
 
@@ -636,25 +758,40 @@ Personalización estructural de la landing page para clientes en planes avanzado
 
 ### Fase 4 — Producción Definitiva en VPS Contenedorizado con Docker y PostgreSQL local (Diferida al despliegue final con clientes reales)
 
-> **Nota de ejecución:** Esta fase se mantiene completamente planificada y documentada para su ejecución posterior (tarea pendiente por hacer, no ejecutar de inmediato). **Netlify y Render se reservan exclusivamente para la demostración y validación comercial.** Para atender a clientes reales y cobro de suscripciones, la app se empaquetará con Docker y Docker Compose (frontend, backend, base de datos PostgreSQL 16 y Nginx) para desplegarse fácilmente en un VPS propio en minutos. **Al momento de iniciar esta fase, el asistente solicitará al usuario la IP, accesos SSH y credenciales del VPS para proceder con el aprovisionamiento y despliegue.**
+> **Nota de ejecución:** Esta fase se mantiene completamente planificada y documentada para su ejecución posterior (tarea pendiente por hacer, no ejecutar de inmediato). **Netlify y Render se reservan exclusivamente para la demostración y validación comercial.** Para atender a clientes reales y cobro de suscripciones, la app se empaquetará con Docker y Docker Compose (frontend, backend, base de datos PostgreSQL 16 y Caddy 2) para desplegarse fácilmente en un VPS propio en minutos. **Al momento de iniciar esta fase, el asistente solicitará al usuario la IP, accesos SSH y credenciales del VPS para proceder con el aprovisionamiento y despliegue.**
 
 #### 4-Docker — Empaquetado Integral con Docker y Docker Compose para VPS (Pendiente por hacer)
 
 - [ ] F4-D01 **Orquestación con Docker Compose de Producción (`docker-compose.prod.yml`):**
   - Servicio `db`: Contenedor `postgres:16-alpine` con volumen persistente `postgres_data`, red privada interna `delivery_net` (puerto 5432 no expuesto al exterior) y healthcheck con `pg_isready`.
-  - Servicio `api`: Contenedor backend Node.js 20 con auto-ejecución de migraciones Prisma (`npx prisma migrate deploy` al iniciar), conexión interna a `db:5432`, healthcheck `/api/health` y reinicio automático (`restart: always`).
-  - Servicio `web`: Contenedor Nginx Alpine optimizado sirviendo el build compilado de React (`dist/`), actuando como Reverse Proxy para `/api` y WebSocket en `/socket.io`.
-  - Servicio `certbot`: Renovación automática de certificados SSL Let's Encrypt con webroot compartido.
-  - Servicio `db-backup`: Contenedor liviano o cron programado para volcar diariamente dumps comprimidos de PostgreSQL (`pg_dump | gzip`) a almacenamiento persistente con retención de 30 días.
+  - Servicio `api`: Contenedor backend Node.js 20 con `docker-entrypoint.sh`, auto-ejecución de migraciones Prisma (`npx prisma migrate deploy` al iniciar), conexión interna a `db:5432`, healthcheck `/api/health` y reinicio automático (`restart: always`).
+  - Servicio `web`: Contenedor Nginx Alpine sirviendo el build de React (`dist/`) en el puerto interno 80. No hace reverse proxy; Caddy enruta `/api` y `/socket.io` al API.
+  - Servicio `caddy`: Caddy 2 público en `80/443`, TLS automático, `/api/*` y `/socket.io/*` → `api:3000`, resto → `web:80`, volúmenes `caddy_data` y `caddy_config`.
+  - No agregar servicios `certbot` ni `db-backup`: TLS lo gestiona Caddy y los backups se ejecutan desde cron del host.
 - [ ] F4-D02 **Dockerfiles Multi-Stage de Producción:**
-  - `backend/Dockerfile`: Multi-stage build con `node:20-alpine`, instalación limpia con `npm ci --omit=dev`, generación de cliente Prisma y usuario de sistema no-root (`nodejs`).
-  - `frontend/Dockerfile`: Multi-stage build con Node en etapa de build (`npm run build`) y Nginx Alpine ligero en etapa final con compresión Gzip y headers de seguridad.
+  - `backend/Dockerfile`: Multi-stage build con `node:20-bookworm-slim` por `bcrypt`, copiar `prismaClient.js`, `services/`, `utils/`, `scripts/` y `prisma/`, generar cliente Prisma y ejecutar con usuario no-root.
+  - `frontend/Dockerfile`: Multi-stage build con Node y `nginx.conf` propio; build args `VITE_API_URL=/api` y `VITE_SOCKET_URL=https://<DOMINIO>`.
+  - Ignorar `.env*` en el contexto Docker para que `frontend/.env.production` (Render) no se cuele en la imagen.
 - [ ] F4-D03 **Script de Despliegue Automatizado en VPS (`scripts/vps-deploy.sh`):**
-  - Script bash de un solo comando en el servidor: `git pull`, validación de variables en `.env.production`, `docker compose -f docker-compose.prod.yml up -d --build` y comprobación de salud de contenedores sin tiempo de inactividad visible.
-- [ ] F4-D04 **Migración de Datos Neon → PostgreSQL Docker:**
-  - Exportación de la data de demostración y clientes piloto desde Neon y restauración dentro del volumen persistente del contenedor PostgreSQL en el VPS.
-- [ ] F4-D05 **Estrategia de Backups y Volúmenes Persistentes:**
-  - Montaje de volumen persistente en disco seguro del host (`/var/lib/docker/volumes/delivery_postgres_data`) con script automatizado de copia externa de seguridad.
+  - Script bash: `git pull`, validación de variables en `.env.production`, `docker compose -f docker-compose.prod.yml up -d --build` y comprobación de salud de contenedores.
+- [ ] F4-D04 **Base limpia de producción (sin migración Neon):**
+  - Crear la base vacía en el contenedor PostgreSQL, ejecutar `prisma migrate deploy` y crear el primer SuperAdmin de forma segura.
+  - No importar datos de Neon ni de demostración. Las tiendas se crean desde SuperAdmin.
+- [ ] F4-D05 **Backups y volúmenes persistentes:**
+  - Volumen `postgres_data` para PostgreSQL y backups con cron del host usando `docker compose exec -T db pg_dump | gzip` con retención de 30 días.
+  - No depender de rutas directas a `/var/lib/docker/volumes/...`.
+- [ ] F4-D06 **Bootstrap de SuperAdmin:**
+  - Crear `backend/scripts/create-superadmin.js` con usuario, contraseña y email por variables de entorno; sin contraseña hardcodeada.
+  - Endurecer o retirar `reset_superadmin.js` de producción.
+- [ ] F4-D07 **Validación de base limpia:**
+  - Verificar migraciones, login de SuperAdmin, creación de tienda, creación de admin y carga de landing.
+- [ ] F4-D08 **Caddy, DNS y TLS:**
+  - Crear `Caddyfile`, apuntar el dominio al VPS y verificar emisión/renovación de certificados.
+- [ ] F4-D09 **Variables de producción, CORS y cookies:**
+  - Exigir `ALLOWED_ORIGINS` con el dominio real y eliminar `test.shop-mg.com` del valor por defecto.
+  - Configurar `NODE_ENV=production`, `trust proxy`, `JWT_SECRET` y cookies `Secure`/`SameSite` según same-origin.
+- [ ] F4-D10 **Socket same-origin:**
+  - Cambiar el fallback de `frontend/src/lib/socket.ts` de `http://localhost:3000` a `window.location.origin`.
 
 #### 4A — Provisionamiento del VPS
 
@@ -665,64 +802,65 @@ Personalización estructural de la landing page para clientes en planes avanzado
 - [ ] F4-05 Instalar Fail2Ban y habilitar regla para SSH.
 - [ ] F4-06 Habilitar actualizaciones automáticas de seguridad (`unattended-upgrades`).
 
-#### 4B — PostgreSQL 16 local en el VPS
+#### 4B — PostgreSQL 16 en contenedor
 
-- [ ] F4-07 Instalar PostgreSQL 16 (`apt install postgresql-16 postgresql-contrib`).
-- [ ] F4-08 Crear usuario `delivery_user` con contraseña segura (mín. 32 caracteres, generada con `openssl rand -base64 32`).
-- [ ] F4-09 Crear base de datos `delivery_db` con owner `delivery_user`.
-- [ ] F4-10 Configurar `pg_hba.conf`: solo conexiones locales (`127.0.0.1/32`), sin acceso remoto.
-- [ ] F4-11 Configurar `postgresql.conf`: `listen_addresses = 'localhost'`, ajustar `shared_buffers`, `work_mem` y `effective_cache_size` para 4 GB RAM.
-- [ ] F4-12 Verificar que PostgreSQL no escucha en interfaces públicas (`ss -tlnp | grep 5432`).
+- [ ] F4-07 Definir `POSTGRES_DB=delivery_db`, `POSTGRES_USER=delivery_user` y `POSTGRES_PASSWORD` en el `.env` de producción; no instalar PostgreSQL en el host.
+- [ ] F4-08 Generar contraseña de mínimo 32 caracteres con `openssl rand -base64 32`.
+- [ ] F4-09 Persistir datos en el volumen `postgres_data`.
+- [ ] F4-10 No publicar el puerto `5432`; dejar la DB solo en la red interna `delivery_net`.
+- [ ] F4-11 Verificar salud con `docker compose exec db pg_isready -U delivery_user -d delivery_db`.
+- [ ] F4-12 Verificar que el puerto 5432 no escuche en interfaces públicas (`ss -tlnp | grep 5432`).
 
-#### 4C — Migración de datos Neon → VPS
+#### 4C — Base limpia y migraciones
 
-- [ ] F4-13 Exportar dump de la DB de Neon con `pg_dump` (schema + data de tiendas piloto, sin data de pruebas).
-- [ ] F4-14 Restaurar dump en PostgreSQL del VPS con `pg_restore` o `psql < dump.sql`.
-- [ ] F4-15 Ejecutar `npx prisma migrate deploy` para alinear el estado de migraciones.
-- [ ] F4-16 Verificar integridad: contar registros (stores, products, users, orders) y comparar con Neon.
-- [ ] F4-17 Actualizar `DATABASE_URL` en el `.env` del VPS para apuntar a `localhost:5432`.
+- [ ] F4-13 Crear la base `delivery_db` vacía mediante `POSTGRES_DB` en el contenedor.
+- [ ] F4-14 Configurar `DATABASE_URL=postgresql://delivery_user:PASS@db:5432/delivery_db` en el `.env` de producción.
+- [ ] F4-15 Ejecutar `docker compose exec -T api npx prisma migrate deploy` y verificar que no haya deriva de esquema.
+- [ ] F4-16 Crear el primer SuperAdmin con `create-superadmin.js`.
+- [ ] F4-17 Verificar que no existan datos de Neon, demo ni pruebas en producción.
 
-#### 4D — Node.js, Backend y Frontend
+#### 4D — Docker, Backend y Frontend
 
-- [ ] F4-18 Instalar Node.js 20 LTS (`nodesource` o `nvm`).
+- [ ] F4-18 Construir el backend con `node:20-bookworm-slim`; no instalar Node.js en el host.
 - [ ] F4-19 Clonar repositorio en `/var/www/delivery-app`.
-- [ ] F4-20 Crear `.env` de producción: `NODE_ENV=production`, `DATABASE_URL=postgresql://delivery_user:PASS@localhost:5432/delivery_db`, `JWT_SECRET` de 128 caracteres, `ALLOWED_ORIGINS` con el dominio real.
-- [ ] F4-21 `npm ci` + `npx prisma generate` + `npx prisma migrate deploy` en backend.
-- [ ] F4-22 Crear `.env.production` en frontend con `VITE_API_URL` y `VITE_SOCKET_URL` apuntando al dominio real.
-- [ ] F4-23 `npm ci` + `npm run build` en frontend (o compilar en CI y subir `dist/`).
-- [ ] F4-24 Instalar PM2: `npm install -g pm2`; iniciar backend con `pm2 start server.js --name delivery-api`.
-- [ ] F4-25 Configurar `pm2 startup` + `pm2 save` para auto-reinicio tras reboot.
-- [ ] F4-26 Configurar `pm2-logrotate` para rotación de logs.
+- [ ] F4-20 Crear `.env` de producción: `NODE_ENV=production`, `DATABASE_URL`, `JWT_SECRET` de 128 caracteres y `ALLOWED_ORIGINS` con el dominio real.
+- [ ] F4-21 Validar `npm ci` + `npx prisma generate` dentro de la imagen y `prisma migrate deploy` en el entrypoint del backend.
+- [ ] F4-22 Configurar build args del frontend: `VITE_API_URL=/api` y `VITE_SOCKET_URL=https://<DOMINIO>`.
+- [ ] F4-23 Compilar el frontend dentro del Dockerfile multi-stage y servir `dist/` con Nginx interno.
+- [ ] F4-24 Levantar el stack con `docker compose -f docker-compose.prod.yml up -d --build`.
+- [ ] F4-25 Configurar `restart: always` y healthchecks para `db`, `api`, `web` y `caddy`.
+- [ ] F4-26 Configurar rotación de logs de Docker (`json-file` con `max-size` y `max-file`).
 
-#### 4E — Nginx, SSL y Dominio
+#### 4E — Caddy, SSL y Dominio
 
-- [ ] F4-27 Instalar Nginx.
-- [ ] F4-28 Crear configuración del sitio: frontend estático en `/`, API proxy en `/api/*`, Socket.io en `/socket.io/*`, compresión gzip y headers de seguridad.
+- [ ] F4-27 Usar el contenedor `caddy:2-alpine` definido en Docker Compose.
+- [ ] F4-28 Crear `Caddyfile`: `/api/*` y `/socket.io/*` → `api:3000`; resto → `web:80`; compresión y headers de seguridad.
 - [ ] F4-29 Apuntar dominio (DNS A record) a la IP del VPS.
-- [ ] F4-30 SSL con Let's Encrypt: `certbot --nginx -d dominio.com -d www.dominio.com`.
-- [ ] F4-31 Verificar renovación automática: `certbot renew --dry-run`.
-- [ ] F4-32 Habilitar HSTS en Nginx.
+- [ ] F4-30 Verificar emisión automática de TLS con Caddy.
+- [ ] F4-31 Verificar renovación automática y persistencia de `caddy_data`.
+- [ ] F4-32 Habilitar HSTS en Caddy.
 
 #### 4F — Backups y Recuperación (PostgreSQL local)
 
-- [ ] F4-33 Script de backup diario: `pg_dump delivery_db | gzip > /var/backups/delivery_$(date).sql.gz`.
+- [ ] F4-33 Script de backup diario: `docker compose exec -T db pg_dump -U delivery_user delivery_db | gzip > /var/backups/delivery_$(date +%F).sql.gz`.
 - [ ] F4-34 Cron: backup a las 2 AM diario + limpieza de backups > 30 días.
 - [ ] F4-35 Copiar backups fuera del VPS (S3, Backblaze B2 o segundo servidor) con `rclone` o `s3cmd`.
-- [ ] F4-36 Probar restauración completa: `pg_restore` en una DB temporal y verificar integridad.
+- [ ] F4-36 Probar restauración completa en una DB temporal/contenedor desechable y verificar integridad.
 - [ ] F4-37 Documentar procedimiento de restauración de emergencia en el Runbook.
 
 #### 4G — Monitoreo, Healthchecks y Operaciones
 
-- [ ] F4-38 Crear endpoints `/api/health` (app viva) y `/api/ready` (DB conectada, migraciones OK).
+- [ ] F4-38 Verificar `/api/health` (ya existe) y agregar `/api/ready` (DB conectada, migraciones OK).
 - [ ] F4-39 Monitoreo externo de uptime (UptimeRobot / BetterStack) con alertas por correo/Telegram.
 - [ ] F4-40 Crear índices en PostgreSQL: `Order(store_id, status)`, `Product(store_id, is_available)`, `User(store_id, email)`, `DeliveryZone(store_id)`.
-- [ ] F4-41 Script de deploy con rollback: `git pull`, `npm ci`, `prisma migrate deploy`, `pm2 restart`, validación de health; revert si falla.
+- [ ] F4-41 Script de deploy con rollback: `git pull`, `docker compose build`, `docker compose up -d`, validación de health; revert si falla.
 - [ ] F4-42 Crear Runbook de incidentes (caída, DB corrupta, disco lleno, certificado expirado).
 - [ ] F4-43 Configurar swap de 2 GB si la VPS tiene 4 GB RAM (seguridad ante picos).
 - [ ] F4-44 Desconectar la app de Neon/Render: eliminar la referencia a `test.shop-mg.com` y a la DB de Neon en código y documentación.
 - [ ] F4-45 Términos, privacidad y retención de datos.
+- [ ] F4-46 Reescribir `Guia_Migracion_VPS.md` de PM2/Nginx a Docker Compose + Caddy + base limpia.
 
-**Criterio de terminado:** la app opera 100% desde el VPS con PostgreSQL local, sin dependencia de Neon ni Render. Backups probados, SSL activo, monitoreo en línea y rollback automatizado.
+**Criterio de terminado:** la app opera 100% desde el VPS con Docker Compose, PostgreSQL local limpio y Caddy con SSL automático, sin dependencia de Neon ni Render. Backups probados, monitoreo en línea y rollback automatizado.
 
 ---
 
@@ -741,12 +879,21 @@ Personalización estructural de la landing page para clientes en planes avanzado
 - [ ] F5-11 Lighthouse y accesibilidad.
 - [ ] F5-12 Revisión móvil.
 - [ ] F5-13 Checklist de aceptación y go/no-go.
+- [ ] F5-14 E2E: `/` carga con base limpia y sin redirección a demo.
+- [ ] F5-15 E2E: CTA de cotización abre WhatsApp con mensaje correcto.
+- [ ] F5-16 E2E: crear tienda → editar CMS → preview → comparar → publicar.
+- [ ] F5-17 Verificar que no aparezcan testimonios ni clientes inventados.
+- [ ] F5-18 Verificar que guardar tasas/delivery no modifique el borrador del CMS.
+- [ ] F5-19 Verificar tema visual en las 6 opciones.
+- [ ] F5-20 Revisión móvil de landing y CMS.
 
 ---
 
 ### Fase 6 — PDFs y documentación (2 días)
 
-#### PDF A — Propuesta Comercial
+#### PDF A — Propuesta Comercial y Cotización
+
+> Este bloque es el PDF de cotización de TiendaFast. Se genera después de validar la landing y el contenido comercial de F2F. Debe incluir planes, alcance por plan, add-ons, implementación, soporte y CTA con WhatsApp.
 
 - [ ] F6-01 Crear `docs/comercial/propuesta-comercial.html`.
 - [ ] F6-02 Portada y promesa de valor.
@@ -756,7 +903,7 @@ Personalización estructural de la landing page para clientes en planes avanzado
 - [ ] F6-06 Pago e indexación.
 - [ ] F6-07 Retorno de inversión.
 - [ ] F6-08 Implementación y soporte.
-- [ ] F6-09 CTA con WhatsApp/QR.
+- [ ] F6-09 CTA con WhatsApp `+58 412 474 2535` y QR.
 
 #### PDF B — Beneficios
 
@@ -842,14 +989,9 @@ Advertencia: `npm run db:seed` elimina pedidos, productos y categorías. No ejec
 ```bash
 cd /var/www/delivery-app
 git pull origin main
-cd backend
-npm ci
-npx prisma generate
-npx prisma migrate deploy
-pm2 restart delivery-api
-cd ../frontend
-npm ci
-npm run build
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
 ```
 
 ---
@@ -867,6 +1009,7 @@ npm run build
 | 2026-11-05 | 62/62 | 95/95 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | F2-14 a F2-20. Validación pertenencia categoría/combos, stock dinámico combo min(componente/qty), rechazo stock negativo, bloqueo eliminación si está en combo y stock visible en catálogo/admin. Bundle 1,053.67 kB. |
 | 2026-11-05 | 62/62 | 96/96 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | F2-08 a F2-13. Edición de settings por superadmin, selectores industria/tema, datos de pago, cambio de contraseña admin con bcrypt, cierre de sesión, notificación sonora y permisos push. Bundle 1,060.87 kB. |
 | 2026-11-05 | 66/66 | 99/99 | 56/56 | 0 errores, 86 warnings | Correcto | Correcto | F2-06, F2-21 a F2-24. Paginación y filtros server-side en órdenes e historial, fechas en America/Caracas UTC-4, ventas netas/brutas, analytics con período y exportación CSV/impresión. Bundle 1,065.64 kB. |
+| 2026-11-06 | 74/74 | No ejecutada | 61/61 | 0 errores, 118 warnings | Correcto | Correcto | Hotfix demo: catálogo público, pedidos admin y checkout con récipe corregidos; selector de sede con Haversine; precios $9/$19/$35. API pendiente por requerir BD. Bundle 1,139.27 kB. |
 
 ---
 
@@ -874,7 +1017,9 @@ npm run build
 
 | Fecha | Fase / ID | Estado | Notas |
 |---|---|---|---|
-| 2026-11-06 | F4-D01 a F4-D05 (Planificado) | Pendiente | Incorporada al plan la estrategia de empaquetado total con Docker Compose (Frontend, Backend, PostgreSQL 16 y Nginx) para despliegue ágil en VPS con clientes reales (Netlify/Render se mantienen para demo) |
+| 2026-11-06 | F2F-01 a F2F-14 | Planificado | Landing `/`, logo TiendaFast, WhatsApp comercial, contenido honesto, CMS con preview/compare/guía y PDF de cotización diferido a F6 |
+| 2026-11-06 | F4-D01 a F4-D10 (Actualizado) | Planificado | Producción con Docker + Caddy, base limpia sin Neon, bootstrap de SuperAdmin, CORS/cookies, socket same-origin y backups desde cron del host |
+| 2026-11-06 | F4-D01 a F4-D05 (Planificado) | Pendiente | Incorporada al plan la estrategia de empaquetado total con Docker Compose (Frontend, Backend, PostgreSQL 16 y Caddy 2) para despliegue ágil en VPS con clientes reales (Netlify/Render se mantienen para demo) |
 | 2026-11-06 | F2D-05 | Hecho | Récipes médicos y lotes restringidos estrictamente a farmacias (ocultos en Comida y Víveres) |
 | 2026-11-06 | F2D-06 | Hecho | Sistema integral de tarifas por zona: preset Puerto Ayacucho, simulador en panel admin y desglose transparente de delivery en Checkout |
 | 2026-11-06 | F2D-01 (Despliegue) | Hecho | Merge y push a rama `main` en GitHub para que Netlify actualice `test.shop-mg.com/admin/demo-comida/order/391` con OpenStreetMap y auto-bounds sin marcas de agua |
@@ -885,6 +1030,8 @@ npm run build
 | 2026-11-06 | F2D-04 | Hecho | Cola FIFO para pedidos pendientes (más antiguo primero en backend y dashboard) con badges dinámicos de tiempo de espera |
 | 2026-11-06 | F2C-01 a F2C-08 | Hecho | Módulo de Farmacias completo: migración Neon de récipes/lotes, subida de foto en checkout, evaluación por farmaceuta (aprobado/rechazado), bloqueo de vencidos y aviso obligatorio de retención física para motorizado |
 | 2026-11-06 | F2E-01 a F2E-07 | Hecho | CMS Visual de Landing y Multi-Sucursal: campo landing_config en BD, card de diseño visual con upload a Cloudinary en Settings, templates dinámicos (Farma, Comida, Víveres) y selector de sedes hermanas |
+| 2026-11-06 | Hotfix demo (P0) | Hecho | Corregidos ReferenceError en `getStoreProducts`/`getStoreOrders` (catálogo y pedidos admin 500) y `prescription_url` ausente en `placeOrder` (checkout con récipe); lint de Landing/MyOrders en 0 errores |
+| 2026-11-06 | F2E-06 / Precios | Hecho | Selector de sedes con geolocalización y orden Haversine; precios conciliados a Emprendedor $9 / Negocio $19 / PRO $35 en código, plan, SuperAdmin, onboarding y PDF |
 | 2026-11-01 | Plan creado | Hecho | Decisiones comerciales y técnicas cerradas |
 | 2026-11-01 | Fase 0 | Hecho | Línea base `c7c0377`, `.env.example`, scripts y CI |
 | 2026-11-01 | Fase 0 pruebas | Hecho | Backend 86/86, frontend 32/32, lint sin errores, build OK |
@@ -1018,7 +1165,7 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 
 ### Decisiones de Fase 2B — Planes y Suscripciones SaaS (F2B-01 a F2B-10)
 
-- Planes estructurados: `EMPRENDEDOR` ($15/mes, max 50 prods), `NEGOCIO` ($30/mes, max 250 prods) y `PRO` ($50/mes, max 1000 prods).
+- Planes estructurados: `EMPRENDEDOR` ($9/mes, max 50 prods), `NEGOCIO` ($19/mes, max 250 prods) y `PRO` ($35/mes, max 1000 prods).
 - Modelo `SubscriptionPayment` para registrar pagos de mensualidad con monto, moneda (USD/VES), método (Pago Móvil, Transferencia, Efectivo, Zelle), referencia, rango de fechas y notas.
 - Bloqueo de catálogo por exceso de cupo: `createProduct`, `createProductsBulk` y `createCombo` responden 403 con mensaje explicativo si la tienda supera el límite de productos de su plan.
 - Asistente de alta SaaS en SuperAdmin que pre-carga categorías base de la industria (`PHARMACY`, `RESTAURANT`, `SUPERMARKET`) y configura período de prueba (30 días por defecto).
@@ -1039,30 +1186,24 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Hecho`.
 - **Causa raíz del bug de ruta:** enlaces de Google Maps sin `origin`; se agrega origen desde la tienda.
 - **No usar `npm run db:seed`** sobre la base actual porque borra pedidos, productos y categorías. La demo se crea con un script idempotente.
 
-### Siguiente bloque recomendado (Ruta a Demostración y Validación)
+### Siguiente bloque recomendado (Ruta a Pulido, Validación y Producción)
 
-1. **Bugs reportados 2026-11-05 (prioridad inmediata):**
-   - **F2-29 (C-07):** teléfono del usuario registrado.
-   - **F2-30 (C-08):** Socket.io del cliente y notificaciones en tiempo real.
-   - **F2-31 (C-09):** ruta de Google Maps con origen en la tienda.
-   - **F2-32 (C-10):** backend Render en `503`.
-2. **Preparación de la demo:**
-   - **F3B-00:** verificar Render antes de cualquier otra acción.
-   - **F3B-01:** aplicar migraciones a Neon.
-   - **F3B-04:** crear `demo-comida`, `demo-viveres` y `demo-farmacia`.
-   - **F3B-07 / F6-23 a F6-26:** generar `Accesos_Demo_TiendaFast.pdf`.
-3. **Fase 2 restante:**
+1. **Fase 2F (prioridad inmediata):**
+   - **F2F-01 a F2F-14:** landing `/`, logo TiendaFast, WhatsApp comercial, contenido honesto, Storefront compartido, temas, preview del CMS, editor guiado, guardados aislados, validación backend, contacto y pruebas.
+2. **Fase 2 restante:**
    - **F2-06:** paginación y filtros server-side en pedidos.
    - **F2-08 a F2-13:** edición completa de configuración, contraseña y cierre de sesiones.
    - **F2-14 a F2-20:** validaciones de categorías/combos, stock de combos, stock negativo y alertas.
    - **F2-21 a F2-24:** fechas, ventas netas, analytics y reportes.
    - **F2-25B a F2-28:** tiendas inactivas y auditoría.
-4. **Fase 3:** seguridad de Socket.io, cookies/CSRF, OTP, validación y uploads.
-5. **Fase 3B (Validación en Staging Netlify + Render + Neon y Catálogo Demo):**
-   - Verificar build de frontend en Netlify y backend en Render.
-   - Validar las 3 tiendas demo en teléfonos y laptops.
-6. **Fase 4 (Producción VPS Definitiva):**
-   - Una vez realizada y validada la demostración comercial, se pedirán al usuario las credenciales del VPS para la instalación de PostgreSQL 16 local, Nginx, SSL y automatización de backups.
+3. **Fase 3:** seguridad de Socket.io, cookies/CSRF, OTP, validación y uploads.
+4. **Fase 5:** QA de landing/CMS y flujos críticos; Playwright, Lighthouse, accesibilidad y revisión móvil.
+5. **Fase 4 (Producción VPS Definitiva):**
+   - Docker Compose con Caddy, base limpia, bootstrap de SuperAdmin, backups y monitoreo.
+   - Al iniciar esta fase se pedirán IP, accesos SSH, dominio y correo ACME del VPS.
+6. **Fase 6:** PDF comercial/cotización con planes, alcance, add-ons y CTA de WhatsApp.
+
+**Demo en la nube (opcional):** Netlify + Render + Neon se mantienen solo para demostración comercial. No son parte de la producción ni de la base limpia.
 
 ### Cómo ejecutar las pruebas de API
 
@@ -1079,12 +1220,16 @@ El rate limiter de autenticación permite ~10 solicitudes por minuto e IP. Si se
 
 ### Bloqueos actuales
 
-- **C-10:** el backend en Render responde `503` (verificado 2026-11-05); bloquea la demo en la nube hasta redeploy/verificación.
-- **C-07/C-08/C-09:** bugs en corrección; el cliente no recibe eventos reales hasta desplegar el fix de Socket.io.
+- **C-10:** el backend en Render respondió `503` el 2026-11-05; revisar solo si se usa la demo en la nube. Producción no dependerá de Render.
+- **C-07/C-08/C-09:** corregidos; validar en QA que el cliente reciba eventos reales tras el despliegue.
+- **Fase 4:** faltan dominio, VPS, accesos SSH y correo ACME para TLS con Caddy.
+- **Docker local:** no está instalado; los builds se validarán en el VPS o con Docker Desktop.
+- **`test:api`:** pendiente contra PostgreSQL desechable con datos demo; no ejecutar sobre producción.
+- **Cambios sin commit:** hay modificaciones en `PLAN_DE_TRABAJO.md`, backend, frontend y onboarding; revisar `git diff` antes de desplegar.
 - Facturación fiscal pendiente de contador, no bloquea el piloto gratuito.
 - Candidatos de piloto pendientes de prospección, no bloquean el desarrollo.
 - CI de pruebas de API pendiente para Fase 5.
-- Deuda de lint (85 advertencias) a reducir durante Fases 1–3.
+- Deuda de lint (118 advertencias) a reducir durante Fases 1–3.
 
 ---
 

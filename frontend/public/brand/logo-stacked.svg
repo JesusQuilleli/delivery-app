@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 196" width="560" height="392">
+  <rect x="100" y="8" width="80" height="80" rx="22" fill="#123B2F"/>
+  <path d="M127 39v-5a13 13 0 0 1 26 0v5" stroke="#FCF7ED" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <path d="M115 37h50v42h-50z" fill="#FCF7ED"/>
+  <path d="M145 45h-12l-4 11h7l-4 12 16-17h-8l5-6Z" fill="#123B2F"/>
+  <text x="140" y="142" text-anchor="middle" font-family="Sora, Manrope, Arial, sans-serif" font-size="43" font-weight="800" letter-spacing="-2" fill="#123B2F">Tienda<tspan fill="#F26A3D">Fast</tspan></text>
+  <text x="140" y="167" text-anchor="middle" font-family="Manrope, Arial, sans-serif" font-size="10" font-weight="800" letter-spacing="4" fill="#123B2F" opacity=".62">ENTREGAS AL INSTANTE</text>
+</svg>

@@ -2,8 +2,9 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Utensils, Star, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 import { Gallery } from "./Gallery";
+import { WhatsAppFab } from "@/components/farma/WhatsAppFab";
 
-export default function RestaurantTemplate({ store, categories }: any) {
+export default function RestaurantTemplate({ store, categories, preview }: any) {
   const landing = store?.landing_config || {};
   const visibility = landing.sections_visibility || {
     categories: true,
@@ -161,6 +162,7 @@ export default function RestaurantTemplate({ store, categories }: any) {
         </div>
         <p>© {new Date().getFullYear()} {store?.name}. Todos los derechos reservados.</p>
       </footer>
+      {!preview && <WhatsAppFab store={store} />}
     </div>
   );
 }

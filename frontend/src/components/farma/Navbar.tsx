@@ -12,10 +12,11 @@ const links = [
 ];
 
 export function Navbar({ store }: { store?: any }) {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug: routeSlug } = useParams<{ slug: string }>();
   const { user, token, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const storeName = store?.name || "Farmacia";
+  const slug = store?.slug || routeSlug;
 
   return (
     <header className="sticky top-0 z-40 backdrop-blur-md bg-background/75 border-b border-border/60">

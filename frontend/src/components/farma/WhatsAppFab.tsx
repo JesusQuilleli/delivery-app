@@ -1,15 +1,14 @@
-import { MessageCircle } from "lucide-react";
+import { MessageCircle } from 'lucide-react';
 
 export function WhatsAppFab({ store }: { store?: any }) {
-  const phone = store?.phone || "";
+  const phone = store?.landing_config?.whatsapp_contact || store?.phone || '';
+  const cleanPhone = String(phone).replace(/\D/g, '');
 
-  if (!phone) return null;
-
-  const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  if (!cleanPhone) return null;
 
   return (
     <a
-      href={`https://wa.me/${cleanPhone.replace('+', '')}`}
+      href={`https://wa.me/${cleanPhone}`}
       target="_blank"
       rel="noreferrer"
       aria-label="Pedir por WhatsApp"

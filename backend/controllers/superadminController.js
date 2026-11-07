@@ -393,7 +393,24 @@ const getStorePayments = async (req, res) => {
   }
 };
 
+const { checkSubscriptionLifecycle } = require('../services/subscriptionService');
+
+const triggerSubscriptionLifecycleCheck = async (req, res) => {
+  try {
+    const result = await checkSubscriptionLifecycle(prisma);
+    res.json({
+      success: true,
+      message: Revisión completada.  tiendas analizadas,  actualizadas.,
+      ...result
+    });
+  } catch (error) {
+    console.error('Error checking subscription lifecycle:', error);
+    res.status(500).json({ error: 'Error ejecutando ciclo de vida de suscripciones' });
+  }
+};
+
 module.exports = {
+  triggerSubscriptionLifecycleCheck,
   getStores,
   createStore,
   toggleStoreStatus,

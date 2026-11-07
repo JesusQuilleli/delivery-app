@@ -116,7 +116,9 @@ export default function MyOrders() {
           setSelectedOrder(current);
           setOrders(latest);
         }
-      } catch (err) {}
+      } catch (err) {
+        console.debug('No se pudo sincronizar el pedido seleccionado', err);
+      }
     }, 4000);
 
     return () => {

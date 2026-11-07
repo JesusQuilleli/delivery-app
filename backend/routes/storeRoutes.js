@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getStoreProducts, getStoreOrders, getStoreHistory, getStoreProductDetails, updateStoreSettings, syncStoreBcvRate, getStoreDeliveryZones, createStoreDeliveryZone, updateStoreDeliveryZone, deleteStoreDeliveryZone, quoteStoreDelivery, getStoreAnalytics, getStoreCustomers, updateStoreCustomer, deleteStoreCustomer, getStoreDrivers, createStoreDriver, updateStoreDriver, deleteStoreDriver } = require('../controllers/storeController');
+const { getStoreProducts, getStoreOrders, getStoreHistory, getStoreProductDetails, updateStoreSettings, updateStoreLanding, syncStoreBcvRate, getStoreDeliveryZones, createStoreDeliveryZone, updateStoreDeliveryZone, deleteStoreDeliveryZone, quoteStoreDelivery, getStoreAnalytics, getStoreCustomers, updateStoreCustomer, deleteStoreCustomer, getStoreDrivers, createStoreDriver, updateStoreDriver, deleteStoreDriver } = require('../controllers/storeController');
 const { requireStoreAdmin } = require('../middleware/authMiddleware');
 const { adminLimiter } = require('../middleware/rateLimiter');
 
@@ -10,6 +10,7 @@ router.get('/:slug/orders', adminLimiter, requireStoreAdmin, getStoreOrders);
 router.get('/:slug/history', adminLimiter, requireStoreAdmin, getStoreHistory);
 router.get('/:slug/analytics', adminLimiter, requireStoreAdmin, getStoreAnalytics);
 router.put('/:slug/settings', adminLimiter, requireStoreAdmin, updateStoreSettings);
+router.put('/:slug/landing', adminLimiter, requireStoreAdmin, updateStoreLanding);
 router.post('/:slug/rates/sync-bcv', adminLimiter, requireStoreAdmin, syncStoreBcvRate);
 router.post('/:slug/delivery-quote', quoteStoreDelivery); // Public
 router.get('/:slug/delivery-zones', adminLimiter, requireStoreAdmin, getStoreDeliveryZones);

@@ -2,6 +2,7 @@ const prisma = require('../prismaClient');
 const { getBcvRate } = require('../services/ratesService');
 const { resolveDeliveryFee } = require('../services/deliveryService');
 const { formatProductWithStock } = require('../utils/inventory');
+const { normalizeLandingConfig } = require('../utils/landing');
 const {
   getCaracasStartOfDay,
   getCaracasStartOfMonth,
@@ -26,6 +27,16 @@ const getStoreProducts = async (req, res) => {
       include: {
         categories: {
           orderBy: { id: 'asc' }
+        },
+        branches: {
+          where: { is_active: true },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            latitude: true,
+            longitude: true
+          }
         }
       }
     });
@@ -54,9 +65,6 @@ const getStoreProducts = async (req, res) => {
     let totalPages = 1;
     let currentPage = 1;
     let totalProducts = 0;
-
-        const isUrgencySort = sort === 'asc' || sort === 'fifo' || (!sort && (status === 'PENDING' || status === 'AWAITING_PAYMENT'));
-    const sortOrder = isUrgencySort ? 'asc' : 'desc';
 
     if (page && limit) {
       currentPage = Number(page);
@@ -136,6 +144,13 @@ const getStoreOrders = async (req, res) => {
   try {
     const { slug } = req.params;
     const { status, payment_method, search, page, limit, sort } = req.query;
+
+    const requestedStatuses = status
+      ? String(status).split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
+      : [];
+    const isUrgencySort = sort === 'asc' || sort === 'fifo'
+      || (!sort && requestedStatuses.some(s => s === 'PENDING' || s === 'AWAITING_PAYMENT'));
+    const sortOrder = isUrgencySort ? 'asc' : 'desc';
 
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
@@ -442,6 +457,11 @@ const updateStoreSettings = async (req, res) => {
       }
     }
 
+    const currentLanding = store.landing_config && typeof store.landing_config === 'object' && !Array.isArray(store.landing_config)
+      ? store.landing_config
+      : {};
+    const normalizedLanding = normalizeLandingConfig(landing_config, currentLanding);
+
     const updatedStore = await prisma.store.update({
       where: { id: store.id },
       data: {
@@ -461,15 +481,69 @@ const updateStoreSettings = async (req, res) => {
         bank_id_number: cleanOptionalText(bank_id_number, 30),
         bank_holder: cleanOptionalText(bank_holder),
         payment_note: cleanOptionalText(payment_note, 300),
-        landing_config: landing_config !== undefined ? landing_config : undefined,
+        landing_config: normalizedLanding,
         parent_store_id: parent_store_id !== undefined ? (parent_store_id ? Number(parent_store_id) : null) : undefined,
       }
     });
 
     res.json({ message: 'Configuración actualizada exitosamente', store: updatedStore });
   } catch (error) {
+    if (error.status === 400) {
+      return res.status(400).json({ error: error.message });
+    }
     console.error('Error actualizando configuración:', error);
     res.status(500).json({ error: 'Error interno actualizando configuración' });
+  }
+};
+
+const updateStoreLanding = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const user = req.user;
+
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN')) {
+      return res.status(403).json({ error: 'No autorizado para editar la landing' });
+    }
+
+    const store = await prisma.store.findUnique({ where: { slug } });
+    if (!store) {
+      return res.status(404).json({ error: 'Tienda no encontrada' });
+    }
+
+    if (user.role === 'ADMIN' && user.store_id !== store.id) {
+      return res.status(403).json({ error: 'No autorizado para editar la landing de otra tienda' });
+    }
+
+    const currentLanding = store.landing_config && typeof store.landing_config === 'object' && !Array.isArray(store.landing_config)
+      ? store.landing_config
+      : {};
+    const incoming = req.body?.landing_config !== undefined ? req.body.landing_config : req.body;
+    const landing_config = normalizeLandingConfig(incoming, currentLanding);
+
+    if (landing_config === undefined) {
+      return res.status(400).json({ error: 'Debes enviar la configuración de la landing.' });
+    }
+
+    const theme_color = req.body?.theme_color !== undefined
+      ? cleanOptionalText(req.body.theme_color, 30) || undefined
+      : undefined;
+
+    const updatedStore = await prisma.store.update({
+      where: { id: store.id },
+      data: { landing_config, theme_color }
+    });
+
+    res.json({
+      message: 'Landing actualizada exitosamente',
+      landing_config: updatedStore.landing_config,
+      theme_color: updatedStore.theme_color
+    });
+  } catch (error) {
+    if (error.status === 400) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Error actualizando landing:', error);
+    res.status(500).json({ error: 'Error interno actualizando la landing' });
   }
 };
 
@@ -1021,6 +1095,7 @@ module.exports = {
   getStoreHistory, 
   getStoreProductDetails, 
   updateStoreSettings, 
+  updateStoreLanding,
   syncStoreBcvRate,
   getStoreDeliveryZones,
   createStoreDeliveryZone,

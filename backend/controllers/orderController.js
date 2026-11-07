@@ -35,7 +35,8 @@ const placeOrder = async (req, res) => {
       latitude,
       longitude,
       payment_method,
-      payment_reference
+      payment_reference,
+      prescription_url
     } = req.body;
 
     // 1. Validaciones básicas

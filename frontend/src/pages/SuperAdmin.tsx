@@ -390,9 +390,9 @@ export default function SuperAdmin() {
                         onChange={(e) => setSelectedPlan(e.target.value)}
                         className="w-full h-10 rounded-md border border-input bg-gray-50 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-ring"
                       >
-                        <option value="EMPRENDEDOR">Emprendedor ($15)</option>
-                        <option value="NEGOCIO">Negocio ($30)</option>
-                        <option value="PRO">Pro / Cadena ($50)</option>
+                        <option value="EMPRENDEDOR">Emprendedor ($9)</option>
+                        <option value="NEGOCIO">Negocio ($19)</option>
+                        <option value="PRO">Pro / Cadena ($35)</option>
                       </select>
                     </div>
                   </div>
@@ -631,15 +631,15 @@ export default function SuperAdmin() {
                     value={editPlan}
                     onChange={(e) => {
                       setEditPlan(e.target.value);
-                      if (e.target.value === 'EMPRENDEDOR') setEditPrice('15');
-                      if (e.target.value === 'NEGOCIO') setEditPrice('30');
-                      if (e.target.value === 'PRO') setEditPrice('50');
+                      if (e.target.value === 'EMPRENDEDOR') setEditPrice('9');
+                      if (e.target.value === 'NEGOCIO') setEditPrice('19');
+                      if (e.target.value === 'PRO') setEditPrice('35');
                     }}
                     className="w-full h-10 rounded-md border border-input bg-gray-50 px-3 text-sm font-semibold"
                   >
-                    <option value="EMPRENDEDOR">Emprendedor (Hasta 50 prods, $15/m)</option>
-                    <option value="NEGOCIO">Negocio (Hasta 250 prods, $30/m)</option>
-                    <option value="PRO">Pro / Cadena (Hasta 1000 prods, $50/m)</option>
+                    <option value="EMPRENDEDOR">Emprendedor (Hasta 50 prods, $9/m)</option>
+                    <option value="NEGOCIO">Negocio (Hasta 250 prods, $19/m)</option>
+                    <option value="PRO">Pro / Cadena (Hasta 1000 prods, $35/m)</option>
                   </select>
                 </div>
 
