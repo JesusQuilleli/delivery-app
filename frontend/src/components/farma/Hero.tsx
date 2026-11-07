@@ -22,17 +22,17 @@ export function Hero({ store }: { store?: any }) {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="col-span-12 lg:col-span-8 rounded-3xl bg-card p-8 lg:p-12 border border-border/60 shadow-sm flex flex-col justify-between min-h-[420px] lg:min-h-[520px] relative overflow-hidden"
+            className="col-span-12 lg:col-span-8 rounded-3xl bg-card p-6 sm:p-8 lg:p-12 border border-border/60 shadow-sm flex flex-col justify-between min-h-[380px] lg:min-h-[500px] relative overflow-hidden min-w-0"
           >
-            <div>
+            <div className="min-w-0">
               <span className="inline-flex items-center gap-2 rounded-full bg-secondary/70 text-secondary-foreground px-3 py-1 text-xs font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-coral animate-pulse" />
                 {badgePromo}
               </span>
-              <h1 className="mt-6 font-display font-extrabold text-3xl sm:text-4xl lg:text-5xl xl:text-6xl leading-[1.05] tracking-tight break-words">
+              <h1 className="mt-6 font-display font-extrabold text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl leading-[1.1] tracking-tight break-words">
                 {slogan}
               </h1>
-              <p className="mt-5 max-w-xl text-base lg:text-lg text-muted-foreground">
+              <p className="mt-4 max-w-xl text-sm sm:text-base lg:text-lg text-muted-foreground break-words">
                 {subtitle}
               </p>
             </div>
@@ -57,7 +57,7 @@ export function Hero({ store }: { store?: any }) {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="col-span-12 sm:col-span-7 lg:col-span-4 rounded-3xl overflow-hidden bg-secondary min-h-[280px] relative"
+            className="col-span-12 sm:col-span-7 lg:col-span-4 rounded-3xl overflow-hidden bg-secondary min-h-[260px] relative min-w-0"
           >
             <img
               src={heroImage}
