@@ -1388,7 +1388,7 @@ El rate limiter de autenticación permite ~10 solicitudes por minuto e IP. Si se
 
 ## 15. Hitos Completados — Acceso Admin Dual, OCR Pago Móvil Inteligente, Sanitización Telefónica y Blindaje Anti-Baneo WhatsApp (2026-11-07)
 
-### ✅ Tareas Ejecutadas y Verificadas:
+### ✅ Tareas Ejecutadas y Verificadas:\n\n- [x] **Corrección de Métricas y Suscripciones SaaS en SuperAdmin:**\n  - Al ingresar a /superadmin, la API arrojaba error 500 porque la tabla PostgreSQL SubscriptionPayment no tenía la columna payment_receipt_url. Se ejecutó ALTER TABLE y se validó la respuesta del endpoint /api/superadmin/subscriptions con HTTP 200 OK y carga de métricas y tiendas registradas.\n
 
 - [x] **Acceso Administrativo Dual (Email o Nombre de Usuario):**
   - **Diagnóstico:** Los administradores intentaban ingresar usando su correo electrónico (`jqcelis092@gmail.com` o `admin@demo.com`), mientras que el controlador backend únicamente consultaba por `username`. Adicionalmente, el usuario principal en BD tenía `username: null`.
