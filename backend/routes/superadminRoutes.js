@@ -3,6 +3,8 @@ const router = express.Router();
 const { requireSuperAdmin } = require('../middleware/authMiddleware');
 const {
   getStores,
+  resetStoreAdminPassword,
+  triggerSubscriptionLifecycleCheck,
   createStore,
   toggleStoreStatus,
   getSubscriptions,

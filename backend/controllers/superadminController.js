@@ -400,7 +400,7 @@ const triggerSubscriptionLifecycleCheck = async (req, res) => {
     const result = await checkSubscriptionLifecycle(prisma);
     res.json({
       success: true,
-      message: Revisión completada.  tiendas analizadas,  actualizadas.,
+      message: 'Revisión completada.',
       ...result
     });
   } catch (error) {

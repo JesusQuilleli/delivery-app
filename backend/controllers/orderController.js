@@ -1026,4 +1026,4 @@ const updatePrescriptionQuote = async (req, res) => {
 module.exports = {
   createPrescriptionQuote,
   getPrescriptionQuotes,
-  updatePrescriptionQuote, placeOrder, updateOrderStatus, deleteOrder, getMyOrders, getMyAddresses, rateOrder, getOrderById, cancelOrderClient, editOrderClient, batchUpdateStatus, markOrderViewed };
+  updatePrescriptionQuote, reviewPrescription, placeOrder, updateOrderStatus, deleteOrder, getMyOrders, getMyAddresses, rateOrder, getOrderById, cancelOrderClient, editOrderClient, batchUpdateStatus, markOrderViewed };
