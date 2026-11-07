@@ -861,6 +861,26 @@ Personalización estructural de la landing page para clientes en planes avanzado
 - [ ] F4-D10 **Socket same-origin:**
   - Cambiar el fallback de `frontend/src/lib/socket.ts` de `http://localhost:3000` a `window.location.origin`.
 
+#### 4-WhatsApp — Pasarela de WhatsApp en VPS con Evolution API y Baileys (Línea +58 4161804831)
+
+- [ ] F4-WA01 **Contenedor Evolution API en Docker Compose:**
+  - Agregar servicio `evolution-api` (`atendai/evolution-api:v2.1.2`) en la red interna `delivery_net` escuchando en `127.0.0.1:8080:8080` (no expuesto a internet público).
+  - Configurar variables: `AUTHENTICATION_API_KEY`, `DATABASE_ENABLED=true` (usando PostgreSQL interno) y `SERVER_URL`.
+- [ ] F4-WA02 **Vinculación de la Línea Oficial +58 4161804831:**
+  - Creación de la instancia `tiendafast` vía endpoint REST: `POST /instance/create` con `{"instanceName": "tiendafast", "qrcode": true}`.
+  - Escaneo del código QR desde el teléfono físico con la línea WhatsApp `+58 4161804831` (Ajustes -> Dispositivos vinculados -> Vincular un dispositivo).
+- [ ] F4-WA03 **Interconexión con el Backend Node.js:**
+  - Configurar en `.env.production` del backend:
+    - `EVOLUTION_API_URL=http://evolution-api:8080`
+    - `EVOLUTION_API_KEY=<tu_clave_api_secreta>`
+    - `EVOLUTION_INSTANCE=tiendafast`
+    - `WHATSAPP_BOT_NUMBER=584161804831`
+- [ ] F4-WA04 **Medidas Anti-Baneo y Calentamiento de la Línea (Ya Codificadas):**
+  - **Spintax de Mensajería:** Cuatro variaciones dinámicas de texto para que cada mensaje OTP sea diferente a ojos de WhatsApp.
+  - **Simulación Humana:** Presencia `composing` y retraso de 1.500 ms antes de enviar el mensaje.
+  - **Rate Limiting Estricto:** Máximo 3 solicitudes por teléfono cada 15 minutos para prevenir abusos.
+  - **Fallback Asistido:** Botón de contacto directo hacia el chat oficial si el cliente tiene problemas de conectividad.
+
 #### 4A — Provisionamiento del VPS
 
 - [ ] F4-01 Contratar VPS (Hetzner/Contabo/DigitalOcean, mínimo 2 vCPU, 4 GB RAM, 80 GB NVMe, Ubuntu 24.04 LTS).

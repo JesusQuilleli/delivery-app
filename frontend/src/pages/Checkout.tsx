@@ -12,7 +12,7 @@ import { requestNotificationPermission } from '../lib/notifications';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Phone, MapPin, CreditCard, ChevronRight, CheckCircle2, ShieldCheck, User as UserIcon, LocateFixed, Home, Briefcase, AlertTriangle, Edit3, XCircle, Navigation, Mail, MessageSquare, Camera, Upload } from 'lucide-react';
+import { Phone, MapPin, CreditCard, ChevronRight, CheckCircle2, ShieldCheck, User as UserIcon, LocateFixed, Home, Briefcase, AlertTriangle, Edit3, XCircle, Navigation, Mail, MessageSquare, Camera, Upload, Sparkles } from 'lucide-react';
 import LoadingOverlay from '../components/LoadingOverlay';
 import { toast } from 'sonner';
 import { CancelOrderModal, EditOrderModal } from '../components/OrderActionModals';
@@ -137,6 +137,7 @@ export default function Checkout() {
   const [authChannel, setAuthChannel] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
   const [whatsAppIdentifier, setWhatsAppIdentifier] = useState<string>('');
   const [whatsAppFallbackLink, setWhatsAppFallbackLink] = useState<string>('');
+  const [demoOtpCode, setDemoOtpCode] = useState<string>('');
 
   // F2G-04 y F2G-05: Capture de Pago Móvil y OCR
   const [paymentReceiptUrl, setPaymentReceiptUrl] = useState<string>('');
@@ -502,24 +503,31 @@ export default function Checkout() {
       return;
     }
     if (!parsedPhone.isValid) {
-      toast.error('Por favor ingresa un número de teléfono válido.');
+      toast.error('Por favor ingresa un número de teléfono válido con código de país.');
       return;
     }
     setLoading(true);
     try {
+      const cleanWaDigits = parsedPhone.e164.replace(/\D/g, '');
       const res = await api.post('/auth/send-whatsapp-otp', {
         phone: parsedPhone.e164,
         store_id: storeId
       });
-      setWhatsAppIdentifier(res.data.identifier || `wa_${parsedPhone.nationalNumber}@whatsapp.user`);
-      if (res.data.code && res.data.simulated) {
-        toast.info(`[Modo Simulado / Dev] Tu código OTP es: ${res.data.code}`);
+      const resolvedIdentifier = res.data.identifier || `wa_${cleanWaDigits}@whatsapp.user`;
+      setWhatsAppIdentifier(resolvedIdentifier);
+
+      if (res.data.code) {
+        setOtp(res.data.code);
+        setDemoOtpCode(res.data.code);
+        toast.success(`⚡ Código OTP: ${res.data.code} (Autocompletado para tu prueba)`);
       } else {
+        setDemoOtpCode('');
         toast.success("Código de verificación enviado a tu WhatsApp.");
       }
-      const adminWa = String(storeConfig?.bank_phone || '584124742535').replace(/\D/g, '');
-      const waMsg = encodeURIComponent(`Hola, solicito el código de verificación para mi pedido en ${storeConfig?.name || 'la tienda'}`);
-      setWhatsAppFallbackLink(`https://wa.me/${adminWa}?text=${waMsg}`);
+
+      const botPhone = String(res.data.bot_number || storeConfig?.bank_phone || '584161804831').replace(/\D/g, '');
+      const waMsg = encodeURIComponent(`Hola, mi código de verificación para ${storeConfig?.name || 'la tienda'} es: ${res.data.code || ''}`);
+      setWhatsAppFallbackLink(`https://wa.me/${botPhone}?text=${waMsg}`);
       setStep(2);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
@@ -555,8 +563,9 @@ export default function Checkout() {
     }
     setLoading(true);
     try {
+      const cleanWaDigits = parsedPhone.e164.replace(/\D/g, '');
       const targetEmail = authChannel === 'WHATSAPP'
-        ? (whatsAppIdentifier || `wa_${parsedPhone.nationalNumber}@whatsapp.user`)
+        ? (whatsAppIdentifier || `wa_${cleanWaDigits}@whatsapp.user`)
         : email;
       const res = await api.post('/auth/verify-otp', {
         email: targetEmail,
@@ -730,7 +739,22 @@ export default function Checkout() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-4">
-              
+              {authChannel === 'WHATSAPP' && demoOtpCode && (
+                <div className="bg-emerald-50/90 border-2 border-emerald-300 rounded-2xl p-4 text-emerald-950 shadow-sm space-y-2 text-left">
+                  <div className="flex items-center gap-2 font-black text-sm text-emerald-800">
+                    <Sparkles size={16} className="text-emerald-600 flex-shrink-0" />
+                    <span>⚡ Modo Demostración / Pruebas Online</span>
+                  </div>
+                  <p className="text-xs text-emerald-900 leading-relaxed">
+                    Tu código de verificación es: <span className="font-mono font-black text-base text-emerald-800 tracking-wider bg-white px-2 py-0.5 rounded-lg border border-emerald-300 shadow-xs">{demoOtpCode}</span>.
+                    Ha sido cargado automáticamente en el campo inferior para que puedas validar la compra de inmediato.
+                  </p>
+                  <p className="text-[11px] text-emerald-700 font-medium">
+                    (En el servidor VPS con Evolution API, este código se enviará directamente y de forma privada al WhatsApp del cliente desde la línea oficial <strong>+58 4161804831</strong>).
+                  </p>
+                </div>
+              )}
+
               <div className="mb-4 bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
                 <label className="text-sm font-bold text-orange-900 mb-2 flex items-center gap-2">
                   <UserIcon size={16} /> {isRegistered && name ? '¡Bienvenido de nuevo!' : '¿Cómo te llamas?'}
@@ -797,15 +821,15 @@ export default function Checkout() {
                 <Button variant="link" onClick={resendOtp} disabled={loading} className="text-orange-600 font-bold hover:text-orange-700">
                   ¿No recibiste el código? Reenviar
                 </Button>
-                {authChannel === 'WHATSAPP' && whatsAppFallbackLink && (
-                  <div>
+                {authChannel === 'WHATSAPP' && (
+                  <div className="pt-1">
                     <a
-                      href={whatsAppFallbackLink}
+                      href={whatsAppFallbackLink || 'https://wa.me/584161804831'}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 transition-all"
+                      className="inline-flex items-center gap-2 text-xs font-black text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3.5 py-2 rounded-xl border border-emerald-200 transition-all shadow-xs"
                     >
-                      <MessageSquare size={14} /> ¿No llegó? Solicitar código directo a WhatsApp
+                      <MessageSquare size={14} className="text-emerald-600" /> WhatsApp Oficial de Soporte (+58 4161804831)
                     </a>
                   </div>
                 )}

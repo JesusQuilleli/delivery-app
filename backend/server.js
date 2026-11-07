@@ -51,18 +51,34 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 console.log('🛡️ Orígenes CORS permitidos:', allowedOrigins);
 
+// Helper para validar si un origen es seguro y permitido (soporta Vercel, Netlify y subdominios de shop-mg.com)
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true; // Peticiones locales, health checks, server-to-server
+  if (allowedOrigins.includes(origin) || isDevOrigin(origin)) return true;
+  try {
+    const { hostname } = new URL(origin);
+    if (
+      hostname === 'test.shop-mg.com' ||
+      hostname.endsWith('.shop-mg.com') ||
+      hostname.endsWith('.vercel.app') ||
+      hostname.endsWith('.netlify.app') ||
+      hostname.endsWith('.onrender.com')
+    ) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+};
+
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) {
-      if (process.env.NODE_ENV === 'production') {
-        return callback(new Error('CORS: Origen requerido'));
-      }
-      return callback(null, true);
-    }
-    if (allowedOrigins.includes(origin) || isDevOrigin(origin)) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
-      callback(new Error(`CORS: Origen no permitido: ${origin}`));
+      console.warn(`[CORS_BLOCKED] Origen rechazado: ${origin}`);
+      callback(null, false);
     }
   },
   credentials: true,
@@ -74,16 +90,10 @@ const corsOptions = {
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      if (!origin) {
-        if (process.env.NODE_ENV === 'production') {
-          return callback(new Error('CORS: Origen requerido'));
-        }
-        return callback(null, true);
-      }
-      if (allowedOrigins.includes(origin) || isDevOrigin(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
       } else {
-        callback(new Error(`CORS: Origen no permitido: ${origin}`));
+        callback(null, false);
       }
     },
     methods: ['GET', 'POST'],

@@ -31,7 +31,7 @@ export function LandingPreview({
   offers = [],
   combos = []
 }: LandingPreviewProps) {
-  const [compareStyle, setCompareStyle] = useState<'side-by-side' | 'toggle'>('side-by-side');
+  const [compareStyle, setCompareStyle] = useState<'side-by-side' | 'toggle'>('toggle');
   const [activeCompareTab, setActiveCompareTab] = useState<'draft' | 'current'>('draft');
 
   const baseStore = store || { name: 'Tu negocio', industry: 'PHARMACY' };

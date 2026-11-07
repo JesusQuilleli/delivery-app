@@ -464,11 +464,16 @@ const sendWhatsAppOtpHandler = async (req, res) => {
 
     const result = await sendWhatsAppOtp(phone, code, store.name);
 
+    // En entorno demo/pruebas o si Evolution API no está configurada, retornamos el código para no bloquear las pruebas en Netlify/Render
+    const shouldExposeCode = result.simulated || !process.env.EVOLUTION_API_URL || process.env.NODE_ENV !== 'production';
+
     res.json({
       success: true,
-      message: 'Código de verificación generado para WhatsApp',
+      message: result.simulated
+        ? 'Código de verificación generado (Modo Demostración / Pruebas)'
+        : 'Código de verificación enviado por WhatsApp',
       simulated: result.simulated || false,
-      code: process.env.NODE_ENV !== 'production' ? code : undefined,
+      code: shouldExposeCode ? code : undefined,
       phone: cleanPhone,
       identifier: userIdentifier,
       bot_number: result.bot_number || process.env.WHATSAPP_BOT_NUMBER || '584161804831'
