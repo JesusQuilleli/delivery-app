@@ -78,6 +78,7 @@ async function sendStoreWelcomeEmail({
   to,
   storeName,
   slug,
+  adminUsername,
   adminEmail,
   adminPassword,
   planTier = 'EMPRENDEDOR',
@@ -87,7 +88,7 @@ async function sendStoreWelcomeEmail({
   adminUrl
 }) {
   const storeUrl = publicUrl || `${BASE_URL}/${slug}`;
-  const loginUrl = adminUrl || `${BASE_URL}/login`;
+  const loginUrl = adminUrl || `${BASE_URL}/admin-login`;
 
   const planNames = {
     EMPRENDEDOR: 'Plan Emprendedor ($9/mes)',
@@ -159,7 +160,8 @@ async function sendStoreWelcomeEmail({
           <div class="card">
             <h3 style="margin-top: 0; color: #059669; font-size: 16px;">🔐 Tus Credenciales de Administrador</h3>
             <div class="cred-item"><span class="cred-label">Panel de Administración:</span> <br/><a href="${loginUrl}" style="color: #059669; font-weight: bold;">${loginUrl}</a></div>
-            <div class="cred-item"><span class="cred-label">Usuario / Correo:</span> <span class="cred-value">${adminEmail}</span></div>
+            <div class="cred-item"><span class="cred-label">Usuario:</span> <span class="cred-value">${adminUsername || adminEmail}</span></div>
+            <div class="cred-item"><span class="cred-label">Correo Registrado:</span> <span class="cred-value">${adminEmail}</span></div>
             <div class="cred-item"><span class="cred-label">Contraseña inicial:</span> <span class="cred-value">${adminPassword}</span></div>
           </div>
 

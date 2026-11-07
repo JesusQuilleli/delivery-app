@@ -36,6 +36,7 @@ const createStore = async (req, res) => {
       storeName,
       slug,
       adminUsername,
+      adminEmail,
       adminPassword,
       adminPhone,
       industry,
@@ -90,7 +91,8 @@ const createStore = async (req, res) => {
       const admin = await tx.user.create({
         data: {
           store_id: store.id,
-          username: adminUsername,
+          username: adminUsername.trim(),
+          email: (adminEmail || '').trim().toLowerCase() || null,
           password: hashedPassword,
           phone: adminPhone,
           name: 'Admin ' + storeName,
