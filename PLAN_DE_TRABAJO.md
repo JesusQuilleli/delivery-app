@@ -1457,3 +1457,39 @@ El rate limiter de autenticación permite ~10 solicitudes por minuto e IP. Si se
     - **Botón "Copiar Enlace":** Copia la URL exacta al portapapeles con confirmación visual interactiva (*"¡Copiado!"*) y toast.
     - **Botón "Compartir en WhatsApp":** Abre un chat de WhatsApp con un mensaje amigable predeterminado invitando a conocer el catálogo digital y hacer pedidos directos.
     - **Botón "Ver Tienda ↗":** Acceso rápido para previsualizar el catálogo público tal como lo ven los clientes en una nueva pestaña.
+
+
+---
+
+## 17. Hitos Completados — Corrección Analytics, Notificaciones Web en Segundo Plano, Flujo de Aprobación por Detalles y Despacho WhatsApp Dual (2026-11-07)
+
+### ✅ Tareas Ejecutadas y Verificadas:
+
+- [x] **Corrección de Bug / Bucle en Analytics y Órdenes (`ReferenceError` y Re-fetch Cíclico):**
+  - **Diagnóstico:** Al cargar el panel o historial, saltaba el toast *"Error interno cargando analytics"*. En los logs del backend se constató `ReferenceError: getCaracasDateString is not defined at storeController.js:892` debido a una importación faltante desde `utils/dates.js`.
+  - **Resolución:**
+    - Se agregó `getCaracasDateString` al bloque de importación de `backend/controllers/storeController.js`.
+    - En `Dashboard.tsx`, se rompió el ciclo de dependencias entre `storeConfig` y `enqueuePendingAlerts` utilizando una referencia inmutable `storeConfigRef`, ejecutando el `useEffect` principal estrictamente al cambiar de tienda (`[slug]`).
+    - En `OrderHistory.tsx`, se estabilizó la dependencia del `useEffect` a `[slug, user?.id]`.
+
+- [x] **Flujo de Aprobación Seguro: Ver Detalles del Pedido Obligatorio:**
+  - **Requerimiento:** Al llegar un pedido en estado *"Por Validar"* (`AWAITING_PAYMENT`) o *"Nueva"* (`PENDING`), evitar la aprobación apresurada sin inspección de comprobante o ítems.
+  - **Implementación:**
+    - Tanto en la vista de tarjetas como en la vista de tabla de `Dashboard.tsx`, se reemplazaron los botones de aprobación directa por el botón prioritario: **`Ver Detalles del Pedido`** con icono `FileText`.
+    - Al hacer clic, dirige a `/admin/:slug/order/:id` (`OrderDetails.tsx`), donde el administrador visualiza la captura del Pago Móvil, el récipe médico (si aplica), los productos solicitados y la dirección geolocalizada.
+    - Desde esa vista detallada es donde se encuentran los botones de *"Aprobar Pago"*, *"Aceptar Pedido"* o *"Rechazar"*.
+
+- [x] **Notificaciones Push / Web en Segundo Plano y Móvil (Service Worker):**
+  - **Service Worker (`public/sw.js`):** Se creó el service worker para gestionar notificaciones en segundo plano, soporte para navegadores móviles (Android Chrome) y foco automático en la pestaña al hacer clic sobre la notificación.
+  - **Registro automático (`main.tsx`):** Registro seguro del worker al cargar la aplicación.
+  - **Para el Cliente:** En `frontend/src/lib/notifications.ts`, al cambiar el estado del pedido (`estado_actualizado`), si la pestaña está en segundo plano o el cliente tiene otra app abierta, se emite una notificación nativa con vibración y sonido (*"Tu pedido va en camino 🛵💨"*).
+  - **Para el Administrador:** Al llegar un nuevo pedido vía Socket (`nuevo_pedido`), se dispara una notificación nativa urgente (*"🚨 ¡Nuevo Pedido Recibido! #..."*) con el monto y nombre del cliente, permitiendo atender la orden inmediatamente aunque el teléfono esté en otra aplicación.
+
+- [x] **Notificaciones Automáticas de Despacho por WhatsApp (Cliente y Motorizado):**
+  - **Estrategia Anti-Baneo:** Mensajes 100% transaccionales solicitados por el flujo de compra, con técnica Spintax (3 variantes rotadas al azar), presencia de digitación humana (`presence: composing`), retardo natural aleatorio (1.2s - 2.2s) y sanitización estricta de números telefónicos en formato E.164 (`58...`).
+  - **Notificación al Cliente (`sendOrderDispatchedToCustomer`):**
+    - Se envía automáticamente al pasar el pedido a *"En Camino"* (`DISPATCHED`).
+    - Informa el número de pedido, tienda, dirección de entrega, nombre y teléfono del repartidor asignado, y monto/método de pago.
+  - **Asignación al Motorizado (`sendOrderDispatchedToDriver`):**
+    - Se envía automáticamente al motorizado asignado a la orden.
+    - Incluye: datos del cliente y teléfono directo, dirección exacta y punto de referencia, lista detallada de productos, instrucción de cobro (*"⚠️ Cobrar en Efectivo: $X"* o *"✅ Pago Móvil Confirmado"*), y enlace directo de navegación en Google Maps (`https://www.google.com/maps/search/?api=1&query=lat,lng`).

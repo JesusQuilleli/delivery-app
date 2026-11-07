@@ -90,7 +90,7 @@ export default function OrderHistory() {
     api.get(`/stores/${slug}/products?limit=1`).then(res => {
       if (res.data.store) setStoreConfig(res.data.store);
     }).catch(e => console.error(e));
-  }, [slug, navigate, user]);
+  }, [slug, user?.id]);
 
   const deleteOrder = async (id: number) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar permanentemente esta orden del historial?')) {

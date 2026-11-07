@@ -5,6 +5,7 @@ const { formatProductWithStock } = require('../utils/inventory');
 const { normalizeLandingConfig } = require('../utils/landing');
 const { cleanOrphanLandingImages, deleteFromCloudinary } = require('../utils/cloudinaryCleaner');
 const {
+  getCaracasDateString,
   getCaracasStartOfDay,
   getCaracasStartOfMonth,
   parseCaracasDateRange

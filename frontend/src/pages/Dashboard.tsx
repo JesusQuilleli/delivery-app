@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Socket } from 'socket.io-client';
 import { createSocket } from '../lib/socket';
-import { playOrderChime } from '../lib/notifications';
+import { playOrderChime, notifyAdminNewOrder, requestNotificationPermission } from '../lib/notifications';
 import api from '../api';
 import { Bell, MapPin, CheckCircle, Package, Clock, Phone, XCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Truck, User, X, Utensils, Check, Navigation, FileText, MessageSquare, Plus, Sparkles } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -148,9 +148,10 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  // Alerta las órdenes pendientes no vistas que el fetch trae (p. ej. las que
-  // llegaron mientras el admin estaba offline o con el socket desconectado),
-  // igual que si hubieran llegado en vivo, sin duplicar las ya alertadas.
+  const storeConfigRef = useRef<any>(null);
+  storeConfigRef.current = storeConfig;
+
+  // Alerta las órdenes pendientes no vistas que el fetch trae
   const enqueuePendingAlerts = useCallback((orders: Order[]) => {
     const newPending = orders
       .filter(o => isNuevas(o.status) && !o.viewed && !alertedPendingIds.current.has(o.id))
@@ -164,21 +165,15 @@ export default function Dashboard() {
     });
     newPending.forEach(o => alertedPendingIds.current.add(o.id));
 
-    playOrderChime();
+    playOrderChime(true);
     if (audioRef.current) {
       audioRef.current.play().catch(() => {});
     }
 
-    if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
-      newPending.slice(0, 5).forEach((order: Order) => {
-        const notif = new Notification("¡Nuevo Pedido!", {
-          body: `${formatPrice(order.total_amount, storeConfig?.currency)} - ${order.delivery_address.split(' |')[0]}`,
-          icon: '/favicon.ico'
-        });
-        notif.onclick = () => { window.focus(); notif.close(); };
-      });
-    }
-  }, [storeConfig]);
+    newPending.slice(0, 3).forEach((order: Order) => {
+      notifyAdminNewOrder(order, storeConfigRef.current?.currency, slug || '');
+    });
+  }, [slug]);
 
   const fetchOrders = useCallback(async () => {
     if (!slug) return;
@@ -216,14 +211,15 @@ export default function Dashboard() {
     }
   }, [slug]);
 
+  // Ejecución limpia sin bucles al montar o cambiar de tienda
   useEffect(() => {
     fetchOrders();
     fetchStoreConfig();
     fetchDrivers();
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      requestNotificationPermission();
     }
-  }, [fetchOrders, fetchStoreConfig, fetchDrivers]);
+  }, [slug]);
 
   useEffect(() => {
     if (!storeId) return;
@@ -255,19 +251,14 @@ export default function Dashboard() {
       socket.on('nuevo_pedido', (order: Order) => {
         setOrders(prev => [order, ...prev]);
         setAlertQueue(prev => [...prev, order]);
+        alertedPendingIds.current.add(order.id);
 
-        playOrderChime();
+        playOrderChime(true);
         if (audioRef.current) {
           audioRef.current.play().catch(() => {});
         }
 
-        if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
-          const notif = new Notification("¡Nuevo Pedido!", {
-            body: `${formatPrice(order.total_amount, storeConfig?.currency)} - ${order.delivery_address.split(' |')[0]}`,
-            icon: '/favicon.ico'
-          });
-          notif.onclick = () => { window.focus(); notif.close(); };
-        }
+        notifyAdminNewOrder(order, storeConfigRef.current?.currency, slug || '');
       });
 
       socket.on('pedido_actualizado', (updatedOrder: Order) => {
@@ -872,25 +863,10 @@ export default function Dashboard() {
                           </TableCell>
                           <TableCell className="text-right align-top py-3">
                             <div className="flex items-center justify-end gap-1.5">
-                              {order.status === 'AWAITING_PAYMENT' && (
-                                <>
-                                  <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 font-bold rounded-lg h-8 px-2" onClick={(e) => { e.stopPropagation(); handleQuickReject(order); }}>
-                                    <XCircle size={14} />
-                                  </Button>
-                                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 font-bold rounded-lg h-8 px-3 text-xs" onClick={(e) => { e.stopPropagation(); handleQuickApprove(order.id); }}>
-                                    <CheckCircle size={14} className="mr-1" /> Aprobar Pago
-                                  </Button>
-                                </>
-                              )}
-                              {order.status === 'PENDING' && (
-                                <>
-                                  <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 font-bold rounded-lg h-8 px-2" onClick={(e) => { e.stopPropagation(); handleQuickReject(order); }}>
-                                    <XCircle size={14} />
-                                  </Button>
-                                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 font-bold rounded-lg h-8 px-3 text-xs" onClick={(e) => { e.stopPropagation(); handleQuickApprove(order.id); }}>
-                                    <CheckCircle size={14} className="mr-1" /> Aprobar
-                                  </Button>
-                                </>
+                              {(order.status === 'AWAITING_PAYMENT' || order.status === 'PENDING') && (
+                                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg h-8 px-3 text-xs shadow-sm flex items-center" onClick={(e) => { e.stopPropagation(); navigate(`/admin/${slug}/order/${order.id}`); }}>
+                                  <FileText size={14} className="mr-1.5" /> Ver Detalles
+                                </Button>
                               )}
                               {order.status === 'ACCEPTED' && (
                                 <Button size="sm" className="bg-purple-600 hover:bg-purple-700 font-bold rounded-lg h-8 px-3 text-xs shadow-sm shadow-purple-500/20" onClick={(e) => { e.stopPropagation(); handleDispatch(order); }}>
@@ -1074,24 +1050,10 @@ export default function Dashboard() {
                       </div>
                     </CardContent>
                     <CardFooter className="p-3 bg-muted/30 border-t border-border">
-                      {order.status === 'AWAITING_PAYMENT' ? (
-                        <div className="flex gap-2 w-full">
-                          <Button variant="outline" size="sm" className="flex-1 font-bold text-red-600 border-red-200 hover:bg-red-50 rounded-lg" onClick={() => handleQuickReject(order)}>
-                            <XCircle size={14} className="mr-1" /> Rechazar
-                          </Button>
-                          <Button size="sm" className="flex-[2] font-bold bg-blue-600 hover:bg-blue-700 rounded-lg" onClick={() => handleQuickApprove(order.id)}>
-                            <CheckCircle size={14} className="mr-1" /> Aprobar Pago
-                          </Button>
-                        </div>
-                      ) : order.status === 'PENDING' ? (
-                        <div className="flex gap-2 w-full">
-                          <Button variant="outline" size="sm" className="flex-1 font-bold text-red-600 border-red-200 hover:bg-red-50 rounded-lg" onClick={() => handleQuickReject(order)}>
-                            <XCircle size={14} className="mr-1" /> Rechazar
-                          </Button>
-                          <Button size="sm" className="flex-[2] font-bold bg-emerald-600 hover:bg-emerald-700 rounded-lg" onClick={() => handleQuickApprove(order.id)}>
-                            <CheckCircle size={14} className="mr-1" /> Aprobar
-                          </Button>
-                        </div>
+                      {(order.status === 'AWAITING_PAYMENT' || order.status === 'PENDING') ? (
+                        <Button size="sm" className="w-full font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg h-9 text-xs shadow-sm flex items-center justify-center" onClick={() => navigate(`/admin/${slug}/order/${order.id}`)}>
+                          <FileText size={14} className="mr-1.5" /> Ver Detalles del Pedido
+                        </Button>
                       ) : order.status === 'ACCEPTED' ? (
                         <div className="flex gap-2 w-full">
                           <Button size="sm" className="flex-1 font-bold bg-purple-600 hover:bg-purple-700 rounded-lg shadow-sm shadow-purple-500/20" onClick={() => handleDispatch(order)}>

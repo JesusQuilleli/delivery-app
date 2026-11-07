@@ -2,6 +2,7 @@ const { Prisma } = require('@prisma/client');
 const prisma = require('../prismaClient');
 const { resolveDeliveryFee, isInsidePuertoAyacucho } = require('../services/deliveryService');
 const { buildStockBreakdown, restoreOrderStock } = require('../services/orderStockService');
+const { sendOrderDispatchedToCustomer, sendOrderDispatchedToDriver } = require('../services/whatsappService');
 
 const validTransitions = {
   'AWAITING_PAYMENT': ['PENDING', 'CANCELLED'],
@@ -359,6 +360,30 @@ const updateOrderStatus = async (req, res) => {
     io.to(`client_${order.user_id}`).emit('estado_actualizado', order);
     io.to(`order_${order.id}`).emit('estado_actualizado', order);
     io.to(`store_${order.store_id}`).emit('pedido_actualizado', order);
+
+    // F2-33: Notificaciones automáticas por WhatsApp al cliente y al motorizado al despachar
+    if (status === 'DISPATCHED') {
+      try {
+        const store = await prisma.store.findUnique({
+          where: { id: order.store_id },
+          select: { name: true, phone: true, currency: true }
+        });
+
+        if (order.user && order.user.phone) {
+          sendOrderDispatchedToCustomer(order, store).catch(err => {
+            console.error('[WHATSAPP] Error notificando cliente:', err.message);
+          });
+        }
+
+        if (order.driver && order.driver.phone) {
+          sendOrderDispatchedToDriver(order, store, order.driver).catch(err => {
+            console.error('[WHATSAPP] Error enviando asignación a motorizado:', err.message);
+          });
+        }
+      } catch (dispatchErr) {
+        console.error('[WHATSAPP] Error en despacho de mensajes:', dispatchErr.message);
+      }
+    }
 
     res.json({ message: 'Estado actualizado', order });
   } catch (error) {
@@ -851,6 +876,25 @@ const batchUpdateStatus = async (req, res) => {
       io.to(`client_${order.user_id}`).emit('estado_actualizado', order);
       io.to(`order_${order.id}`).emit('estado_actualizado', order);
       io.to(`store_${order.store_id}`).emit('pedido_actualizado', order);
+    }
+
+    if (status === 'DISPATCHED') {
+      for (const order of updatedOrders) {
+        try {
+          const store = await prisma.store.findUnique({
+            where: { id: order.store_id },
+            select: { name: true, phone: true, currency: true }
+          });
+          if (order.user && order.user.phone) {
+            sendOrderDispatchedToCustomer(order, store).catch(() => {});
+          }
+          if (order.driver && order.driver.phone) {
+            sendOrderDispatchedToDriver(order, store, order.driver).catch(() => {});
+          }
+        } catch (e) {
+          console.error('[WHATSAPP_BATCH] Error despachando WhatsApp:', e.message);
+        }
+      }
     }
 
     res.json({ message: `${result.count} pedidos actualizados`, updated: result.count, failed: [...deniedIds, ...invalidTransitionIds] });
