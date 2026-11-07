@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TiendaFast Delivery - Flyer Promocional</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f172a;
+      color: #1e293b;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+    .flyer {
+      width: 210mm;
+      min-height: 297mm;
+      background: #ffffff;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Fondo decorativo geométrico */
+    .bg-shape-1 {
+      position: absolute;
+      top: -80px;
+      right: -80px;
+      width: 380px;
+      height: 380px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(255,255,255,0) 70%);
+      border-radius: 50%;
+      z-index: 1;
+    }
+    .bg-shape-2 {
+      position: absolute;
+      bottom: -100px;
+      left: -100px;
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(249, 115, 22, 0.12) 0%, rgba(255,255,255,0) 70%);
+      border-radius: 50%;
+      z-index: 1;
+    }
+
+    /* HEADER */
+    .header {
+      background: linear-gradient(135deg, #064e3b 0%, #047857 55%, #059669 100%);
+      color: white;
+      padding: 36px 36px 28px;
+      position: relative;
+      z-index: 2;
+      clip-path: polygon(0 0, 100% 0, 100% 92%, 0 100%);
+    }
+    .brand-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 8px 16px rgba(234, 88, 12, 0.4);
+    }
+    .logo-text {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+    }
+    .logo-text span {
+      color: #fdba74;
+    }
+    .location-badge {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      backdrop-filter: blur(8px);
+    }
+    .headline {
+      font-size: 34px;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+      color: #ffffff;
+    }
+    .headline span {
+      background: linear-gradient(90deg, #fdba74 0%, #fb923c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subheadline {
+      font-size: 15px;
+      line-height: 1.5;
+      color: #d1fae5;
+      max-width: 90%;
+      font-weight: 500;
+    }
+
+    /* BODY CONTAINER */
+    .body-content {
+      padding: 24px 36px;
+      position: relative;
+      z-index: 2;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* GRID BENEFICIOS */
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .benefit-card {
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 16px 14px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .benefit-card.highlight {
+      background: #ecfdf5;
+      border-color: #6ee7b7;
+    }
+    .b-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+      display: inline-block;
+    }
+    .b-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+    .b-desc {
+      font-size: 11px;
+      line-height: 1.4;
+      color: #64748b;
+    }
+
+    /* HERO SHOWCASE / FEATURES */
+    .showcase-banner {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius: 20px;
+      padding: 20px 24px;
+      color: white;
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 20px;
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 12px 24px -6px rgba(15, 23, 42, 0.25);
+    }
+    .showcase-text h3 {
+      font-size: 18px;
+      font-weight: 900;
+      margin-bottom: 10px;
+      color: #f8fafc;
+    }
+    .showcase-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .showcase-features li {
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #cbd5e1;
+    }
+    .check-badge {
+      width: 18px;
+      height: 18px;
+      background: #10b981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: white;
+      font-weight: bold;
+      shrink: 0;
+    }
+    .showcase-mock {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 14px;
+      color: #0f172a;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    .mock-tag {
+      display: inline-block;
+      background: #ffedd5;
+      color: #c2410c;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 12px;
+      margin-bottom: 6px;
+    }
+    .mock-title {
+      font-size: 14px;
+      font-weight: 900;
+      margin-bottom: 4px;
+    }
+    .mock-meta {
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 10px;
+    }
+    .mock-pill {
+      background: #059669;
+      color: white;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 8px;
+      display: inline-block;
+    }
+
+    /* SECTION COMERCIOS */
+    .industries-strip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f1f5f9;
+      border-radius: 14px;
+      padding: 10px 18px;
+    }
+    .ind-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #334155;
+    }
+
+    /* PRICING PLANS */
+    .pricing-wrap {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .price-col {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 14px 12px;
+      text-align: center;
+      background: #ffffff;
+      position: relative;
+    }
+    .price-col.popular {
+      border-color: #059669;
+      background: #f0fdf4;
+      box-shadow: 0 6px 16px rgba(5, 150, 105, 0.15);
+    }
+    .pop-badge {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #059669;
+      color: white;
+      font-size: 9px;
+      font-weight: 900;
+      padding: 2px 10px;
+      border-radius: 10px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .plan-name {
+      font-size: 12px;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .price-val {
+      font-size: 24px;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    .price-val span {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+    }
+    .plan-cap {
+      font-size: 10px;
+      font-weight: 700;
+      color: #059669;
+      margin-bottom: 8px;
+    }
+    .plan-desc {
+      font-size: 10px;
+      color: #64748b;
+      line-height: 1.35;
+    }
+
+    /* FOOTER CTA */
+    .footer-cta {
+      background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+      color: white;
+      padding: 20px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+    .cta-text h4 {
+      font-size: 19px;
+      font-weight: 900;
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+    }
+    .cta-text p {
+      font-size: 12px;
+      opacity: 0.95;
+    }
+    .cta-contacts {
+      text-align: right;
+    }
+    .cta-badge-phone {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #ffffff;
+      color: #c2410c;
+      font-size: 14px;
+      font-weight: 900;
+      padding: 8px 16px;
+      border-radius: 10px;
+      margin-bottom: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .cta-sub {
+      font-size: 11px;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="flyer">
+    <div class="bg-shape-1"></div>
+    <div class="bg-shape-2"></div>
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="brand-bar">
+        <div class="logo-wrap">
+          <div class="logo-icon">⚡</div>
+          <div class="logo-text">Tienda<span>Fast</span></div>
+        </div>
+        <div class="location-badge">📍 Puerto Ayacucho</div>
+      </div>
+      <h1 class="headline">¡Lleva tu Negocio al <span>Delivery Online</span> Sin Comisiones!</h1>
+      <p class="subheadline">Tu propia tienda digital interactiva para recibir pedidos directos a tu WhatsApp y panel en tiempo real, cobrando por Pago Móvil en Bolívares.</p>
+    </header>
+
+    <!-- CONTENT -->
+    <div class="body-content">
+      
+      <!-- BENEFICIOS CLAVE -->
+      <div class="benefits-grid">
+        <div class="benefit-card highlight">
+          <span class="b-icon">💰</span>
+          <h4 class="b-title">0% Comisiones</h4>
+          <p class="b-desc">Conserva el 100% de tus ventas. Tarifa plana mensual sin sorpresas.</p>
+        </div>
+        <div class="benefit-card highlight">
+          <span class="b-icon">📲</span>
+          <h4 class="b-title">Login con WhatsApp</h4>
+          <p class="b-desc">Tus clientes piden en 3 clics con código OTP sin crear contraseñas.</p>
+        </div>
+        <div class="benefit-card highlight">
+          <span class="b-icon">🧾</span>
+          <h4 class="b-title">Pago Móvil + OCR</h4>
+          <p class="b-desc">Lectura inteligente de comprobantes para evitar pagos incompletos.</p>
+        </div>
+      </div>
+
+      <!-- SHOWCASE -->
+      <div class="showcase-banner">
+        <div class="showcase-text">
+          <h3>¿Qué incluye tu plataforma?</h3>
+          <ul class="showcase-features">
+            <li><span class="check-badge">✓</span> Catálogo digital con fotos, precios y combos</li>
+            <li><span class="check-badge">✓</span> Panel administrativo con alerta sonora de pedidos</li>
+            <li><span class="check-badge">✓</span> Cálculo exacto de delivery por km en Municipio Atures</li>
+            <li><span class="check-badge">✓</span> Enlace web personalizado para tus redes y WhatsApp</li>
+          </ul>
+        </div>
+        <div class="showcase-mock">
+          <span class="mock-tag">EN VIVO EN PUERTO AYACUCHO</span>
+          <h4 class="mock-title">tiendafast.com/tu-negocio</h4>
+          <p class="mock-meta">Entrega estimada: 30 - 45 min</p>
+          <div class="mock-pill">🛵 Delivery Activo</div>
+        </div>
+      </div>
+
+      <!-- COMERCIOS COMPATIBLES -->
+      <div class="industries-strip">
+        <div class="ind-item">🍔 Restaurantes & Fast Food</div>
+        <div class="ind-item">💊 Farmacias & Salud</div>
+        <div class="ind-item">🛒 Bodegones & Víveres</div>
+        <div class="ind-item">🍕 Pizzerías & Snacks</div>
+      </div>
+
+      <!-- PLANES COMERCIALES -->
+      <div>
+        <p style="text-align: center; font-size: 13px; font-weight: 800; color: #475569; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+          Planes diseñados para crecer en el mercado local
+        </p>
+        <div class="pricing-wrap">
+          <div class="price-col">
+            <p class="plan-name">Emprendedor</p>
+            <p class="price-val">$9<span>/mes</span></p>
+            <p class="plan-cap">Hasta 50 productos</p>
+            <p class="plan-desc">Ideal para pequeños negocios y puestos de comida rápida.</p>
+          </div>
+          <div class="price-col popular">
+            <span class="pop-badge">Más Recomendado</span>
+            <p class="plan-name" style="color: #059669;">Negocio</p>
+            <p class="price-val" style="color: #059669;">$19<span>/mes</span></p>
+            <p class="plan-cap">Hasta 250 productos</p>
+            <p class="plan-desc">Combos ilimitados, múltiples zonas de reparto y reportes de ventas.</p>
+          </div>
+          <div class="price-col">
+            <p class="plan-name">Pro / Cadena</p>
+            <p class="price-val">$35<span>/mes</span></p>
+            <p class="plan-cap">Hasta 1000 productos</p>
+            <p class="plan-desc">Multi-sucursal, control de motorizados y soporte VIP.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER CTA -->
+    <footer class="footer-cta">
+      <div class="cta-text">
+        <h4>🎁 ¡15 Días de Prueba Gratuita!</h4>
+        <p>Te configuramos tu tienda hoy mismo en menos de 10 minutos.</p>
+      </div>
+      <div class="cta-contacts">
+        <div class="cta-badge-phone">
+          💬 WhatsApp: +58 416-1804831
+        </div>
+        <p class="cta-sub">Atención directa y soporte en Puerto Ayacucho</p>
+      </div>
+    </footer>
+  </div>
+
+</body>
+</html>
