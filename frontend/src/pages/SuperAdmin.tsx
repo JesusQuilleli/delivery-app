@@ -26,6 +26,7 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  Trash2,
   MessageSquare,
   Mail
 } from 'lucide-react';
@@ -184,6 +185,24 @@ export default function SuperAdmin() {
       toast.error(err.response?.data?.error || 'Error al restablecer contraseña');
     }
     setResettingId(null);
+  };
+
+  const handleDeleteStore = async (store: StoreItem) => {
+    const confirmMsg = `¿ESTÁS SEGURO de eliminar permanentemente la tienda "${store.name}"?\n\nEsta acción borrará:\n- Todo su catálogo y categorías\n- Todos sus pedidos y cotizaciones\n- Suscriptores, repartidores y usuarios\n\nEscribe el slug "${store.slug}" para confirmar la eliminación:`;
+    const input = window.prompt(confirmMsg);
+    if (!input) return;
+    if (input.trim() !== store.slug.trim()) {
+      toast.error('El slug no coincide. Eliminación cancelada.');
+      return;
+    }
+    try {
+      await api.delete(`/superadmin/stores/${store.id}`);
+      toast.success(`Tienda "${store.name}" eliminada permanentemente`);
+      fetchSubscriptions();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.error || 'Error al eliminar la tienda');
+    }
   };
 
   const toggleStatus = async (id: number) => {
@@ -561,7 +580,7 @@ export default function SuperAdmin() {
 
                             <TableCell>
                               <Badge variant="outline" className="font-black text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
-                                {store.plan} (${store.plan_price}/m)
+                                {store.plan}
                               </Badge>
                               {store.product_usage && (
                                 <div className="mt-1.5 w-28">
@@ -659,10 +678,21 @@ export default function SuperAdmin() {
                                   variant={store.is_active ? "destructive" : "default"} 
                                   size="sm" 
                                   onClick={() => toggleStatus(store.id)}
-                                  className="h-8 px-2 text-xs font-bold"
+                                  className={`h-8 px-2 text-xs font-bold ${!store.is_active ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                                  title={store.is_active ? 'Suspender tienda' : 'Reactivar tienda'}
                                 >
                                   <Power size={12} className="mr-1" />
-                                  {store.is_active ? 'Pausar' : 'Activar'}
+                                  {store.is_active ? 'Suspender' : 'Reactivar'}
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => handleDeleteStore(store)}
+                                  className="h-8 px-2 text-xs font-bold border-rose-300 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                                  title="Eliminar tienda permanentemente"
+                                >
+                                  <Trash2 size={12} className="mr-1" />
+                                  Eliminar
                                 </Button>
                               </div>
                             </TableCell>

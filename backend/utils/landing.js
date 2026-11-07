@@ -12,7 +12,10 @@ const ALLOWED_SECTIONS = [
 const ALLOWED_LAYOUT_VARIANTS = [
   'hero_split',
   'minimal_banner',
-  'grid_showcase'
+  'grid_showcase',
+  'clean_catalog',
+  'story_reel',
+  'magazine_editorial'
 ];
 
 class LandingValidationError extends Error {

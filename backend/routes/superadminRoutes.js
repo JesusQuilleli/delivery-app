@@ -7,6 +7,7 @@ const {
   triggerSubscriptionLifecycleCheck,
   createStore,
   toggleStoreStatus,
+  deleteStore,
   getSubscriptions,
   updateStoreSubscription,
   recordSubscriptionPayment,
@@ -17,6 +18,7 @@ const { adminLimiter } = require('../middleware/rateLimiter');
 router.get('/stores', adminLimiter, requireSuperAdmin, getStores);
 router.post('/stores', adminLimiter, requireSuperAdmin, createStore);
 router.put('/stores/:id/status', adminLimiter, requireSuperAdmin, toggleStoreStatus);
+router.delete('/stores/:id', adminLimiter, requireSuperAdmin, deleteStore);
 router.post('/stores/:id/reset-password', adminLimiter, requireSuperAdmin, resetStoreAdminPassword);
 
 // Rutas SaaS de Suscripciones y Pagos (Fase 2B)

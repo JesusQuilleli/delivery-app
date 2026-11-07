@@ -43,7 +43,7 @@ export default function Layout() {
             className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition"
             onClick={() => navigate(`/${slug}`)}
           >
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-inner">
+            <div className="w-10 h-10 bg-primary text-primary-foreground rounded-xl flex items-center justify-center shadow-md">
               <Store className="text-white" size={20} />
             </div>
             <h1 className="text-xl font-black tracking-tight text-gray-900 capitalize hidden sm:block">
@@ -67,7 +67,7 @@ export default function Layout() {
             {!isCheckout && (
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="relative p-2 text-gray-600 hover:text-orange-500 transition-colors"
+                className="relative p-2 text-gray-600 hover:text-primary transition-colors"
               >
                 <ShoppingCart size={28} />
                 {cartItemsCount > 0 && (
@@ -105,7 +105,7 @@ export default function Layout() {
           <div className="relative w-full max-w-full sm:max-w-md h-full bg-white shadow-2xl flex flex-col">
             <div className="p-4 sm:p-6 border-b flex justify-between items-center bg-gray-50/50">
               <h2 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-2 tracking-tight">
-                <ShoppingCart size={24} className="text-orange-500" /> Mi Pedido
+                <ShoppingCart size={24} className="text-primary" /> Mi Pedido
               </h2>
               <button onClick={() => setIsCartOpen(false)} className="p-2 text-gray-400 hover:text-gray-900 bg-white rounded-full hover:bg-gray-100 border shadow-sm transition">
                 <X size={20} />
@@ -127,13 +127,13 @@ export default function Layout() {
               ) : (
                 cart.map(item => (
                   <div key={item.product_id} className="flex gap-4 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm items-center hover:shadow-md transition">
-                    <div className="w-16 h-16 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-orange-100">
-                      <Store className="text-orange-500/50" size={24} />
+                    <div className="w-16 h-16 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 border border-primary/20">
+                      <Store className="text-primary" size={24} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-bold text-gray-900 leading-tight truncate">{item.name}</h4>
                       <div className="flex items-center justify-between gap-2 mt-2">
-                        <span className="text-sm font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
+                        <span className="text-sm font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
                           {item.quantity} x {formatPrice(item.unit_price, storeConfig?.currency)}
                         </span>
                         <span className="font-black text-gray-900 text-base sm:text-lg shrink-0 whitespace-nowrap">
@@ -161,7 +161,7 @@ export default function Layout() {
                 <Button
                   variant="default"
                   onClick={goToCheckout}
-                  className="w-full h-14 sm:h-16 text-lg sm:text-xl font-black shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 rounded-2xl"
+                  className="w-full h-14 sm:h-16 text-lg sm:text-xl font-black shadow-lg bg-primary text-primary-foreground shadow-primary/20 hover:shadow-primary/30 rounded-2xl"
                 >
                   Proceder al Pago
                 </Button>

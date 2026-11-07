@@ -20,7 +20,10 @@ const FIELD_LABELS: Record<string, string> = {
 const LAYOUT_LABELS: Record<string, string> = {
   hero_split: 'Hero Split (Moderno Gastronómico)',
   minimal_banner: 'Banner Showcase (Marketplace Promocional)',
-  grid_showcase: 'Grid Gourmet (Vitrina Directa)'
+  grid_showcase: 'Grid Gourmet (Vitrina Directa)',
+  clean_catalog: 'Boutique Elegante (Minimalista)',
+  story_reel: 'Stories App (Visual Móvil)',
+  magazine_editorial: 'Editorial Gourmet (Dark Mode)'
 };
 
 const SECTION_LABELS: Record<string, string> = {

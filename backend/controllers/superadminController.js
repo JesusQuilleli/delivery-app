@@ -478,7 +478,77 @@ const resetStoreAdminPassword = async (req, res) => {
   }
 };
 
+
+const deleteStore = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const store = await prisma.store.findUnique({
+      where: { id: Number(id) }
+    });
+    if (!store) {
+      return res.status(404).json({ error: 'Tienda no encontrada' });
+    }
+
+    const actor = req.user?.username || req.user?.name || 'SUPERADMIN';
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Eliminar ítems de órdenes de la tienda
+      await tx.orderItem.deleteMany({
+        where: { order: { store_id: Number(id) } }
+      });
+      // 2. Eliminar órdenes
+      await tx.order.deleteMany({
+        where: { store_id: Number(id) }
+      });
+      // 3. Eliminar cotizaciones de récipe
+      await tx.prescriptionQuote.deleteMany({
+        where: { store_id: Number(id) }
+      });
+      // 4. Eliminar combo items de productos de esta tienda
+      await tx.comboItem.deleteMany({
+        where: { product: { store_id: Number(id) } }
+      });
+      // 5. Eliminar productos
+      await tx.product.deleteMany({
+        where: { store_id: Number(id) }
+      });
+      // 6. Eliminar categorías
+      await tx.category.deleteMany({
+        where: { store_id: Number(id) }
+      });
+      // 7. Eliminar motorizados
+      await tx.driver.deleteMany({
+        where: { store_id: Number(id) }
+      });
+      // 8. Eliminar zonas de entrega
+      await tx.deliveryZone.deleteMany({
+        where: { store_id: Number(id) }
+      });
+      // 9. Eliminar clientes registrados en la tienda
+      await tx.storeCustomer.deleteMany({
+        where: { store_id: Number(id) }
+      });
+      // 10. Eliminar usuarios de la tienda (no superadmins)
+      await tx.user.deleteMany({
+        where: { store_id: Number(id), role: { not: 'SUPERADMIN' } }
+      });
+      // 11. Eliminar la tienda
+      await tx.store.delete({
+        where: { id: Number(id) }
+      });
+    }, { maxWait: 15000, timeout: 30000 });
+
+    console.log(`[AUDIT] STORE_DELETED: Tienda '${store.name}' (ID: ${store.id}, Slug: '${store.slug}') eliminada por ${actor}.`);
+
+    res.json({ success: true, message: `Tienda '${store.name}' eliminada correctamente.` });
+  } catch (error) {
+    console.error('Error eliminando tienda:', error);
+    res.status(500).json({ error: 'Error interno al eliminar la tienda: ' + error.message });
+  }
+};
+
 module.exports = {
+  deleteStore,
   resetStoreAdminPassword,
   triggerSubscriptionLifecycleCheck,
   getStores,

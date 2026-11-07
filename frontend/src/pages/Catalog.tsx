@@ -25,6 +25,7 @@ interface Product {
   description?: string | null;
   category_id?: number | null;
   stock?: number | null;
+  is_available?: boolean;
   requires_prescription?: boolean;
   prescription_type?: string;
 }
@@ -270,7 +271,7 @@ export default function Catalog() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
                 {products.map(p => {
                   const qty = getProductQuantity(p.id);
-                  const soldOut = p.stock != null && p.stock <= 0;
+                  const soldOut = p.is_available === false || (p.stock != null && p.stock <= 0);
                   const maxed = p.stock != null && qty >= p.stock;
                 return (
                   <Card key={p.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 border-border group flex flex-col h-full bg-card">
@@ -298,7 +299,7 @@ export default function Catalog() {
                         </div>
                       )}
                       {p.image_url ? (
-                        <img src={p.image_url} alt={p.name} className="w-full h-full object-contain mix-blend-multiply" />
+                        <img src={p.image_url} alt={p.name} className={`w-full h-full object-contain mix-blend-multiply ${soldOut ? "opacity-35 grayscale" : ""}`} />
                       ) : (
                         <img src="https://placehold.co/400x400/f8fafc/94a3b8?text=Sin+Imagen" alt={p.name} className="w-full h-full object-contain mix-blend-multiply opacity-50" />
                       )}

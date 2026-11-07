@@ -53,7 +53,7 @@ export default function ProductDetails() {
   }, []);
 
   const qty = product ? (cart.find(i => i.product_id === product.id)?.quantity || 0) : 0;
-  const soldOut = product?.stock != null && product.stock <= 0;
+  const soldOut = product?.is_available === false || (product?.stock != null && product.stock <= 0);
   const maxed = product?.stock != null && qty >= product.stock;
 
   if (loading) {

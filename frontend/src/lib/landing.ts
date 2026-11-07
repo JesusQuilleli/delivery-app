@@ -1,4 +1,10 @@
-export type LandingLayoutVariant = 'hero_split' | 'minimal_banner' | 'grid_showcase';
+export type LandingLayoutVariant =
+  | 'hero_split'
+  | 'minimal_banner'
+  | 'grid_showcase'
+  | 'clean_catalog'
+  | 'story_reel'
+  | 'magazine_editorial';
 
 export interface LandingBanner {
   id: string;
@@ -46,27 +52,70 @@ export const LANDING_SECTION_OPTIONS: { key: keyof LandingSections; label: strin
   { key: 'contact', label: 'Contacto', description: 'WhatsApp, ubicación y formulario.' }
 ];
 
-export const LANDING_LAYOUT_OPTIONS: { value: LandingLayoutVariant; label: string; description: string; badge: string; icon: string }[] = [
+export interface LandingLayoutOption {
+  value: LandingLayoutVariant;
+  label: string;
+  description: string;
+  badge: string;
+  icon: string;
+  minPlan: 'EMPRENDEDOR' | 'NEGOCIO' | 'PRO';
+  minPlanLabel: string;
+}
+
+export const LANDING_LAYOUT_OPTIONS: LandingLayoutOption[] = [
   {
     value: 'hero_split',
     label: 'Hero Split (Moderno Gastronómico)',
     description: 'Titular de impacto y plato estrella flotante con halo dinámico. Estilo restaurante moderno.',
-    badge: 'Popular',
-    icon: '🍔'
+    badge: 'Incluido en todos',
+    icon: '🍔',
+    minPlan: 'EMPRENDEDOR',
+    minPlanLabel: 'Plan Emprendedor'
   },
   {
     value: 'minimal_banner',
     label: 'Banner Showcase (Marketplace Promocional)',
     description: 'Gran banner ancho panorámico con buscador rápido y franja de ofertas destacadas en cuadrícula.',
-    badge: 'Delivery Rápido',
-    icon: '🛵'
+    badge: 'Plan Negocio',
+    icon: '🛵',
+    minPlan: 'NEGOCIO',
+    minPlanLabel: 'Plan Negocio'
   },
   {
     value: 'grid_showcase',
     label: 'Grid Gourmet (Vitrina Directa)',
-    description: 'Enfoque directo en combos y productos más vendidos con insignias de ahorro y banners intercalados.',
-    badge: 'Catálogo Visual',
-    icon: '✨'
+    description: 'Enfoque directo en combos y productos más pedidos con insignias de ahorro y banners intercalados.',
+    badge: 'Plan Negocio',
+    icon: '🍱',
+    minPlan: 'NEGOCIO',
+    minPlanLabel: 'Plan Negocio'
+  },
+  {
+    value: 'clean_catalog',
+    label: 'Boutique Elegante (Minimalista)',
+    description: 'Diseño sobrio y refinado con tipografía moderna, navegación limpia por pestañas y tarjetas despejadas.',
+    badge: 'Corporativo',
+    icon: '✨',
+    minPlan: 'PRO',
+    minPlanLabel: 'Plan Corporativo'
+  },
+  {
+    value: 'story_reel',
+    label: 'Stories App (Visual Móvil)',
+    description: 'Barra superior interactiva de burbujas circulares estilo Instagram Stories para ofertas del día y combos.',
+    badge: 'Corporativo',
+    icon: '📱',
+    minPlan: 'PRO',
+    minPlanLabel: 'Plan Corporativo'
+  },
+  {
+    value: 'magazine_editorial',
+    label: 'Editorial Gourmet (Dark Mode)',
+    description: 'Estilo revista culinaria de lujo con contrastes visuales de alto impacto y vitrina fotográfica a sangre.',
+    badge: 'Corporativo',
+    icon: '🥂',
+    minPlan: 'PRO',
+    minPlanLabel: 'Plan Corporativo'
   }
 ];
 

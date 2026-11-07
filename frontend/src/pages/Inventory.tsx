@@ -104,6 +104,7 @@ export default function Inventory() {
   const [newProductPrice, setNewProductPrice] = useState('');
   const [newProductDesc, setNewProductDesc] = useState('');
   const [newProductStock, setNewProductStock] = useState('');
+  const [newProductAvailable, setNewProductAvailable] = useState<boolean>(true);
   const [newProductImage, setNewProductImage] = useState('');
   const [newProductCategoryId, setNewProductCategoryId] = useState<number | ''>('');
   const [newPrescriptionType, setNewPrescriptionType] = useState<'NONE' | 'SHOW_ONLY' | 'RETAIN_ORIGINAL'>('NONE');
@@ -126,6 +127,7 @@ export default function Inventory() {
   const [editProductPrice, setEditProductPrice] = useState('');
   const [editProductDesc, setEditProductDesc] = useState('');
   const [editProductStock, setEditProductStock] = useState('');
+  const [editProductAvailable, setEditProductAvailable] = useState<boolean>(true);
   const [editProductImage, setEditProductImage] = useState('');
   const [editProductCategoryId, setEditProductCategoryId] = useState<number | ''>('');
   const [editPrescriptionType, setEditPrescriptionType] = useState<'NONE' | 'SHOW_ONLY' | 'RETAIN_ORIGINAL'>('NONE');
@@ -272,9 +274,9 @@ export default function Inventory() {
         name: newProductName,
         price: parseFloat(newProductPrice),
         description: newProductDesc,
-        stock: newProductStock !== '' ? parseInt(newProductStock) : null,
+        stock: null,
         image_url: newProductImage,
-        is_available: true,
+        is_available: newProductAvailable,
         category_id: newProductCategoryId ? Number(newProductCategoryId) : null
       };
       if (isPharmacy) {
@@ -287,7 +289,7 @@ export default function Inventory() {
       setProducts([res.data.product, ...products]);
       setIsAddProductOpen(false);
       // Reset
-      setNewProductName(''); setNewProductPrice(''); setNewProductDesc(''); setNewProductStock(''); setNewProductImage(''); setNewProductCategoryId('');
+      setNewProductName(''); setNewProductPrice(''); setNewProductDesc(''); setNewProductStock(''); setNewProductAvailable(true); setNewProductImage(''); setNewProductCategoryId('');
       setNewPrescriptionType('NONE'); setNewLotNumber(''); setNewExpiresAt('');
       toast.success("Producto creado exitosamente");
     } catch (error: any) {
@@ -418,6 +420,7 @@ export default function Inventory() {
     setEditProductPrice(p.price.toString());
     setEditProductDesc(p.description || '');
     setEditProductStock(p.stock !== null && p.stock !== undefined ? p.stock.toString() : '');
+    setEditProductAvailable(p.is_available !== false);
     setEditProductImage(p.image_url || '');
     setEditProductCategoryId(p.category_id || '');
     setEditPrescriptionType((p.prescription_type as any) || (p.requires_prescription ? 'RETAIN_ORIGINAL' : 'NONE'));
@@ -434,7 +437,8 @@ export default function Inventory() {
         name: editProductName,
         price: parseFloat(editProductPrice),
         description: editProductDesc,
-        stock: editProductStock !== '' ? parseInt(editProductStock) : null,
+        stock: null,
+        is_available: editProductAvailable,
         image_url: editProductImage,
         category_id: editProductCategoryId ? Number(editProductCategoryId) : null,
         prescription_type: editPrescriptionType,
@@ -857,20 +861,17 @@ export default function Inventory() {
                       ) : (
                         <span className="text-xs text-gray-400 font-bold">-</span>
                       )}
-                      {p.stock === null ? (
-                        <span className="text-xs font-semibold text-gray-400">Stock: Ilimitado</span>
-                      ) : p.stock <= 0 ? (
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs font-bold">Agotado (0)</Badge>
-                      ) : p.stock <= 5 ? (
-                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs font-bold">Bajo stock ({p.stock})</Badge>
-                      ) : (
-                        <span className="text-xs font-semibold text-gray-600">Stock: {p.stock}</span>
-                      )}
                       <button
                         onClick={() => toggleAvailability(p.id, p.is_available)}
-                        className={`px-2.5 py-1 text-xs font-bold rounded-full transition-colors ${p.is_available ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full transition-all border ${
+                          p.is_available 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' 
+                            : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100'
+                        }`}
+                        title="Toca para cambiar disponibilidad"
                       >
-                        {p.is_available ? 'ACTIVO' : 'INACTIVO'}
+                        <span className={`w-2 h-2 rounded-full ${p.is_available ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                        {p.is_available ? 'Disponible' : 'Agotado'}
                       </button>
                     </div>
                     <div className="flex gap-1 mt-2">
@@ -921,23 +922,18 @@ export default function Inventory() {
                       )}
                     </TableCell>
                     <TableCell className="font-black text-blue-600">{formatPrice(p.price, storeConfig?.currency)}</TableCell>
-                    <TableCell>
-                      {p.stock === null ? (
-                        <span className="text-xs font-medium text-gray-400">Ilimitado</span>
-                      ) : p.stock <= 0 ? (
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 font-bold">Agotado (0)</Badge>
-                      ) : p.stock <= 5 ? (
-                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 font-bold">Bajo stock ({p.stock})</Badge>
-                      ) : (
-                        <span className="font-semibold text-gray-700">{p.stock} unid.</span>
-                      )}
-                    </TableCell>
                     <TableCell className="text-center">
                       <button
                         onClick={() => toggleAvailability(p.id, p.is_available)}
-                        className={`px-3 py-1 text-xs font-bold rounded-full transition-colors ${p.is_available ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full transition-all border shadow-sm ${
+                          p.is_available 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' 
+                            : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100'
+                        }`}
+                        title="Clic para cambiar disponibilidad"
                       >
-                        {p.is_available ? 'ACTIVO' : 'INACTIVO'}
+                        <span className={`w-2 h-2 rounded-full ${p.is_available ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                        {p.is_available ? 'Disponible' : 'Agotado'}
                       </button>
                     </TableCell>
                     <TableCell className="text-right">

@@ -754,7 +754,7 @@ export default function Checkout() {
         return (
           <Card className="border-none shadow-2xl backdrop-blur-xl bg-white/90 animate-in fade-in slide-in-from-right-8 duration-500">
             <CardHeader className="text-center pb-2">
-              <div className={`mx-auto w-20 h-20 bg-gradient-to-br ${authChannel === 'WHATSAPP' ? 'from-emerald-400 to-emerald-600 shadow-emerald-500/30' : 'from-orange-400 to-orange-600 shadow-orange-500/30'} rounded-2xl flex items-center justify-center mb-6 shadow-lg transform -rotate-3 hover:rotate-0 transition-transform`}>
+              <div className={`mx-auto w-20 h-20 bg-gradient-to-br ${authChannel === 'WHATSAPP' ? 'from-emerald-400 to-emerald-600 shadow-emerald-500/30' : 'from-orange-400 to-orange-600 shadow-primary/30'} rounded-2xl flex items-center justify-center mb-6 shadow-lg transform -rotate-3 hover:rotate-0 transition-transform`}>
                 <ShieldCheck className="text-white" size={36} />
               </div>
               <CardTitle className="text-3xl font-black text-gray-900 tracking-tight">
@@ -783,7 +783,7 @@ export default function Checkout() {
                 </div>
               )}
 
-              <div className="mb-4 bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
+              <div className="mb-4 bg-primary/5 p-4 rounded-2xl border border-primary/20">
                 <label className="text-sm font-bold text-orange-900 mb-2 flex items-center gap-2">
                   <UserIcon size={16} /> {isRegistered && name ? '¡Bienvenido de nuevo!' : '¿Cómo te llamas?'}
                 </label>
@@ -798,7 +798,7 @@ export default function Checkout() {
               </div>
 
               {authChannel === 'EMAIL' && (
-                <div className="mb-4 bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
+                <div className="mb-4 bg-primary/5 p-4 rounded-2xl border border-primary/20">
                   <label className="text-sm font-bold text-orange-900 mb-2 flex items-center gap-2">
                     <Phone size={16} /> {isRegistered && rawPhone ? 'Tu teléfono registrado (puedes corregirlo)' : 'Número de Teléfono (Para el delivery)'}
                   </label>
@@ -806,7 +806,7 @@ export default function Checkout() {
                     <select
                       value={countryCode}
                       onChange={(e) => setCountryCode(e.target.value)}
-                      className="h-14 px-2 text-lg font-bold rounded-xl border border-orange-200 transition-all bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500 cursor-pointer outline-none"
+                      className="h-14 px-2 text-lg font-bold rounded-xl border border-primary/30 transition-all bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500 cursor-pointer outline-none"
                     >
                       <option value="+58">🇻🇪 +58</option>
                       <option value="+57">🇨🇴 +57</option>
@@ -844,12 +844,12 @@ export default function Checkout() {
                 />
               </div>
 
-              <Button onClick={verifyOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 shadow-xl shadow-orange-500/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={otp.length < 6 || ((!isRegistered || !name) && name.length < 3) || !parsedPhone.isValid || loading}>
+              <Button onClick={verifyOtp} className="w-full h-16 text-lg rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 shadow-xl shadow-primary/20 font-black text-white transition-all transform hover:scale-[1.02]" disabled={otp.length < 6 || ((!isRegistered || !name) && name.length < 3) || !parsedPhone.isValid || loading}>
                 {loading ? 'Verificando...' : 'Validar y Continuar'} <ChevronRight className="ml-2" />
               </Button>
               
               <div className="text-center mt-4 space-y-2">
-                <Button variant="link" onClick={resendOtp} disabled={loading} className="text-orange-600 font-bold hover:text-orange-700">
+                <Button variant="link" onClick={resendOtp} disabled={loading} className="text-primary font-bold hover:text-primary">
                   ¿No recibiste el código? Reenviar
                 </Button>
                 {authChannel === 'WHATSAPP' && (
@@ -874,7 +874,7 @@ export default function Checkout() {
             <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 p-6">
               <CardTitle className="flex items-center gap-3 text-2xl font-black text-gray-900">
                 <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-                  <MapPin className="text-orange-600"/>
+                  <MapPin className="text-primary"/>
                 </div> 
                 ¿A dónde enviamos?
               </CardTitle>
@@ -901,7 +901,7 @@ export default function Checkout() {
                   variant="outline" 
                   onClick={handleGPSLocation}
                   disabled={isSearchingAddress}
-                  className="w-full flex items-center justify-center gap-2 text-orange-600 border-orange-200 hover:bg-orange-50 h-12 rounded-xl mt-2 font-bold"
+                  className="w-full flex items-center justify-center gap-2 text-primary border-primary/30 hover:bg-primary/10 h-12 rounded-xl mt-2 font-bold"
                 >
                   <LocateFixed size={18} /> 
                   {isSearchingAddress ? 'Ubicando...' : 'Ubicar mi casa por GPS'}
@@ -912,7 +912,7 @@ export default function Checkout() {
                     {addressSuggestions.map((sug, i) => (
                       <div 
                         key={sug.place_id || i}
-                        className="p-4 hover:bg-orange-50 cursor-pointer border-b border-gray-100 last:border-0 text-sm text-gray-700 flex items-start gap-2"
+                        className="p-4 hover:bg-primary/10 cursor-pointer border-b border-gray-100 last:border-0 text-sm text-gray-700 flex items-start gap-2"
                         onClick={() => selectAddress(sug)}
                       >
                         <MapPin size={16} className="text-orange-400 mt-0.5 flex-shrink-0" />
@@ -1355,7 +1355,7 @@ export default function Checkout() {
 
               <Button 
                 onClick={confirmOrder} 
-                className={`w-full h-16 text-lg rounded-2xl font-black text-white transition-all transform shadow-xl ${!paymentMethod || (paymentMethod === 'TRANSFER' && !isTransferReferenceValid) || loading ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:scale-[1.02] hover:shadow-orange-500/30'}`}
+                className={`w-full h-16 text-lg rounded-2xl font-black text-white transition-all transform shadow-xl ${!paymentMethod || (paymentMethod === 'TRANSFER' && !isTransferReferenceValid) || loading ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:scale-[1.02] hover:shadow-primary/30'}`}
                 disabled={!paymentMethod || (paymentMethod === 'TRANSFER' && !isTransferReferenceValid) || loading}
               >
                 {loading ? 'Procesando Seguro...' : 'Confirmar y Pagar'} <CheckCircle2 className="ml-2" />
@@ -1390,11 +1390,11 @@ export default function Checkout() {
             <CardHeader className="text-center pb-8 pt-8 bg-gradient-to-b from-orange-50/50 to-white">
               <CardTitle className="text-3xl font-black text-gray-900 tracking-tight">Estado del Pedido</CardTitle>
               {estimatedMinutes ? (
-                <div className="mt-4 bg-orange-100/80 text-orange-800 p-4 rounded-2xl font-black border border-orange-200 text-lg shadow-sm">
+                <div className="mt-4 bg-orange-100/80 text-primary p-4 rounded-2xl font-black border border-primary/30 text-lg shadow-sm">
                   ⏳ Llegada Estimada: ~{estimatedMinutes} mins
                 </div>
               ) : (
-                <CardDescription className="text-orange-600 font-bold mt-2 animate-pulse">
+                <CardDescription className="text-primary font-bold mt-2 animate-pulse">
                   {orderStatus === 'AWAITING_PAYMENT' ? 'Validando tu pago móvil...' : 'Actualización en tiempo real...'}
                 </CardDescription>
               )}
@@ -1409,14 +1409,14 @@ export default function Checkout() {
                     <div key={item.status} className={`relative pl-8 sm:pl-10 transition-all duration-700 ${isCompleted ? 'opacity-100 transform translate-x-0' : 'opacity-40 transform translate-x-2'}`}>
                       {/* Círculo indicador con icono */}
                       <div className={`absolute -left-[26px] top-0 w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-xl shadow-lg transition-all duration-500 ${
-                        isActive ? 'bg-orange-500 text-white shadow-orange-500/40 animate-bounce' : 
-                        isCompleted ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-400 grayscale'
+                        isActive ? 'bg-primary text-white shadow-primary/40 animate-bounce' : 
+                        isCompleted ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400 grayscale'
                       }`}>
                         {item.icon}
                       </div>
                       
                       <div className="flex flex-col pt-1">
-                        <h3 className={`font-black text-xl transition-colors ${isActive ? 'text-orange-600' : 'text-gray-900'}`}>
+                        <h3 className={`font-black text-xl transition-colors ${isActive ? 'text-primary' : 'text-gray-900'}`}>
                           {item.title}
                         </h3>
                         <p className="text-gray-500 font-medium text-sm mt-1">{item.desc}</p>
@@ -1500,7 +1500,7 @@ export default function Checkout() {
 
               {orderStatus === 'DELIVERED' && (
                 <div className="mt-12 pt-8 border-t border-gray-100 animate-in slide-in-from-bottom-8 duration-700">
-                  <Button onClick={() => navigate(`/${slug}`)} className="w-full h-16 text-lg rounded-2xl font-black bg-gradient-to-r from-orange-500 to-orange-600 shadow-xl shadow-orange-500/20 text-white hover:scale-[1.02] transition-transform">
+                  <Button onClick={() => navigate(`/${slug}`)} className="w-full h-16 text-lg rounded-2xl font-black bg-gradient-to-r from-orange-500 to-orange-600 shadow-xl shadow-primary/20 text-white hover:scale-[1.02] transition-transform">
                     Hacer otro pedido
                   </Button>
                 </div>
@@ -1539,13 +1539,13 @@ export default function Checkout() {
           <div className="flex justify-between items-center mb-10 px-4 relative">
             <div className="absolute left-8 right-8 h-1.5 bg-gray-200 top-4 -z-10 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-orange-500 transition-all duration-500" 
+                className="h-full bg-primary transition-all duration-500" 
                 style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
               ></div>
             </div>
             {[1, 2, 3, 4].map(s => (
               <div key={s} className="flex flex-col items-center gap-2">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm transition-all duration-500 ${currentStep >= s ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-110' : 'bg-white text-gray-400 border-2 border-gray-200'}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm transition-all duration-500 ${currentStep >= s ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-110' : 'bg-white text-gray-400 border-2 border-gray-200'}`}>
                   {s}
                 </div>
               </div>
