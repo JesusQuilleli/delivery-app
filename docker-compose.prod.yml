@@ -89,6 +89,11 @@ services:
       - DATABASE_SAVE_DATA_CHATS=true
       - DATABASE_SAVE_DATA_LABELS=true
       - DATABASE_SAVE_DATA_HISTORIC=true
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379/1
+      - CACHE_REDIS_PREFIX_KEY=evolution
+      - CACHE_REDIS_SAVE_INSTANCES=true
+      - DEL_INSTANCE=false
       - WA_BUSINESS_TOKEN_WEBHOOK=true
     ports:
       # Expuesto únicamente a loopback local (127.0.0.1) del VPS, nunca a internet abierto
@@ -99,6 +104,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - delivery_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: delivery_redis
+    restart: always
+    command: ["redis-server", "--appendonly", "no"]
     networks:
       - delivery_net
 

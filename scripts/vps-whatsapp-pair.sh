@@ -37,19 +37,27 @@ echo "2️⃣ Obteniendo código QR para escanear con la línea +58 4161804831..
 echo "Abre WhatsApp en el teléfono -> Ajustes (o Menú) -> Dispositivos Vinculados -> Vincular dispositivo"
 echo ""
 
-# 2. Solicitar QR Code
-QR_RESPONSE=$(curl -s -X GET "${EVO_URL}/instance/connect/${INSTANCE_NAME}" \
+BOT_NUMBER="${WHATSAPP_BOT_NUMBER:-584161804831}"
+
+# 2. Solicitar código de vinculación numérico directo (Pairing Code) y QR Code
+echo "2️⃣ Obteniendo credenciales de vinculación para ${BOT_NUMBER}..."
+PAIR_RESPONSE=$(curl -s -X GET "${EVO_URL}/instance/connect/${INSTANCE_NAME}?number=${BOT_NUMBER}" \
      -H "apikey: ${EVOLUTION_API_KEY}")
 
-# Extraer base64 si está presente
-BASE64_QR=$(echo "$QR_RESPONSE" | jq -r '.base64 // empty' 2>/dev/null || true)
+PAIR_CODE=$(echo "$PAIR_RESPONSE" | jq -r '.pairingCode // empty' 2>/dev/null || true)
+BASE64_QR=$(echo "$PAIR_RESPONSE" | jq -r '.base64 // empty' 2>/dev/null || true)
+
+if [ -n "$PAIR_CODE" ] && [ "$PAIR_CODE" != "null" ]; then
+    echo "🔑 ========================================================"
+    echo "   CÓDIGO DE VINCULACIÓN DIRECTO POR TELÉFONO: ${PAIR_CODE}"
+    echo "============================================================"
+    echo "En WhatsApp -> Dispositivos vinculados -> Vincular un dispositivo"
+    echo "Toca abajo en 'Vincular con el número de teléfono' e ingresa: ${PAIR_CODE}"
+fi
 
 if [ -n "$BASE64_QR" ]; then
-    echo "✅ Código QR generado con éxito."
-    echo "Si estás en terminal con soporte o navegador, puedes verlo accediendo a:"
-    echo "👉 ${EVO_URL}/instance/connect/${INSTANCE_NAME}"
-    echo "(O haz un túnel SSH si estás accediendo de forma remota: ssh -L 8080:localhost:8080 usuario@tu-ip)"
+    echo "✅ Código QR también disponible para escaneo con cámara."
 else
     echo "Estado de conexión:"
-    echo "$QR_RESPONSE"
+    echo "$PAIR_RESPONSE"
 fi
