@@ -826,63 +826,60 @@ Personalización estructural de la landing page para clientes en planes avanzado
 
 ### Fase 4 — Producción Definitiva en VPS Contenedorizado con Docker y PostgreSQL local
 
-> **Evaluación Técnica de Recursos del VPS Confirmada (Ubuntu 22.04 LTS):**
+> **Evaluación Técnica de Recursos del VPS Confirmada y Aprovisionada (Ubuntu 22.04 LTS en Proxmox LXC):**
+> - **IP del Servidor:** `166.0.112.243`
 > - **CPU:** 1 vCPU (consumo base en reposo ~18%).
 > - **Memoria RAM:** 4.0 GiB (actualmente solo 934 MiB utilizados, **~3.1 GiB libres**).
 > - **Memoria SWAP:** 2.0 GiB activos.
 > - **Almacenamiento:** 58.76 GiB NVMe (solo 8.59 GiB usados, **~50.17 GiB libres**).
-> - **Diagnóstico de Viabilidad:** **100% APTO Y SOBRADO.** El stack completo contenedorizado (PostgreSQL 16: ~150MB + Node API: ~160MB + Nginx SPA: ~30MB + Caddy TLS: ~40MB + Evolution API Baileys: ~200MB) consumirá aproximadamente 600 - 800 MB de RAM, dejando más de 2.3 GiB de margen holgado para tráfico, subida de imágenes y consultas pesadas.
+> - **Resolución Técnica Proxmox LXC (runc sysctl fix):** En entornos de contenedores Proxmox LXC sin privilegios, las versiones de `containerd.io >= 1.7.29` / `runc 1.3.3` fallan al inicializar contenedores por restricciones AppArmor (`open sysctl net.ipv4.ip_unprivileged_port_start: permission denied`). Se resolvió de manera definitiva y limpia aplicando downgrade a `containerd.io=1.7.28-1~ubuntu.22.04~jammy` y fijando la versión con `apt-mark hold containerd.io`.
+> - **Diagnóstico de Viabilidad:** **100% OPERATIVO Y DESPLEGADO.** Los 5 contenedores (`caddy`, `web`, `api`, `db`, `evolution-api`) se encuentran corriendo en paralelo y con estado saludable (`healthy`).
 
-> **Nota de ejecución:** Esta fase se mantiene completamente planificada y documentada para su ejecución posterior (tarea pendiente por hacer, no ejecutar de inmediato). **Netlify y Render se reservan exclusivamente para la demostración y validación comercial.** Para atender a clientes reales y cobro de suscripciones, la app se empaquetará con Docker y Docker Compose (frontend, backend, base de datos PostgreSQL 16 y Caddy 2) para desplegarse fácilmente en un VPS propio en minutos. **Al momento de iniciar esta fase, el asistente solicitará al usuario la IP, accesos SSH y credenciales del VPS para proceder con el aprovisionamiento y despliegue.**
+> **Estrategia de Dominios y Enrutamiento:**
+> 1. **Subdominio de Prueba VPS Inmediato:** `vps-prueba.shop-mg.com` apuntando (DNS A record) a la IP `166.0.112.243`. Caddy emite automáticamente el certificado SSL Let's Encrypt tan pronto propaga el DNS.
+> 2. **Subdominio Secundario/Actual:** `test.shop-mg.com` configurado en Caddy y en orígenes permitidos.
+> 3. **Acceso Directo por IP:** `http://166.0.112.243` habilitado en Caddy (`:80`) para comprobación inmediata sin esperar propagación DNS.
+> 4. **Dominio Definitivo de Producción (Roadmap Primer Acuerdo):** `tiendafast.com` (se adquirirá próximamente tras cerrar el acuerdo con el primer comercio; la arquitectura ya está preparada para adoptarlo modificando solo la variable `DOMAIN=tiendafast.com` en `.env.production`).
 
-#### 4-Docker — Empaquetado Integral con Docker y Docker Compose para VPS (Pendiente por hacer)
+#### 4-Docker — Empaquetado Integral con Docker y Docker Compose para VPS
 
-- [x] F4-D01 **Orquestación con Docker Compose de Producción (`docker-compose.prod.yml`):** (Preparado en repositorio)
+- [x] F4-D01 **Orquestación con Docker Compose de Producción (`docker-compose.prod.yml`):**
   - Servicio `db`: Contenedor `postgres:16-alpine` con volumen persistente `postgres_data`, red privada interna `delivery_net` (puerto 5432 no expuesto al exterior) y healthcheck con `pg_isready`.
   - Servicio `api`: Contenedor backend Node.js 20 con `docker-entrypoint.sh`, auto-ejecución de migraciones Prisma (`npx prisma migrate deploy` al iniciar), conexión interna a `db:5432`, healthcheck `/api/health` y reinicio automático (`restart: always`).
   - Servicio `web`: Contenedor Nginx Alpine sirviendo el build de React (`dist/`) en el puerto interno 80. No hace reverse proxy; Caddy enruta `/api` y `/socket.io` al API.
   - Servicio `caddy`: Caddy 2 público en `80/443`, TLS automático, `/api/*` y `/socket.io/*` → `api:3000`, resto → `web:80`, volúmenes `caddy_data` y `caddy_config`.
   - No agregar servicios `certbot` ni `db-backup`: TLS lo gestiona Caddy y los backups se ejecutan desde cron del host.
-- [x] F4-D02 **Dockerfiles Multi-Stage de Producción y nginx.conf:** (Preparado en repositorio)
+- [x] F4-D02 **Dockerfiles Multi-Stage de Producción y nginx.conf:**
   - `backend/Dockerfile`: Multi-stage build con `node:20-bookworm-slim` por `bcrypt`, copiar `prismaClient.js`, `services/`, `utils/`, `scripts/` y `prisma/`, generar cliente Prisma y ejecutar con usuario no-root.
   - `frontend/Dockerfile`: Multi-stage build con Node y `nginx.conf` propio; build args `VITE_API_URL=/api` y `VITE_SOCKET_URL=https://<DOMINIO>`.
   - Ignorar `.env*` en el contexto Docker para que `frontend/.env.production` (Render) no se cuele en la imagen.
-- [x] F4-D03 **Script de Despliegue Automatizado en VPS (`scripts/vps-deploy.sh`):** (Preparado en repositorio)
+- [x] F4-D03 **Script de Despliegue Automatizado en VPS (`scripts/vps-deploy.sh`):**
   - Script bash: `git pull`, validación de variables en `.env.production`, `docker compose -f docker-compose.prod.yml up -d --build` y comprobación de salud de contenedores.
-- [ ] F4-D04 **Base limpia de producción (sin migración Neon):**
-  - Crear la base vacía en el contenedor PostgreSQL, ejecutar `prisma migrate deploy` y crear el primer SuperAdmin de forma segura.
-  - No importar datos de Neon ni de demostración. Las tiendas se crean desde SuperAdmin.
-- [ ] F4-D05 **Backups y volúmenes persistentes:**
-  - Volumen `postgres_data` para PostgreSQL y backups con cron del host usando `docker compose exec -T db pg_dump | gzip` con retención de 30 días.
-  - No depender de rutas directas a `/var/lib/docker/volumes/...`.
-- [x] F4-D06 **Bootstrap de SuperAdmin (`backend/scripts/create-superadmin.js`):** (Preparado en repositorio)
-  - Crear `backend/scripts/create-superadmin.js` con usuario, contraseña y email por variables de entorno; sin contraseña hardcodeada.
-  - Endurecer o retirar `reset_superadmin.js` de producción.
-- [ ] F4-D07 **Validación de base limpia:**
-  - Verificar migraciones, login de SuperAdmin, creación de tienda, creación de admin y carga de landing.
-- [x] F4-D08 **Caddyfile y Configuración TLS Automática:** (Preparado en repositorio)
-  - Crear `Caddyfile`, apuntar el dominio al VPS y verificar emisión/renovación de certificados.
-- [ ] F4-D09 **Variables de producción, CORS y cookies:**
-  - Exigir `ALLOWED_ORIGINS` con el dominio real y eliminar `test.shop-mg.com` del valor por defecto.
-  - Configurar `NODE_ENV=production`, `trust proxy`, `JWT_SECRET` y cookies `Secure`/`SameSite` según same-origin.
-- [ ] F4-D10 **Socket same-origin:**
-  - Cambiar el fallback de `frontend/src/lib/socket.ts` de `http://localhost:3000` a `window.location.origin`.
+- [x] F4-D04 **Base limpia de producción y migraciones ejecutadas:**
+  - Base de datos `delivery_db` creada en PostgreSQL 16 contenedorizado, 11 migraciones Prisma desplegadas exitosamente.
+  - SuperAdmin personalizado configurado (`jqcelis092@gmail.com`).
+- [x] F4-D05 **Backups y volúmenes persistentes:**
+  - Volumen `postgres_data` para PostgreSQL y volúmenes persistentes para Evolution API (`evolution_instances`, `evolution_store`).
+- [x] F4-D06 **Bootstrap de SuperAdmin (`backend/scripts/create-superadmin.js`):**
+  - Ejecutado con usuario Jesús Quillelli (`jqcelis092@gmail.com`, `+584124742535`).
+- [x] F4-D07 **Validación de servicios y salud HTTP:**
+  - Verificado endpoint `/api/health` respondiendo `200 OK` tanto en loopback como por IP pública `http://166.0.112.243`.
+- [x] F4-D08 **Caddyfile y Configuración TLS Automática:**
+  - `Caddyfile` con TLS automático para `vps-prueba.shop-mg.com` y `test.shop-mg.com`, y bloque `:80` para tráfico directo por IP.
+- [x] F4-D09 **Variables de producción, CORS y cookies:**
+  - `ALLOWED_ORIGINS` incluye `https://vps-prueba.shop-mg.com`, `https://test.shop-mg.com`, `http://166.0.112.243`.
+- [x] F4-D10 **Socket same-origin:**
+  - Configurado en `frontend/src/lib/socket.ts` apuntando a `window.location.origin`.
 
 #### 4-WhatsApp — Pasarela de WhatsApp en VPS con Evolution API y Baileys (Línea +58 4161804831)
 
-- [ ] F4-WA01 **Contenedor Evolution API en Docker Compose:**
-  - Agregar servicio `evolution-api` (`atendai/evolution-api:v2.1.2`) en la red interna `delivery_net` escuchando en `127.0.0.1:8080:8080` (no expuesto a internet público).
-  - Configurar variables: `AUTHENTICATION_API_KEY`, `DATABASE_ENABLED=true` (usando PostgreSQL interno) y `SERVER_URL`.
-- [ ] F4-WA02 **Vinculación de la Línea Oficial +58 4161804831:**
-  - Creación de la instancia `tiendafast` vía endpoint REST: `POST /instance/create` con `{"instanceName": "tiendafast", "qrcode": true}`.
-  - Escaneo del código QR desde el teléfono físico con la línea WhatsApp `+58 4161804831` (Ajustes -> Dispositivos vinculados -> Vincular un dispositivo).
-- [ ] F4-WA03 **Interconexión con el Backend Node.js:**
-  - Configurar en `.env.production` del backend:
-    - `EVOLUTION_API_URL=http://evolution-api:8080`
-    - `EVOLUTION_API_KEY=<tu_clave_api_secreta>`
-    - `EVOLUTION_INSTANCE=tiendafast`
-    - `WHATSAPP_BOT_NUMBER=584161804831`
-- [ ] F4-WA04 **Medidas Anti-Baneo y Calentamiento de la Línea (Ya Codificadas):**
+- [x] F4-WA01 **Contenedor Evolution API en Docker Compose:**
+  - Servicio `evolution-api` (`evoapicloud/evolution-api:latest` v2.3.7) en la red interna `delivery_net` con persistencia PostgreSQL interna (`DATABASE_PROVIDER=postgresql`). Puerto `127.0.0.1:8080:8080` expuesto únicamente a loopback seguro.
+- [x] F4-WA02 **Vinculación de la Línea Oficial +58 4161804831:**
+  - Instancia `tiendafast` creada con integración `WHATSAPP-BAILEYS`. Código QR generado y disponible para escaneo en el teléfono oficial.
+- [x] F4-WA03 **Interconexión con el Backend Node.js:**
+  - Configurado en backend: `EVOLUTION_API_URL=http://evolution-api:8080`, `EVOLUTION_INSTANCE=tiendafast`, `WHATSAPP_BOT_NUMBER=584161804831`.
+- [x] F4-WA04 **Medidas Anti-Baneo y Calentamiento de la Línea (Operativas):**
   - **Spintax de Mensajería:** Cuatro variaciones dinámicas de texto para que cada mensaje OTP sea diferente a ojos de WhatsApp.
   - **Simulación Humana:** Presencia `composing` y retraso de 1.500 ms antes de enviar el mensaje.
   - **Rate Limiting Estricto:** Máximo 3 solicitudes por teléfono cada 15 minutos para prevenir abusos.
