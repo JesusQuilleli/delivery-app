@@ -581,7 +581,7 @@ export default function Dashboard() {
 
   return (
     <AdminLayout title="Panel de Despachos">
-      <NotificationPermissionBanner role="admin" className="mb-4" />
+      
       <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
         
         {/* F2C-14: Botón de Cotizaciones de Récipe */}

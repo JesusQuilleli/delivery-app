@@ -5,6 +5,7 @@ import {
   AlertTriangle, Palette, Share2, Copy, Check, ExternalLink, MessageCircle 
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { NotificationPermissionBanner, NotificationStatusButton } from './NotificationPermissionBanner';
 import { AuthContext } from '../context/AuthContext';
 import { toast } from 'sonner';
 
@@ -94,11 +95,15 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             );
           })}
 
+          <NotificationStatusButton />
           <Button variant="destructive" onClick={handleLogout} className="gap-2 h-10 font-bold shadow-sm ml-2">
             <LogOut size={16} /> <span className="hidden sm:inline">Salir</span>
           </Button>
         </div>
       </header>
+
+      {/* Alerta interactiva de Notificaciones para el Administrador */}
+      <NotificationPermissionBanner role="admin" className="mb-4 print:hidden" />
 
       {/* Barra de Difusión / Compartir Catálogo para el Vendedor */}
       {slug && (

@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import api from '../api';
 import { formatPrice } from '../utils/currency';
 import { ThemeProvider } from './ThemeProvider';
+import { NotificationPermissionBanner } from './NotificationPermissionBanner';
 
 export default function Layout() {
   const { slug } = useParams<{ slug: string }>();
@@ -88,7 +89,8 @@ export default function Layout() {
       </header>
 
       {/* Contenedor Principal */}
-      <main className="max-w-5xl mx-auto pb-20">
+      <main className="max-w-5xl mx-auto pb-20 px-4">
+        <NotificationPermissionBanner role="customer" className="mt-4 mb-2" />
         <Outlet />
       </main>
 

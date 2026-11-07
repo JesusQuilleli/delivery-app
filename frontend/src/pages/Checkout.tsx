@@ -8,6 +8,7 @@ import { parsePhone } from '../utils/phone';
 import { useClientRealtime } from '../context/RealtimeContext';
 import { createSocket } from '../lib/socket';
 import { requestNotificationPermission } from '../lib/notifications';
+import { NotificationPermissionBanner } from '../components/NotificationPermissionBanner';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -1400,6 +1401,7 @@ export default function Checkout() {
               )}
             </CardHeader>
             <CardContent className="p-5 sm:p-8 sm:px-10">
+              <NotificationPermissionBanner role="customer" className="mb-6" />
               <div className="relative border-l-4 border-gray-100 ml-6 space-y-10">
                 {timeline.map((item, index) => {
                   const isCompleted = index <= currentIndex;
