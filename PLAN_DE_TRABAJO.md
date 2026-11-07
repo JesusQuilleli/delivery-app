@@ -674,6 +674,29 @@ Personalización estructural de la landing page para clientes en planes avanzado
 
 ---
 
+### Fase 2G — Experiencia de Pago con Capture (OCR), Validación por WhatsApp y Recuperación de Accesos Admin (2 días)
+
+- [ ] F2G-01 **Ver/Ocultar Contraseña en Login de Admin y SuperAdmin:** Botón de alternancia con icono de ojo (`Eye` / `EyeOff`) en los campos de contraseña de `/admin-login`, `/superadmin` y cambio de contraseña en `Settings.tsx`.
+- [ ] F2G-02 **Flujo "¿Olvidaste tu contraseña?" y Solicitud de Desbloqueo a SuperAdmin:**
+  - Enlace visible en `/admin-login` para administradores que hayan olvidado su contraseña.
+  - Modal para ingresar usuario o slug de la tienda con botón directo a WhatsApp del Fundador (`+58 412 474 2535`) con mensaje prellenado estructurado: *"Hola SuperAdmin, soy el encargado de la tienda [Slug/Nombre] y requiero restablecer mi contraseña de acceso."*
+  - Registro de auditoría/solicitud en backend (`PasswordResetRequest`).
+- [ ] F2G-03 **Módulo de Reseteo Rápido de Contraseñas en Panel SuperAdmin:**
+  - Pestaña o acción de 1 clic en la lista de tiendas de `SuperAdmin.tsx` para restablecer la contraseña del admin de cualquier tienda.
+  - Generador de contraseña temporal aleatoria segura (ej. `Fast2026-X8Y`), cifrado en base de datos con `bcrypt` y botón de WhatsApp para enviar las nuevas credenciales al comerciante en 1 clic.
+- [ ] F2G-04 **Carga de Capture de Pago Móvil en Checkout y Visualización en Dashboard:**
+  - Campo `Order.payment_receipt_url` en base de datos.
+  - En `Checkout.tsx` (Paso 4): Zona de carga intuitiva para subir el comprobante/capture de pantalla del banco (JPEG/PNG/WEBP a Cloudinary).
+  - En `Dashboard.tsx` y `OrderDetails.tsx`: Miniatura interactiva del capture en la pestaña "Por Validar", con apertura en modal ampliado para que el comerciante verifique la transferencia visualmente en 2 segundos.
+- [ ] F2G-05 **Extracción Asistida de Datos del Capture de Pago Móvil (OCR / Parser):**
+  - Procesamiento del comprobante para extraer automáticamente número de referencia bancaria y monto en bolívares.
+  - Pre-llenado automático de la referencia y monto en el formulario de Checkout para que el cliente solo confirme con 1 clic sin tener que tipear números largos.
+- [ ] F2G-06 **Paso a Paso y Pasarela de Validación de OTP por WhatsApp:**
+  - Selector dual en Checkout: *"Recibir código por: [Correo] | [WhatsApp]"*.
+  - Integración de pasarela para envío de código de 6 dígitos al WhatsApp del cliente (Meta Cloud API / Evolution API / WhatsApp Gateway) con contingencia asistida al WhatsApp comercial.
+
+---
+
 ### Fase 3 — Seguridad (4 días)
 
 #### Socket.io
