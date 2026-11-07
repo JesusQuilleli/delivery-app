@@ -1,14 +1,12 @@
 {
-    # Email para registro de certificados TLS automáticos de Let's Encrypt
     email {$ACME_EMAIL:admin@shop-mg.com}
     admin off
 }
 
-{$DOMAIN:test.shop-mg.com} {
-    # Compresión gzip y zstd
+# Bloque HTTPS con TLS automático para los dominios
+{$DOMAIN:vps-prueba.shop-mg.com}, test.shop-mg.com {
     encode gzip zstd
 
-    # Cabeceras de seguridad
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
@@ -17,7 +15,6 @@
         Referrer-Policy "strict-origin-when-cross-origin"
     }
 
-    # API Backend (Node.js Express)
     handle /api/* {
         reverse_proxy api:3000 {
             header_up Host {host}
@@ -27,7 +24,6 @@
         }
     }
 
-    # WebSockets en tiempo real (Socket.io)
     handle /socket.io/* {
         reverse_proxy api:3000 {
             header_up Host {host}
@@ -37,7 +33,31 @@
         }
     }
 
-    # Frontend Single Page App (Nginx)
+    handle {
+        reverse_proxy web:80
+    }
+}
+
+# Acceso HTTP directo por IP para pruebas previas a la propagación del DNS
+:80 {
+    handle /api/* {
+        reverse_proxy api:3000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    handle /socket.io/* {
+        reverse_proxy api:3000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
     handle {
         reverse_proxy web:80
     }

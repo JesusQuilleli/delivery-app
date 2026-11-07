@@ -71,7 +71,7 @@ services:
       - delivery_net
 
   evolution-api:
-    image: atendai/evolution-api:v2.1.2
+    image: evoapicloud/evolution-api:latest
     container_name: delivery_evolution_api
     restart: always
     environment:
