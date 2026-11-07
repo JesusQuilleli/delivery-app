@@ -166,7 +166,7 @@ export default function Checkout() {
 
       if (res.data.extracted) {
         setOcrDetectedInfo(res.data.extracted);
-        const expectedBs = conversions.ves || 0;
+        const expectedBs = expectedVes || 0;
         if (res.data.extracted.amount && expectedBs > 0 && res.data.extracted.amount < expectedBs * 0.98) {
           toast.error(
             `⚠️ Monto insuficiente en el comprobante: Detectamos Bs. ${res.data.extracted.amount.toFixed(2)}, pero el total es Bs. ${expectedBs.toFixed(2)}. Verifica tu comprobante antes de confirmar.`,
@@ -226,6 +226,14 @@ export default function Checkout() {
     ? [Number(storeConfig.latitude), Number(storeConfig.longitude)]
     : defaultPosition;
   const grandTotal = total + deliveryFee;
+  const expectedVes = (() => {
+    if (!storeConfig) return 0;
+    const vesRate = Number(storeConfig.ves_rate) || 36.5;
+    const base = storeConfig.currency || 'USD';
+    if (base === 'VES') return grandTotal;
+    const usdRate = Number(storeConfig.usd_rate) || 1.0;
+    return (grandTotal / usdRate) * vesRate;
+  })();
   const isTransferReferenceValid = /^\d{4,10}$/.test(paymentReference);
 
   useEffect(() => {
@@ -611,8 +619,8 @@ export default function Checkout() {
       toast.error('Debes adjuntar la fotografía de tu récipe médico para continuar.');
       return;
     }
-    if (paymentMethod === 'TRANSFER' && ocrDetectedInfo?.amount && (conversions.ves || 0) > 0 && ocrDetectedInfo.amount < (conversions.ves || 0) * 0.98) {
-      toast.error(`El comprobante adjunto registra Bs. ${ocrDetectedInfo.amount.toFixed(2)}, inferior al total del pedido (Bs. ${(conversions.ves || 0).toFixed(2)}). Por favor adjunta un comprobante por el monto total.`);
+    if (paymentMethod === 'TRANSFER' && ocrDetectedInfo?.amount && expectedVes > 0 && ocrDetectedInfo.amount < expectedVes * 0.98) {
+      toast.error(`El comprobante adjunto registra Bs. ${ocrDetectedInfo.amount.toFixed(2)}, inferior al total del pedido (Bs. ${expectedVes.toFixed(2)}). Por favor adjunta un comprobante por el monto total.`);
       return;
     }
     setLoading(true);
@@ -1297,15 +1305,15 @@ export default function Checkout() {
                           </div>
                         </div>
 
-                        {ocrDetectedInfo?.amount && (conversions.ves || 0) > 0 && (
-                          ocrDetectedInfo.amount < (conversions.ves || 0) * 0.98 ? (
+                        {ocrDetectedInfo?.amount && expectedVes > 0 && (
+                          ocrDetectedInfo.amount < expectedVes * 0.98 ? (
                             <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs space-y-1 text-left">
                               <div className="flex items-center gap-1.5 font-bold text-amber-900">
                                 <AlertTriangle size={15} className="text-amber-600 shrink-0" />
                                 <span>Monto insuficiente detectado en comprobante</span>
                               </div>
                               <p className="text-amber-800 leading-relaxed">
-                                El comprobante indica <strong>Bs. {ocrDetectedInfo.amount.toFixed(2)}</strong>, pero el total de tu pedido es <strong>Bs. {(conversions.ves || 0).toFixed(2)}</strong>. Por favor verifica tu pago o adjunta el capture con el pago completo para continuar.
+                                El comprobante indica <strong>Bs. {ocrDetectedInfo.amount.toFixed(2)}</strong>, pero el total de tu pedido es <strong>Bs. {expectedVes.toFixed(2)}</strong>. Por favor verifica tu pago o adjunta el capture con el pago completo para continuar.
                               </p>
                             </div>
                           ) : (
@@ -1315,7 +1323,7 @@ export default function Checkout() {
                                 <span>Monto verificado: Bs. {ocrDetectedInfo.amount.toFixed(2)}</span>
                               </div>
                               <p className="text-emerald-800">
-                                Cubre el total del pedido (Total: Bs. {(conversions.ves || 0).toFixed(2)}).
+                                Cubre el total del pedido (Total: Bs. {expectedVes.toFixed(2)}).
                               </p>
                             </div>
                           )
