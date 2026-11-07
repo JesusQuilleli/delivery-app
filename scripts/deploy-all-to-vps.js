@@ -7,9 +7,8 @@ async function deploy() {
   console.log('📦 2. Sincronizando schema y controladores en delivery_api...');
   await runSSHCommand('docker cp /opt/delivery-app/backend/prisma/schema.prisma delivery_api:/app/prisma/schema.prisma');
   await runSSHCommand('docker exec delivery_api npx prisma generate');
-  await runSSHCommand('docker cp /opt/delivery-app/backend/controllers/authController.js delivery_api:/app/controllers/authController.js');
-  await runSSHCommand('docker cp /opt/delivery-app/backend/controllers/orderController.js delivery_api:/app/controllers/orderController.js');
-  await runSSHCommand('docker cp /opt/delivery-app/backend/services/whatsappService.js delivery_api:/app/services/whatsappService.js');
+  await runSSHCommand('docker cp /opt/delivery-app/backend/controllers/. delivery_api:/app/controllers/');
+  await runSSHCommand('docker cp /opt/delivery-app/backend/services/. delivery_api:/app/services/');
   
   console.log('🔄 3. Reiniciando delivery_api...');
   await runSSHCommand('docker restart delivery_api');
