@@ -547,7 +547,7 @@ Flujo avanzado de prescripción médica adaptado a la operativa real de farmacia
 - [x] F2C-14 **Bandeja de "Cotizaciones por Récipe" en Dashboard de Farmacia:**
   - El farmaceuta recibe la solicitud, visualiza el récipe y arma el carrito del cliente con el inventario en 2 clics.
   - Envía la cotización aprobada con enlace directo de pago y notificación en tiempo real.
-- [ ] F2C-15 **Asistente de Detección de Medicamentos (OCR / Sugerencia automática):** Lectura asistida de nombres de medicamentos en el récipe para pre-seleccionar ítems disponibles en stock. Pendiente: no implementado.
+- [x] F2C-15 **Asistente de Detección de Medicamentos y Sugerencia de Stock:** Detección de medicamentos solicitados en las notas del récipe, visualización destacada de notas del cliente, chips de sugerencias inteligentes con adición en 1 clic y buscador rápido en tiempo real dentro del modal de cotización de Dashboard.
 
 ---
 

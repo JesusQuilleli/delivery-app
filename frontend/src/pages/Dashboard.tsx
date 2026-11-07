@@ -1,10 +1,10 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Socket } from 'socket.io-client';
 import { createSocket } from '../lib/socket';
 import { playOrderChime } from '../lib/notifications';
 import api from '../api';
-import { Bell, MapPin, CheckCircle, Package, Clock, Phone, XCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Truck, User, X, Utensils, Check, Navigation, FileText, MessageSquare, Plus } from 'lucide-react';
+import { Bell, MapPin, CheckCircle, Package, Clock, Phone, XCircle, ChevronLeft, ChevronRight, CheckSquare, Trash2, Truck, User, X, Utensils, Check, Navigation, FileText, MessageSquare, Plus, Sparkles } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardFooter } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -115,6 +115,9 @@ export default function Dashboard() {
   const [newQuoteItemName, setNewQuoteItemName] = useState('');
   const [newQuoteItemPrice, setNewQuoteItemPrice] = useState('');
   const [newQuoteItemQty, setNewQuoteItemQty] = useState('1');
+  // F2C-15: Asistente de Detección de Medicamentos y Catálogo
+  const [storeProducts, setStoreProducts] = useState<any[]>([]);
+  const [medSearchQuery, setMedSearchQuery] = useState('');
   const [quoteItemsList, setQuoteItemsList] = useState<{ name: string; quantity: number; price: number }[]>([]);
   const [quoteAdminNotes, setQuoteAdminNotes] = useState('');
   const [savingQuote, setSavingQuote] = useState(false);
@@ -417,6 +420,44 @@ export default function Dashboard() {
     setNewQuoteItemName('');
     setNewQuoteItemPrice('');
     setNewQuoteItemQty('1');
+    setMedSearchQuery('');
+
+    // F2C-15: Cargar inventario de la farmacia para sugerencias automáticas
+    if (storeProducts.length === 0 && slug) {
+      api.get(`/inventory/${slug}/inventory`).then(res => {
+        setStoreProducts(res.data.products?.filter((p: any) => p.is_available) || []);
+      }).catch(err => console.error('Error cargando catálogo para cotizador:', err));
+    }
+  };
+
+  // F2C-15: Detección inteligente de medicamentos en las notas del récipe
+  const suggestedMedicines = useMemo(() => {
+    if (!activeQuote?.notes || storeProducts.length === 0) return [];
+    const notesLower = activeQuote.notes.toLowerCase();
+    return storeProducts.filter(p => {
+      const nameWords = p.name.toLowerCase().split(/\s+/).filter((w: string) => w.length >= 4);
+      return nameWords.some((w: string) => notesLower.includes(w));
+    }).slice(0, 5);
+  }, [activeQuote?.notes, storeProducts]);
+
+  const searchResults = useMemo(() => {
+    if (!medSearchQuery.trim() || storeProducts.length === 0) return [];
+    const q = medSearchQuery.toLowerCase();
+    return storeProducts.filter(p => p.name.toLowerCase().includes(q)).slice(0, 5);
+  }, [medSearchQuery, storeProducts]);
+
+  const handleAddProductToQuote = (prod: any) => {
+    setQuoteItemsList(prev => [
+      ...prev,
+      {
+        name: prod.name,
+        price: Number(prod.price),
+        quantity: 1,
+        product_id: prod.id
+      }
+    ]);
+    setMedSearchQuery('');
+    toast.success(`Añadido: ${prod.name}`);
   };
 
   const handleAddItemToQuote = () => {
@@ -1225,6 +1266,73 @@ export default function Dashboard() {
                   <img src={activeQuote.prescription_url} alt="Récipe Médico" className="max-h-56 mx-auto rounded-lg shadow-md object-contain" />
                   <span className="mt-1 block text-xs font-bold text-blue-600 underline">Clic para abrir en tamaño completo</span>
                 </a>
+              </div>
+
+              {/* Notas del Cliente y Asistente F2C-15 */}
+              {activeQuote.notes && (
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs">
+                  <p className="font-bold text-amber-800 flex items-center gap-1.5 mb-0.5">
+                    <MessageSquare size={13} /> Mensaje / Notas del Cliente con su Récipe:
+                  </p>
+                  <p className="text-amber-950 font-medium italic">"{activeQuote.notes}"</p>
+                </div>
+              )}
+
+              {/* F2C-15: Coincidencias detectadas en inventario */}
+              {suggestedMedicines.length > 0 && (
+                <div className="p-3 rounded-xl bg-blue-50/90 border border-blue-200 text-xs space-y-2">
+                  <p className="font-bold text-blue-900 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-blue-600 animate-pulse" /> Coincidencias sugeridas en tu inventario (1 clic):
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestedMedicines.map(prod => (
+                      <button
+                        key={prod.id}
+                        type="button"
+                        onClick={() => handleAddProductToQuote(prod)}
+                        className="px-2.5 py-1.5 rounded-lg bg-white border border-blue-300 text-blue-950 hover:bg-blue-600 hover:text-white transition font-medium text-xs flex items-center gap-1.5 shadow-sm group"
+                      >
+                        <span>{prod.name}</span>
+                        <span className="font-bold text-emerald-700 bg-emerald-50 group-hover:bg-blue-700 group-hover:text-white px-1.5 py-0.5 rounded text-[11px]">
+                          ${Number(prod.price).toFixed(2)}
+                        </span>
+                        <Plus size={12} className="text-blue-600 group-hover:text-white" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Búsqueda rápida en catálogo */}
+              <div className="relative">
+                <label className="text-[11px] font-bold text-gray-600 uppercase block mb-1">Búsqueda Rápida en Inventario</label>
+                <Input
+                  placeholder="🔍 Escribe para buscar medicamento en stock y agregarlo directamente..."
+                  value={medSearchQuery}
+                  onChange={e => setMedSearchQuery(e.target.value)}
+                  className="h-9 text-xs bg-white border-blue-200"
+                />
+                {searchResults.length > 0 && (
+                  <div className="absolute left-0 right-0 top-16 bg-white border border-gray-200 rounded-xl shadow-xl z-30 max-h-48 overflow-y-auto divide-y divide-gray-100">
+                    {searchResults.map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleAddProductToQuote(p)}
+                        className="w-full px-3 py-2 text-left hover:bg-emerald-50 flex items-center justify-between text-xs transition"
+                      >
+                        <div>
+                          <p className="font-bold text-gray-900">{p.name}</p>
+                          <p className="text-[10px] text-gray-500">Stock: {p.stock != null ? p.stock : 'Ilimitado'}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-emerald-600 text-xs">${Number(p.price).toFixed(2)}</span>
+                          <span className="block text-[10px] text-blue-600 font-semibold">+ Agregar</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Formulario de agregar medicamento */}
