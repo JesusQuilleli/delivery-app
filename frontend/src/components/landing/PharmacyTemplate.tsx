@@ -28,7 +28,7 @@ export default function PharmacyTemplate({ store, categories, offers, combos, pr
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans">
-      <Navbar store={store} />
+      <Navbar store={store} preview={preview} />
       <main>
         <Hero store={store} />
         {visibility.categories !== false && <Categories categories={categories} />}

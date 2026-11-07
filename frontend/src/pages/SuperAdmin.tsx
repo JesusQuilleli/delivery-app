@@ -80,6 +80,7 @@ export default function SuperAdmin() {
   const [storeName, setStoreName] = useState('');
   const [slug, setSlug] = useState('');
   const [adminUsername, setAdminUsername] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
@@ -160,7 +161,7 @@ export default function SuperAdmin() {
         trialDays: Number(trialDays)
       });
       toast.success('Tienda y catálogo inicial creados exitosamente.');
-      setStoreName(''); setSlug(''); setAdminUsername(''); setAdminPhone(''); setAdminPassword('');
+      setStoreName(''); setSlug(''); setAdminUsername(''); setAdminEmail(''); setAdminPhone(''); setAdminPassword('');
       fetchSubscriptions();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Error al crear la tienda.');

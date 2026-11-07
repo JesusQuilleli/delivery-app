@@ -11,25 +11,27 @@ const links = [
   { href: "#contacto", label: "Contacto" },
 ];
 
-export function Navbar({ store }: { store?: any }) {
+export function Navbar({ store, preview = false }: { store?: any; preview?: boolean }) {
   const { slug: routeSlug } = useParams<{ slug: string }>();
   const { user, token, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const storeName = store?.name || "Farmacia";
   const slug = store?.slug || routeSlug;
 
+  const showUserSession = !preview && token && user;
+
   return (
     <header className="sticky top-0 z-40 backdrop-blur-md bg-background/85 border-b border-border/60">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
         <a href="#inicio" className="flex items-center gap-2.5 min-w-0 flex-shrink-0">
-          <span className="grid place-items-center w-9 h-9 rounded-xl bg-primary text-primary-foreground shadow-sm flex-shrink-0">
-            <Plus className="w-5 h-5 fill-primary-foreground/50" strokeWidth={2.5} />
+          <span className="grid place-items-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary text-primary-foreground shadow-sm flex-shrink-0">
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5 fill-primary-foreground/50" strokeWidth={2.5} />
           </span>
           <div className="flex flex-col min-w-0">
-            <span className="font-display font-extrabold text-base sm:text-lg tracking-tight leading-none truncate max-w-[140px] sm:max-w-[220px] xl:max-w-none">
+            <span className="font-display font-extrabold text-sm sm:text-lg tracking-tight leading-none truncate max-w-[120px] sm:max-w-[220px] xl:max-w-none">
               {storeName}
             </span>
-            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider leading-none mt-1 whitespace-nowrap">
+            <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground tracking-wider leading-none mt-1 whitespace-nowrap">
               Entregas al instante
             </span>
           </div>
@@ -44,7 +46,7 @@ export function Navbar({ store }: { store?: any }) {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          {token && user ? (
+          {showUserSession ? (
             <>
               <div className="hidden md:flex items-center gap-2 text-xs sm:text-sm font-semibold text-foreground/80 mr-1">
                 <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
@@ -77,7 +79,7 @@ export function Navbar({ store }: { store?: any }) {
             <>
               <Link
                 to={`/${slug}/productos`}
-                className="inline-flex items-center gap-1.5 rounded-full bg-primary text-primary-foreground px-4 py-2 text-xs sm:text-sm font-semibold hover:opacity-90 transition shadow-sm whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary text-primary-foreground px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold hover:opacity-90 transition shadow-sm whitespace-nowrap"
               >
                 <ShoppingBag className="w-4 h-4" />
                 <span className="hidden sm:inline">Catálogo Online</span>

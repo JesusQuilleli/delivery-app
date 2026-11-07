@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>TiendaFast — Guía Maestra Operativa y Arquitectura Multi-Tenant</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    @page {
+      size: A4;
+      margin: 15mm 15mm 15mm 15mm;
+      @bottom-right {
+        content: counter(page) " de " counter(pages);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 9pt;
+        color: #94a3b8;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+      font-size: 9.8pt;
+      line-height: 1.5;
+    }
+
+    .cover {
+      background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);
+      color: #ffffff;
+      padding: 38px 30px;
+      border-radius: 18px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 25px rgba(6, 78, 59, 0.2);
+    }
+    .cover h1 {
+      margin: 0 0 6px 0;
+      font-size: 24pt;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .cover .subtitle {
+      font-size: 12pt;
+      font-weight: 600;
+      opacity: 0.95;
+      margin-bottom: 12px;
+      color: #a7f3d0;
+    }
+    .cover .badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 8.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .meta-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 8.5pt;
+      color: #d1fae5;
+    }
+
+    h2 {
+      font-size: 14pt;
+      font-weight: 800;
+      color: #064e3b;
+      margin: 24px 0 10px 0;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      font-size: 11.5pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 16px 0 6px 0;
+      page-break-after: avoid;
+    }
+
+    p { margin: 0 0 10px 0; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 12px 0;
+    }
+
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      page-break-inside: avoid;
+    }
+
+    .card.highlight {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+
+    .card.warning {
+      background: #fffbeb;
+      border-color: #fef3c7;
+    }
+
+    .card h4 {
+      margin: 0 0 6px 0;
+      font-size: 10.5pt;
+      font-weight: 800;
+      color: #047857;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+    th {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 700;
+    }
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    tr:nth-child(even) td { background: #f8fafc; }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 7.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .tag.green { background: #dcfce7; color: #166534; }
+    .tag.blue { background: #dbeafe; color: #1e40af; }
+    .tag.orange { background: #ffedd5; color: #9a3412; }
+    .tag.purple { background: #f3e8ff; color: #6b21a8; }
+
+    ul { margin: 0 0 10px 0; padding-left: 20px; }
+    li { margin-bottom: 4px; }
+
+    .code-box {
+      font-family: 'JetBrains Mono', monospace;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 8pt;
+      line-height: 1.4;
+      margin: 10px 0;
+      page-break-inside: avoid;
+    }
+
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+
+  <!-- PORTADA -->
+  <div class="cover">
+    <span class="badge">Documento de Arquitectura & Operación SaaS</span>
+    <h1>TiendaFast Delivery</h1>
+    <div class="subtitle">Guía Maestra Operativa para el Fundador / SuperAdmin</div>
+    <p style="margin: 0; opacity: 0.9; font-size: 9.5pt;">
+      Manual completo de gestión multitienda, configuración operativa, ciclo de vida de clientes y flujos transaccionales para Puerto Ayacucho, Estado Amazonas.
+    </p>
+    <div class="meta-bar">
+      <span><b>Versión:</b> 2.4.0 (VPS Ubuntu + Docker)</span>
+      <span><b>Ubicación Operativa:</b> Puerto Ayacucho (Atures)</span>
+      <span><b>Línea Oficial OTP:</b> +58 416-1804831</span>
+      <span><b>Dominio:</b> vps-prueba.shop-mg.com (Próx. tiendafast.com)</span>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 1: SUPERADMIN -->
+  <h2>👑 Flujo 1: SuperAdmin (Gestión SaaS & Creación de Tiendas)</h2>
+  <p>
+    El SuperAdmin es el dueño supremo de la plataforma. Controla todos los comercios suscritos, sus planes de cobro mensual, sus usuarios administradores y la infraestructura centralizada sin tocar código.
+  </p>
+
+  <div class="grid-2">
+    <div class="card highlight">
+      <h4>🚀 1. Alta Instantánea de Tiendas (Tenants)</h4>
+      <ul>
+        <li><b>Nombre y URL (Slug):</b> Define la ruta pública (ej. <code>tiendafast.com/demo-farmacia</code>).</li>
+        <li><b>Tipo de Industria:</b> Selecciona entre Farmacia, Restaurante o Supermercado, inyectando categorías y plantilla visual inicial.</li>
+        <li><b>Plan SaaS y Prueba:</b> Asigna Plan Emprendedor ($9), Negocio ($19) o Pro ($35), con 30 días de prueba gratuita.</li>
+      </ul>
+    </div>
+    <div class="card highlight">
+      <h4>✉️ 2. Despacho Automático de Bienvenida</h4>
+      <ul>
+        <li>Al crear la tienda, el sistema envía automáticamente un <b>correo formal al dueño</b>.</li>
+        <li>Contiene: URL de login, usuario, contraseña inicial, enlace público de su tienda y detalle de funcionalidades del plan.</li>
+        <li>Notifica los días de disfrute y la fecha exacta de expiración del período de prueba.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>⏰ 3. Ciclo de Vida y Alertas Preventivas de Suscripción</h4>
+    <p>
+      El sistema cuenta con un motor autónomo en segundo plano (<code>subscriptionService.js</code>) que audita diariamente los períodos de cobro:
+    </p>
+    <ul>
+      <li><b>Aviso Preventivo (3 días antes):</b> Si el período de prueba o mes activo vence en 3 días o menos, se envía automáticamente un correo de alerta con instrucciones de renovación vía Pago Móvil para evitar la suspensión.</li>
+      <li><b>Estado de Gracia (5 días):</b> Al vencer, la tienda pasa a <code>PAST_DUE</code> otorgando 5 días de gracia para que el comercio recolecte sus ingresos y reporte el pago.</li>
+      <li><b>Suspensión Automática:</b> Si tras 5 días en mora no se registra pago, la tienda pasa a <code>SUSPENDED</code> y se desactiva temporalmente el storefront (<code>is_active = false</code>).</li>
+    </ul>
+  </div>
+
+  <!-- SECCIÓN 2: ADMIN TIENDA -->
+  <div class="page-break"></div>
+  <h2>🏪 Flujo 2: Administrador de Tienda (Comercio Local)</h2>
+  <p>
+    Cada comercio opera en su propio espacio aislado (<code>store_id</code>). Dispone de un panel integral optimizado para computadoras y teléfonos inteligentes.
+  </p>
+
+  <div class="grid-2">
+    <div class="card">
+      <h4>📦 Catálogo & Precios Duales (USD / BCV)</h4>
+      <ul>
+        <li><b>Tasa BCV Automatizada:</b> El sistema actualiza la tasa oficial en vivo desde el Banco Central de Venezuela.</li>
+        <li><b>Cálculo Dual:</b> El comerciante fija el precio en USD ($) y el cliente ve el monto exacto en Bolívares (Bs) al instante.</li>
+        <li><b>Control de Stock:</b> Alerta cuando el producto entra en inventario crítico o agotado.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>🎨 CMS de Diseño y Landing en Vivo</h4>
+      <ul>
+        <li><b>Edición sin código:</b> Banners de portada, promociones de impacto, galería de fotos y testimonios de clientes.</li>
+        <li><b>Vista Previa Dividida Real:</b> Selector de vista previa para Desktop (1120px), Tablet (768px) y Móvil (375px) con sandbox iframe responsivo.</li>
+        <li><b>Comparación Lado a Lado:</b> Permite comparar la versión publicada contra el borrador con cambios antes de guardar.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>📊 Matriz de Planes y Límites Operativos SaaS</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Plan</th>
+        <th>Precio / Mes</th>
+        <th>Límite de Productos</th>
+        <th>Administradores</th>
+        <th>Características Claves</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>Emprendedor</b></td>
+        <td>$9 USD</td>
+        <td>Hasta 50 productos</td>
+        <td>1 Usuario</td>
+        <td>Catálogo digital, pedidos en tiempo real con audio, delivery por distancia.</td>
+      </tr>
+      <tr>
+        <td><b>Negocio</b></td>
+        <td>$19 USD</td>
+        <td>Hasta 250 productos</td>
+        <td>Hasta 3 Usuarios</td>
+        <td>Combos ilimitados, múltiples zonas de reparto, exportación de reportes CSV.</td>
+      </tr>
+      <tr>
+        <td><b>Pro / Cadena</b></td>
+        <td>$35 USD</td>
+        <td>Hasta 1,000 productos</td>
+        <td>Hasta 10 Usuarios</td>
+        <td>Multi-sucursal, motorizados ilimitados, soporte 24/7 prioritario.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECCIÓN 3: CLIENTE FINAL -->
+  <div class="page-break"></div>
+  <h2>🛵 Flujo 3: Cliente Final (Experiencia de Compra sin Fricción)</h2>
+  <p>
+    Diseñado específicamente para el consumidor de <b>Puerto Ayacucho (Estado Amazonas, Municipio Atures)</b>, eliminando toda barrera técnica que impida la compra.
+  </p>
+
+  <div class="grid-2">
+    <div class="card highlight">
+      <h4>📍 1. Delimitación Estricta en Puerto Ayacucho</h4>
+      <ul>
+        <li>El sistema restringe geográficamente los pedidos al <b>Municipio Atures (Puerto Ayacucho)</b>.</li>
+        <li>Las coordenadas de entrega se validan mediante geolocalización Haversine en el radio local.</li>
+        <li>Previene despachos fallidos o intentos de compra desde otros estados o ciudades lejanas.</li>
+      </ul>
+    </div>
+    <div class="card highlight">
+      <h4>📲 2. Acceso Rápido con OTP por WhatsApp</h4>
+      <ul>
+        <li><b>Cero contraseñas:</b> El cliente no tiene que crear ni recordar contraseñas.</li>
+        <li>Introduce su WhatsApp (+58 41X-XXXXXXX) y recibe un código OTP de 6 dígitos enviado por el bot oficial (<b>+58 416-1804831</b>).</li>
+        <li>Alternativamente, puede recibir el código de acceso en su correo electrónico.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h4>💵 3. Pago Móvil Venezolano Integrado</h4>
+      <ul>
+        <li>Al confirmar su carrito, el cliente visualiza los datos de Pago Móvil de la tienda (Banco, Cédula/RIF, Teléfono).</li>
+        <li>Adjunta su número de referencia o captura de pantalla.</li>
+        <li>El pedido entra en estado <code>PENDING</code> y la tienda recibe una alerta auditiva inmediata.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>✏️ 4. Edición y Cancelación Flexible</h4>
+      <ul>
+        <li><b>Cancelación con Motivo:</b> Si el cliente cometió un error, puede cancelar su orden explicando el motivo antes de que entre en preparación.</li>
+        <li><b>Edición de Productos:</b> En víveres y farmacias, puede agregar o quitar artículos antes del despacho con el motorizado.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card warning" style="margin-top: 16px;">
+    <h4 style="color: #92400e;">🔒 Protocolo de Seguridad y Respaldo Técnico en VPS</h4>
+    <p style="font-size: 8.8pt; margin: 0;">
+      • Servidor VPS Ubuntu 22.04 LTS endurecido con firewall <b>UFW estricto</b> (únicamente puertos 22, 80, 443 expuestos).<br/>
+      • Sistema anti brute-force <b>Fail2Ban activo</b> monitoreando intentos no autorizados con baneo automático de IPs.<br/>
+      • Certificados SSL/TLS con renovación automática vía Let's Encrypt / Caddy para el dominio <code>vps-prueba.shop-mg.com</code>.<br/>
+      • Base de datos PostgreSQL con respaldo diario y multi-tenant estricto por <code>store_id</code>.
+    </p>
+  </div>
+
+</body>
+</html>

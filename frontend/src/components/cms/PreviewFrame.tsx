@@ -59,7 +59,10 @@ export function PreviewFrame({ device, label, children }: PreviewFrameProps) {
       if (!doc) return;
 
       const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'));
-      doc.head.innerHTML = styles.map((s) => s.outerHTML).join('\n') + `
+      doc.head.innerHTML = `
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        ${styles.map((s) => s.outerHTML).join('\n')}
         <style>
           html, body {
             margin: 0;

@@ -1337,3 +1337,49 @@ El rate limiter de autenticación permite ~10 solicitudes por minuto e IP. Si se
 | Un solo desarrollador | Documentar, commits pequeños y este registro |
 | Alcance creciente | Fases cerradas y criterios de terminado |
 | Cobro manual | Límite de clientes hasta automatizar |
+
+
+---
+
+## 14. Hitos Completados — Despliegue VPS, WhatsApp OTP Oficial y Automatización SaaS (2026-11-07)
+
+### ✅ Tareas Ejecutadas y Verificadas en Producción:
+
+- [x] **Despliegue y Activación de Producción en VPS propio (166.0.112.243):**
+  - Configuración del subdominio de pruebas `https://vps-prueba.shop-mg.com/`.
+  - Servidor web reverso **Caddy 2** con resolución ACME automática `tls-alpn-01` y certificado SSL Let's Encrypt válido (HTTP 200 OK verificado).
+  - Stack completo en Docker Compose (`delivery_caddy`, `delivery_web`, `delivery_api`, `delivery_db`, `delivery_redis`, `delivery_evolution_api`).
+  - Base de datos PostgreSQL con migraciones ejecutadas y cuenta SuperAdmin activa.
+  - Dominio futuro planificado para primer acuerdo comercial: `tiendafast.com`.
+
+- [x] **Seguridad y Endurecimiento del Servidor VPS:**
+  - Actualización limpia de 174 paquetes de seguridad de Ubuntu 22.04 LTS.
+  - Protección de paquetes core de Docker con `apt-mark hold`.
+  - Firewall **UFW** configurado estrictamente: únicamente puertos 22 (SSH), 80 (HTTP) y 443 (HTTPS) expuestos al exterior.
+  - Servicio **Fail2Ban** activo en jail `sshd` mitigando ataques de fuerza bruta y baneando atacantes automáticamente.
+
+- [x] **Integración Estable de WhatsApp Bot Oficial (+58 4161804831):**
+  - Eliminación de instancias duplicadas y colisiones de sesiones previas en Evolution API y Redis.
+  - Configuración de fingerprint de navegador de escritorio Chrome (`CONFIG_SESSION_PHONE_CLIENT=Chrome (Linux)` y `CONFIG_SESSION_PHONE_NAME=Chrome`).
+  - Creación del script autónomo `bash /opt/delivery-app/scripts/whatsapp-pair.sh`:
+    - Genera código de vinculación telefónica de 8 caracteres directo para vincular sin cámara (`GFWHSLLA`).
+    - Renderiza código QR en ASCII limpio y de alta resolución en la terminal sin ruido de logs.
+    - Exporta imagen QR a `whatsapp-qr.png`.
+
+- [x] **Flujo 1: SuperAdmin (Onboarding por Correo y Alertas de Suscripción):**
+  - Implementación de `backend/services/emailService.js` con soporte para Resend y Nodemailer SMTP.
+  - **Correo de Bienvenida Automático:** Envía datos de acceso (URL del panel, usuario, contraseña inicial, enlace público de la tienda, detalle del plan suscrito y días de disfrute/prueba) inmediatamente al registrar una tienda.
+  - **Avisos Preventivos de Vencimiento:** Motor en `backend/services/subscriptionService.js` que revisa las tiendas activas y despacha un correo de alerta cuando restan 3 días o menos para el vencimiento.
+  - Integración en frontend `SuperAdmin.tsx` con campo de correo electrónico para el dueño.
+
+- [x] **Flujo 2: Corrección de CMS y Vista Previa Responsiva:**
+  - Inyección de `<meta name="viewport" content="width=device-width, initial-scale=1">` en el sandbox iframe de `PreviewFrame.tsx` para evaluación precisa de media queries Tailwind en móviles (375px), tablets (768px) y desktop (1120px).
+  - Corrección de `Navbar.tsx` para no renderizar botones de sesión de administrador dentro de la vista previa de clientes cuando `preview=true`.
+
+- [x] **Flujo 3: Delimitación Local Puerto Ayacucho y Flexibilidad de Pedidos:**
+  - Verificación de georreferencia en Municipio Atures / Puerto Ayacucho.
+  - Soporte de cancelación con motivo y edición de pedido antes de preparación y despacho.
+
+- [x] **Generación de los 2 Documentos Maestros PDF:**
+  - **PDF 1 (Para el Dueño / Fundador):** `Guia_Maestra_TiendaFast_Dueño.pdf` (1.06 MB) — Desglose exhaustivo de los 3 flujos: SuperAdmin SaaS, Admin Tienda y Cliente Final, con especificaciones de seguridad y arquitectura.
+  - **PDF 2 (Para el Socio Comercial / Pitch):** `Propuesta_Comercial_TiendaFast_Socio.pdf` (723 KB) — Presentación comercial orientada a alianzas, comparativa detallada de planes ($9, $19, $35), ROI para negocios locales y la dinámica de compra del cliente sin contraseñas y con Pago Móvil.

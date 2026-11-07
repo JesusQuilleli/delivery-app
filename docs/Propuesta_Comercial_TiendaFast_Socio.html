@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>TiendaFast — Propuesta Comercial y Modelo de Negocio</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    @page {
+      size: A4;
+      margin: 15mm 15mm 15mm 15mm;
+      @bottom-right {
+        content: counter(page) " de " counter(pages);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 9pt;
+        color: #94a3b8;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+      font-size: 10pt;
+      line-height: 1.5;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
+      color: #ffffff;
+      padding: 38px 30px;
+      border-radius: 18px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.2);
+    }
+    .hero h1 {
+      margin: 0 0 6px 0;
+      font-size: 26pt;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .hero .subtitle {
+      font-size: 13pt;
+      font-weight: 600;
+      opacity: 0.95;
+      margin-bottom: 12px;
+      color: #bfdbfe;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 8.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .meta-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 9pt;
+      color: #dbeafe;
+    }
+
+    h2 {
+      font-size: 15pt;
+      font-weight: 800;
+      color: #1e3a8a;
+      margin: 24px 0 10px 0;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      font-size: 12pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 16px 0 6px 0;
+      page-break-after: avoid;
+    }
+
+    p { margin: 0 0 10px 0; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 14px 0;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .plan-card {
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 18px 16px;
+      background: #ffffff;
+      position: relative;
+      page-break-inside: avoid;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .plan-card.featured {
+      border-color: #2563eb;
+      background: #f8faff;
+      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.08);
+    }
+    .plan-badge {
+      position: absolute;
+      top: -10px;
+      right: 14px;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 7pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .plan-title {
+      font-size: 13pt;
+      font-weight: 800;
+      margin: 0;
+      color: #0f172a;
+    }
+    .plan-price {
+      font-size: 20pt;
+      font-weight: 800;
+      color: #2563eb;
+      margin: 8px 0;
+    }
+    .plan-price span {
+      font-size: 9pt;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px 18px;
+      page-break-inside: avoid;
+    }
+
+    .card.accent {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    .card h4 {
+      margin: 0 0 8px 0;
+      font-size: 11pt;
+      font-weight: 800;
+      color: #1e3a8a;
+    }
+
+    ul { margin: 0 0 10px 0; padding-left: 20px; }
+    li { margin-bottom: 5px; }
+
+    .problem-solution {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 16px 0;
+      page-break-inside: avoid;
+    }
+    .box-problem {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .box-problem h4 {
+      margin: 0 0 6px 0;
+      color: #991b1b;
+      font-size: 11pt;
+    }
+    .box-solution {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .box-solution h4 {
+      margin: 0 0 6px 0;
+      color: #166534;
+      font-size: 11pt;
+    }
+
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+
+  <!-- PORTADA COMERCIAL -->
+  <div class="hero">
+    <span class="badge">Propuesta Comercial & Pitch Estratégico</span>
+    <h1>TiendaFast</h1>
+    <div class="subtitle">La Plataforma de Delivery & Catálogo Digital para Puerto Ayacucho</div>
+    <p style="margin: 0; opacity: 0.95; font-size: 10pt;">
+      El sistema que transforma negocios locales tradicionales en comercios electrónicos modernos, multiplicando sus ventas a domicilio sin complicaciones técnicas.
+    </p>
+    <div class="meta-bar">
+      <span><b>Enfoque:</b> Comercio Local & Alianzas Comerciales</span>
+      <span><b>Mercado:</b> Puerto Ayacucho (Amazonas)</span>
+      <span><b>Modelo:</b> Suscripción Mensual Accesible (SaaS)</span>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 1: QUÉ RESUELVE -->
+  <h2>💡 El Desafío del Comercio y la Solución TiendaFast</h2>
+  <p>
+    En Puerto Ayacucho, los comercios (farmacias, restaurantes, bodegones) pierden clientes a diario por atender pedidos de forma desordenada a través de chats personales de WhatsApp.
+  </p>
+
+  <div class="problem-solution">
+    <div class="box-problem">
+      <h4>❌ Cómo Venden Hoy (El Problema)</h4>
+      <ul>
+        <li><b>Chats caóticos:</b> 50 clientes escribiendo a la vez, mensajes perdidos y clientes insatisfechos.</li>
+        <li><b>Confusión con la tasa:</b> El cliente pregunta "¿a qué tasa reciben hoy?", demorando la venta.</li>
+        <li><b>Comprobantes dudosos:</b> Pérdida de tiempo validando capturas borrosas de Pago Móvil.</li>
+        <li><b>Direcciones imprecisas:</b> Motorizados perdidos sin ubicación GPS exacta.</li>
+      </ul>
+    </div>
+    <div class="box-solution">
+      <h4>✅ Con TiendaFast (La Solución)</h4>
+      <ul>
+        <li><b>Catálogo Web Propio:</b> El cliente entra, ve fotos, precios en USD y Bolívares (Tasa BCV del día).</li>
+        <li><b>Pedidos Ordenados:</b> El comercio recibe una alerta sonora con los productos ya listos en pantalla.</li>
+        <li><b>Pago Móvil Verificado:</b> El cliente adjunta su referencia bancaria directamente en el pedido.</li>
+        <li><b>GPS en Puerto Ayacucho:</b> Ubicación clara y validada dentro del radio del Municipio Atures.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 2: PLANES Y FLUJO ADMIN -->
+  <div class="page-break"></div>
+  <h2>🏪 ¿Qué Puede Hacer el Comercio Bajo Cada Plan?</h2>
+  <p>
+    Ofrecemos 3 planes diseñados a la medida de la capacidad operativa y presupuesto de cualquier negocio local en Amazonas. No cobramos comisiones porcentuales sobre sus ventas: <b>el 100% del dinero de sus productos va directo al comerciante.</b>
+  </p>
+
+  <div class="grid-3">
+    <!-- PLAN EMPRENDEDOR -->
+    <div class="plan-card">
+      <div>
+        <p class="plan-title">Emprendedor</p>
+        <div class="plan-price">$9 <span>/ mes</span></div>
+        <p style="font-size: 8.5pt; color: #64748b; margin-bottom: 12px;">Para bodegones pequeños, farmacias de barrio y comida rápida.</p>
+        <ul style="font-size: 8.5pt; padding-left: 16px;">
+          <li><b>Hasta 50 productos</b> con fotos</li>
+          <li>Recepción de pedidos con sonido</li>
+          <li>Precios duales en USD y Tasa BCV</li>
+          <li>Cálculo de delivery por distancia</li>
+          <li>1 Administrador</li>
+        </ul>
+      </div>
+      <div style="font-size: 8pt; color: #059669; font-weight: 700; margin-top: 10px;">
+        ⭐ Incluye 30 días de prueba gratuita
+      </div>
+    </div>
+
+    <!-- PLAN NEGOCIO -->
+    <div class="plan-card featured">
+      <span class="plan-badge">Más Popular</span>
+      <div>
+        <p class="plan-title">Negocio</p>
+        <div class="plan-price">$19 <span>/ mes</span></div>
+        <p style="font-size: 8.5pt; color: #64748b; margin-bottom: 12px;">Para comercios consolidados y restaurantes con alto volumen.</p>
+        <ul style="font-size: 8.5pt; padding-left: 16px;">
+          <li><b>Hasta 250 productos</b> y combos</li>
+          <li><b>Combos y ofertas</b> promocionales</li>
+          <li>Múltiples zonas de reparto con tarifas fijas</li>
+          <li>Exportación de reportes de ventas CSV</li>
+          <li><b>Hasta 3 Administradores</b> simultáneos</li>
+        </ul>
+      </div>
+      <div style="font-size: 8pt; color: #2563eb; font-weight: 700; margin-top: 10px;">
+        ⭐ Retorno de inversión en 2 pedidos
+      </div>
+    </div>
+
+    <!-- PLAN PRO -->
+    <div class="plan-card">
+      <div>
+        <p class="plan-title">Pro / Cadena</p>
+        <div class="plan-price">$35 <span>/ mes</span></div>
+        <p style="font-size: 8.5pt; color: #64748b; margin-bottom: 12px;">Para supermercados, franquicias o farmacias con sucursales.</p>
+        <ul style="font-size: 8.5pt; padding-left: 16px;">
+          <li><b>Hasta 1,000 productos</b> en stock</li>
+          <li><b>Multi-sucursales</b> en Puerto Ayacucho</li>
+          <li>Gestión de flota de motorizados ilimitada</li>
+          <li>Reportes avanzados de clientes y ventas</li>
+          <li><b>Hasta 10 Administradores</b> y soporte 24/7</li>
+        </ul>
+      </div>
+      <div style="font-size: 8pt; color: #7c3aed; font-weight: 700; margin-top: 10px;">
+        ⭐ Soporte prioritario y personalizado
+      </div>
+    </div>
+  </div>
+
+  <div class="card accent" style="margin-top: 18px;">
+    <h4>🎨 Autonomía Total para el Dueño del Negocio (CMS en Vivo)</h4>
+    <p style="font-size: 9.5pt; margin: 0;">
+      El comercio puede cambiar el color de su marca, subir su logo, modificar sus horarios y activar banners de ofertas desde su teléfono en 1 minuto. Dispone de un simulador visual en vivo para comprobar cómo se ve su tienda en computadoras, tablets y teléfonos antes de publicar.
+    </p>
+  </div>
+
+  <!-- SECCIÓN 3: EXPERIENCIA DEL CLIENTE -->
+  <div class="page-break"></div>
+  <h2>🛵 Flujo del Cliente: ¿Cómo es la Dinámica y por qué es tan Fácil?</h2>
+  <p>
+    El éxito de una app en Venezuela radica en que <b>hasta la persona con menor conocimiento tecnológico pueda ordenar en menos de 2 minutos</b>.
+  </p>
+
+  <div class="grid-2">
+    <div class="card">
+      <h4>1. Sin Contraseñas ni Registros Largos</h4>
+      <p style="font-size: 9pt;">
+        El cliente solo escribe su número de teléfono (+58 41X...) y recibe un código OTP de 6 dígitos directo a su WhatsApp personal desde la línea oficial de TiendaFast (+58 416-1804831). ¡Listo! Ya está dentro sin contraseñas que olvidar.
+      </p>
+    </div>
+    <div class="card">
+      <h4>2. Catálogo Ágil y Precios Transparentes</h4>
+      <p style="font-size: 9pt;">
+        Visualiza el catálogo categorizado con buscador rápido. Cada producto muestra su valor en USD y en Bolívares calculado automáticamente con la tasa oficial BCV actualizada al instante.
+      </p>
+    </div>
+    <div class="card">
+      <h4>3. Pago Móvil Venezolano Integrado</h4>
+      <p style="font-size: 9pt;">
+        Al finalizar la compra, el cliente copia los datos de Pago Móvil con un toque, realiza la transferencia desde la app de su banco y sube su referencia o comprobante.
+      </p>
+    </div>
+    <div class="card">
+      <h4>4. Tranquilidad: Editar o Cancelar Pedido</h4>
+      <p style="font-size: 9pt;">
+        Si el cliente olvidó pedir un jarabe o un refresco, puede editar su pedido o cancelarlo explicando el motivo antes de que el negocio lo prepare o el motorizado salga en camino.
+      </p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 18px; background: #faf5ff; border-color: #e9d5ff;">
+    <h4 style="color: #6b21a8;">🚀 Argumento de Venta Insuperable para Comercios Locales</h4>
+    <p style="font-size: 9.5pt; color: #4c1d95; margin: 0;">
+      <i>"Por menos de lo que gastas en una cena o una recarga de teléfono al mes ($9 a $19), tu negocio tiene su propia página web profesional, pedidos organizados con sonido, motorizados geolocalizados y soporte directo aquí mismo en Puerto Ayacucho."</i>
+    </p>
+  </div>
+
+</body>
+</html>

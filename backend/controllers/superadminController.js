@@ -1,6 +1,7 @@
 const prisma = require('../prismaClient');
 const bcrypt = require('bcrypt');
 const { getPlan, PLANS } = require('../config/plans');
+const { sendStoreWelcomeEmail } = require('../services/emailService');
 
 const DEFAULT_CATEGORIES_BY_INDUSTRY = {
   PHARMACY: ['Medicamentos', 'Cuidado Personal', 'Primeros Auxilios'],
@@ -108,6 +109,20 @@ const createStore = async (req, res) => {
 
       return { store, admin };
     });
+
+    const destEmail = req.body.adminEmail || (adminUsername.includes('@') ? adminUsername : null);
+    if (destEmail) {
+      sendStoreWelcomeEmail({
+        to: destEmail,
+        storeName,
+        slug,
+        adminEmail: destEmail,
+        adminPassword,
+        planTier: selectedPlan.code,
+        trialDays: Number(trialDays),
+        expiresAt: trialEndsAt
+      }).catch(err => console.error('[EMAIL::WELCOME_ERROR]', err.message));
+    }
 
     res.json({ message: 'Tienda y catálogo inicial creados exitosamente', data: result });
   } catch (error) {
