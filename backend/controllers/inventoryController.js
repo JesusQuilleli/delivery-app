@@ -449,15 +449,29 @@ const createCategory = async (req, res) => {
   try {
     const { slug } = req.params;
     const { name, image_url } = req.body;
-    if (!name) return res.status(400).json({ error: 'Nombre es requerido' });
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Nombre de la categoría es requerido' });
 
     const store = await prisma.store.findUnique({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Tienda no encontrada' });
 
+    const trimmedName = name.trim();
+
+    // Validar categoría duplicada (case-insensitive) para esta tienda
+    const existing = await prisma.category.findFirst({
+      where: {
+        store_id: store.id,
+        name: { equals: trimmedName, mode: 'insensitive' }
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: `La categoría "${trimmedName}" ya existe en esta tienda.` });
+    }
+
     const category = await prisma.category.create({
       data: {
         store_id: store.id,
-        name,
+        name: trimmedName,
         image_url: image_url || null
       }
     });
@@ -472,14 +486,30 @@ const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, image_url } = req.body;
-    if (!name) return res.status(400).json({ error: 'Nombre es requerido' });
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Nombre es requerido' });
 
     const oldCategory = await prisma.category.findUnique({ where: { id: Number(id) } });
+    if (!oldCategory) return res.status(404).json({ error: 'Categoría no encontrada' });
+
+    const trimmedName = name.trim();
+
+    // Validar categoría duplicada si cambia el nombre
+    const existing = await prisma.category.findFirst({
+      where: {
+        store_id: oldCategory.store_id,
+        name: { equals: trimmedName, mode: 'insensitive' },
+        id: { not: Number(id) }
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: `La categoría "${trimmedName}" ya existe en esta tienda.` });
+    }
 
     const category = await prisma.category.update({
       where: { id: Number(id) },
       data: { 
-        name,
+        name: trimmedName,
         image_url: image_url !== undefined ? image_url : undefined
       }
     });

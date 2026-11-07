@@ -53,6 +53,27 @@ export default function Inventory() {
   const [storeConfig, setStoreConfig] = useState<any>(null);
   const ITEMS_PER_PAGE = 8;
 
+  const isPharmacy = storeConfig?.industry?.toUpperCase() === 'PHARMACY' || storeConfig?.industry?.toUpperCase() === 'FARMACIA';
+  const isRestaurant = storeConfig?.industry?.toUpperCase() === 'RESTAURANT' || storeConfig?.industry?.toUpperCase() === 'RESTAURANTE';
+
+  const productNamePlaceholder = isRestaurant
+    ? "Ej. Hamburguesa Doble, Pizza Familiar, Pollo Broaster..."
+    : isPharmacy
+    ? "Ej. Paracetamol 500mg, Ibuprofeno..."
+    : "Ej. Harina PAN 1kg, Arroz, Refresco 2L...";
+
+  const productDescPlaceholder = isRestaurant
+    ? "Ej. Con carne Angus, queso cheddar fundido, tocineta y papas..."
+    : isPharmacy
+    ? "Ej. Caja de 20 tabletas, uso bajo indicación médica..."
+    : "Detalles y especificaciones del producto...";
+
+  const categoryNamePlaceholder = isRestaurant
+    ? "Ej. Hamburguesas, Bebidas, Combos, Postres..."
+    : isPharmacy
+    ? "Ej. Analgésicos, Vitaminas, Cuidado Personal..."
+    : "Ej. Bebidas, Víveres, Charcutería...";
+
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -247,7 +268,7 @@ export default function Inventory() {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const payload = {
+      const payload: any = {
         name: newProductName,
         price: parseFloat(newProductPrice),
         description: newProductDesc,
@@ -256,11 +277,18 @@ export default function Inventory() {
         is_available: true,
         category_id: newProductCategoryId ? Number(newProductCategoryId) : null
       };
+      if (isPharmacy) {
+        payload.prescription_type = newPrescriptionType;
+        payload.requires_prescription = newPrescriptionType !== 'NONE';
+        payload.lot_number = newLotNumber || null;
+        payload.expires_at = newExpiresAt || null;
+      }
       const res = await api.post(`/inventory/${slug}/products`, payload);
       setProducts([res.data.product, ...products]);
       setIsAddProductOpen(false);
       // Reset
       setNewProductName(''); setNewProductPrice(''); setNewProductDesc(''); setNewProductStock(''); setNewProductImage(''); setNewProductCategoryId('');
+      setNewPrescriptionType('NONE'); setNewLotNumber(''); setNewExpiresAt('');
       toast.success("Producto creado exitosamente");
     } catch (error: any) {
       console.error(error);
@@ -299,15 +327,40 @@ export default function Inventory() {
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) {
+      toast.error("Por favor ingresa un nombre para la categoría");
+      return;
+    }
+
+    const exists = allCategories.some(c => c.name.trim().toLowerCase() === trimmed.toLowerCase()) ||
+                   categories.some(c => c.name.trim().toLowerCase() === trimmed.toLowerCase());
+    if (exists) {
+      toast.error(`La categoría "${trimmed}" ya existe en tu tienda.`);
+      return;
+    }
+
     try {
-      const res = await api.post(`/inventory/${slug}/categories`, { name: newCategoryName, image_url: newCategoryImage });
-      setCategories([...categories, res.data.category]);
+      const res = await api.post(`/inventory/${slug}/categories`, { name: trimmed, image_url: newCategoryImage });
+      const createdCategory = res.data.category;
+      setCategories(prev => [...prev, createdCategory]);
+      setAllCategories(prev => [...prev, createdCategory]);
       setNewCategoryName('');
       setNewCategoryImage('');
-      toast.success("Categoría creada exitosamente");
-    } catch (error) {
+      toast.success(`Categoría "${createdCategory.name}" creada exitosamente`, {
+        action: {
+          label: "+ Agregar producto",
+          onClick: () => {
+            setNewProductCategoryId(createdCategory.id);
+            setActiveTab("products");
+            setIsAddProductOpen(true);
+          }
+        }
+      });
+    } catch (error: any) {
       console.error(error);
-      toast.error("Error al crear categoría");
+      const msg = error.response?.data?.error || "Error al crear categoría";
+      toast.error(msg);
     }
   };
 
@@ -321,14 +374,29 @@ export default function Inventory() {
   const handleEditCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCategory) return;
+    const trimmed = editCategoryName.trim();
+    if (!trimmed) {
+      toast.error("Por favor ingresa un nombre para la categoría");
+      return;
+    }
+
+    const exists = allCategories.some(c => c.id !== editingCategory.id && c.name.trim().toLowerCase() === trimmed.toLowerCase());
+    if (exists) {
+      toast.error(`La categoría "${trimmed}" ya existe en tu tienda.`);
+      return;
+    }
+
     try {
-      const res = await api.put(`/inventory/categories/${editingCategory.id}`, { name: editCategoryName, image_url: editCategoryImage });
-      setCategories(categories.map(c => c.id === editingCategory.id ? res.data.category : c));
+      const res = await api.put(`/inventory/categories/${editingCategory.id}`, { name: trimmed, image_url: editCategoryImage });
+      const updated = res.data.category;
+      setCategories(categories.map(c => c.id === editingCategory.id ? updated : c));
+      setAllCategories(allCategories.map(c => c.id === editingCategory.id ? updated : c));
       setIsEditCategoryOpen(false);
       toast.success("Categoría actualizada");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Error al actualizar categoría");
+      const msg = error.response?.data?.error || "Error al actualizar categoría";
+      toast.error(msg);
     }
   };
 
@@ -432,7 +500,7 @@ export default function Inventory() {
             <form onSubmit={handleAddCategory} className="flex gap-4 items-end flex-wrap">
               <div className="space-y-1 flex-grow max-w-[200px]">
                 <Label className="font-bold text-gray-700">Nombre de la Categoría</Label>
-                <Input required value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Ej. Bebidas..." className="rounded-xl bg-gray-50 border-gray-200" />
+                <Input required value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder={categoryNamePlaceholder} className="rounded-xl bg-gray-50 border-gray-200" />
               </div>
               <div className="space-y-1 flex-grow max-w-[300px]">
                 <Label className="font-bold text-gray-700">Subir Imagen (Opcional)</Label>
@@ -517,7 +585,21 @@ export default function Inventory() {
                     </TableCell>
                     <TableCell className="font-black text-gray-900 text-lg">{c.name}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
+                      <div className="flex justify-end gap-1.5 items-center">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            setNewProductCategoryId(c.id);
+                            setActiveTab("products");
+                            setIsAddProductOpen(true);
+                          }} 
+                          className="text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-200 rounded-lg flex items-center gap-1.5 h-8 px-2.5 mr-1"
+                          title={`Agregar producto a la categoría ${c.name}`}
+                        >
+                          <Plus size={14} /> <span className="hidden sm:inline">Agregar producto</span>
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => openEditCategoryModal(c)} className="text-blue-500 hover:bg-blue-50 hover:text-blue-600 rounded-lg">
                           <Pencil size={18} />
                         </Button>
@@ -576,7 +658,7 @@ export default function Inventory() {
                 <form onSubmit={handleAddProduct} className="space-y-4 mt-4">
                   <div className="space-y-1">
                     <Label className="font-bold text-gray-700">Nombre del Producto</Label>
-                    <Input required value={newProductName} onChange={e => setNewProductName(e.target.value)} placeholder="Ej. Paracetamol 500mg" className="rounded-xl bg-gray-50 border-gray-200" />
+                    <Input required value={newProductName} onChange={e => setNewProductName(e.target.value)} placeholder={productNamePlaceholder} className="rounded-xl bg-gray-50 border-gray-200" />
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1">
@@ -603,31 +685,35 @@ export default function Inventory() {
                   </div>
                   <div className="space-y-1">
                     <Label className="font-bold text-gray-700">Descripción (Opcional)</Label>
-                    <Input value={newProductDesc} onChange={e => setNewProductDesc(e.target.value)} placeholder="Detalles del producto..." className="rounded-xl bg-gray-50 border-gray-200" />
+                    <Input value={newProductDesc} onChange={e => setNewProductDesc(e.target.value)} placeholder={productDescPlaceholder} className="rounded-xl bg-gray-50 border-gray-200" />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="font-bold text-gray-700">Tipo de Récipe Médico (Farmacias)</Label>
-                    <select
-                      value={newPrescriptionType}
-                      onChange={e => setNewPrescriptionType(e.target.value as any)}
-                      className="flex h-10 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
-                    >
-                      <option value="NONE">Venta Libre (Sin récipe)</option>
-                      <option value="SHOW_ONLY">Requiere Récipe (Solo mostrar al motorizado)</option>
-                      <option value="RETAIN_ORIGINAL">Retención Obligatoria (Motorizado debe retenerlo para archivo)</option>
-                    </select>
-                  </div>
+                  {isPharmacy && (
+                    <>
+                      <div className="space-y-1">
+                        <Label className="font-bold text-gray-700">Tipo de Récipe Médico (Farmacias)</Label>
+                        <select
+                          value={newPrescriptionType}
+                          onChange={e => setNewPrescriptionType(e.target.value as any)}
+                          className="flex h-10 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+                        >
+                          <option value="NONE">Venta Libre (Sin récipe)</option>
+                          <option value="SHOW_ONLY">Requiere Récipe (Solo mostrar al motorizado)</option>
+                          <option value="RETAIN_ORIGINAL">Retención Obligatoria (Motorizado debe retenerlo para archivo)</option>
+                        </select>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="font-bold text-gray-700 text-xs">Nº Lote (Opcional)</Label>
-                      <Input value={newLotNumber} onChange={e => setNewLotNumber(e.target.value)} placeholder="Ej. L-2026A" className="rounded-xl bg-gray-50 border-gray-200 h-10 text-xs" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="font-bold text-gray-700 text-xs">Vencimiento</Label>
-                      <Input type="date" value={newExpiresAt} onChange={e => setNewExpiresAt(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200 h-10 text-xs" />
-                    </div>
-                  </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="font-bold text-gray-700 text-xs">Nº Lote (Opcional)</Label>
+                          <Input value={newLotNumber} onChange={e => setNewLotNumber(e.target.value)} placeholder="Ej. L-2026A" className="rounded-xl bg-gray-50 border-gray-200 h-10 text-xs" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="font-bold text-gray-700 text-xs">Vencimiento</Label>
+                          <Input type="date" value={newExpiresAt} onChange={e => setNewExpiresAt(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200 h-10 text-xs" />
+                        </div>
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-1">
                     <Label className="font-bold text-gray-700">Subir Imagen (Opcional)</Label>
                     <div className="flex gap-2 items-center">
@@ -689,9 +775,9 @@ export default function Inventory() {
                   </div>
                   <div className="space-y-1">
                     <Label className="font-bold text-gray-700">Descripción (Opcional)</Label>
-                    <Input value={editProductDesc} onChange={e => setEditProductDesc(e.target.value)} className="rounded-xl bg-gray-50 border-gray-200" />
+                    <Input value={editProductDesc} onChange={e => setEditProductDesc(e.target.value)} placeholder={productDescPlaceholder} className="rounded-xl bg-gray-50 border-gray-200" />
                   </div>
-                  {(storeConfig?.industry?.toUpperCase() === 'PHARMACY' || storeConfig?.industry?.toUpperCase() === 'FARMACIA') && (
+                  {isPharmacy && (
                     <>
                       <div className="space-y-1">
                         <Label className="font-bold text-gray-700">Tipo de Récipe Médico (Farmacias)</Label>

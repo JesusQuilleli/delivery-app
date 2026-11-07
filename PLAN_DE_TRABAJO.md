@@ -1421,3 +1421,39 @@ El rate limiter de autenticación permite ~10 solicitudes por minuto e IP. Si se
   - En Venezuela es común que los usuarios escriban su número con el cero local (`04124742535`).
   - **Frontend (`Checkout.tsx`):** Se implementó una limpieza reactiva en tiempo real (`val.replace(/\D/g, '').replace(/^0+/, '')`) tanto en el formulario de acceso por WhatsApp como en el paso de entrega. El cero se descarta de inmediato al escribirlo o pegarlo, evitando números malformados como `+580412...`.
   - **Backend (`whatsappService.js` y `authController.js`):** Se robusteció la normalización telefónica para detectar y corregir automáticamente formatos con prefijos `580...`, `04...` o `4...`, asegurando que Evolution API siempre reciba el formato E.164 estándar (`58412xxxxxxx`).
+
+
+---
+
+## 16. Hitos Completados — Adaptación Dinámica por Industria, Bloqueo de Categorías Duplicadas, Flujo Rápido de Creación y Barra de Difusión para Vendedores (2026-11-07)
+
+### ✅ Tareas Ejecutadas y Verificadas:
+
+- [x] **Adaptación Dinámica por Industria en Creación y Edición de Productos (`Inventory.tsx`):**
+  - **Diagnóstico:** Al gestionar tiendas de alimentos/restaurante (`industry: "RESTAURANT"`), el modal de creación de productos mostraba campos irrelevantes de farmacia (*Tipo de Récipe Médico*, *Nº Lote*, *Vencimiento*) y placeholders de medicamentos (*Ej. Paracetamol 500mg*).
+  - **Solución implementada:**
+    - Se evaluó el tipo de industria configurado en la tienda (`storeConfig?.industry`).
+    - Los campos de prescripción médica, número de lote y fecha de vencimiento ahora se condicionan estrictamente a `{isPharmacy && (...)}`. Si la tienda es de comida, restaurante o supermercado, estos campos se ocultan al 100%.
+    - Placeholders contextuales según la industria:
+      - **Restaurantes / Comida:** *"Ej. Hamburguesa Doble, Pizza Familiar, Pollo Broaster..."* y descripción *"Ej. Con carne Angus, queso cheddar fundido, tocineta y papas..."*.
+      - **Farmacias:** *"Ej. Paracetamol 500mg, Ibuprofeno..."* y descripción *"Ej. Caja de 20 tabletas, uso bajo indicación médica..."*.
+      - **Supermercados:** *"Ej. Harina PAN 1kg, Arroz, Refresco 2L..."* y descripción *"Detalles y especificaciones del producto..."*.
+
+- [x] **Bloqueo de Categorías Duplicadas (Frontend & Backend):**
+  - **Diagnóstico:** En la administración de categorías se observaba la creación repetida de la categoría *"Bebidas"* debido a la ausencia de validación de unicidad por tienda.
+  - **Solución implementada:**
+    - **Frontend (`Inventory.tsx`):** Validación en tiempo real dentro de `handleAddCategory` y `handleEditCategory`. Compara el nombre sin espacios en los extremos y sin distinguir mayúsculas/minúsculas frente al listado de categorías existentes; si ya existe, bloquea la acción y lanza un toast descriptivo: *"La categoría 'X' ya existe en tu tienda"*.
+    - **Backend (`inventoryController.js`):** En `createCategory` y `updateCategory`, se consulta en Prisma `prisma.category.findFirst({ where: { store_id: store.id, name: { equals: trimmedName, mode: 'insensitive' } } })`. Si existe coincidencia, responde `HTTP 400 Bad Request` impidiendo inserciones duplicadas a nivel de API.
+    - **Saneamiento en Base de Datos:** Se ejecutó un script de deduplicación en la base de datos de producción en el VPS, eliminando las categorías duplicadas y preservando la integridad de los productos.
+
+- [x] **Flujo Acelerado "Agregar Producto a Esta Categoría":**
+  - En la tabla de categorías (`Inventory.tsx`), se integró un botón de acción directo en cada fila: `+ Agregar producto` con icono `Plus`. Al hacer clic, precarga automáticamente el `category_id`, cambia de inmediato a la pestaña de productos y abre el modal de creación.
+  - Al crear exitosamente una nueva categoría mediante el formulario, la notificación toast incluye un botón de acción interactivo `+ Agregar producto` para empezar a cargar productos en esa categoría con un solo clic.
+
+- [x] **Barra de Difusión y Compartir Tienda para Vendedores (`AdminLayout.tsx`):**
+  - **Ubicación estratégica:** Se incorporó en el layout principal del panel administrativo (`AdminLayout.tsx`), visible permanentemente en todas las vistas del vendedor (Tablero, Catálogo, Historial, Clientes, etc.).
+  - **Elementos interactivos:**
+    - Visualización destacada de la URL pública de la tienda (`https://vps-prueba.shop-mg.com/:slug`) con insignia de catálogo activo.
+    - **Botón "Copiar Enlace":** Copia la URL exacta al portapapeles con confirmación visual interactiva (*"¡Copiado!"*) y toast.
+    - **Botón "Compartir en WhatsApp":** Abre un chat de WhatsApp con un mensaje amigable predeterminado invitando a conocer el catálogo digital y hacer pedidos directos.
+    - **Botón "Ver Tienda ↗":** Acceso rápido para previsualizar el catálogo público tal como lo ven los clientes en una nueva pestaña.
