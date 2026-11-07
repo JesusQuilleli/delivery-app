@@ -138,6 +138,7 @@ model Order {
   stock_restored    Boolean     @default(false)
   payment_method    String
   payment_reference String?
+  payment_receipt_url String?
   status            String      @default("PENDING")
   viewed            Boolean     @default(false)
   client_rating     Int?

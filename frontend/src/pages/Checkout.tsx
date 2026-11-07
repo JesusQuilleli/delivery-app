@@ -95,11 +95,11 @@ export default function Checkout() {
   const [countryCode, setCountryCode] = useState('+58');
   const [rawPhone, setRawPhone] = useState('');
   
-  const cleanRaw = rawPhone.replace(/\D/g, '');
+  const cleanRaw = rawPhone.replace(/\D/g, '').replace(/^0+/, '');
   const parsedPhone = parsePhone(`${countryCode}${cleanRaw}`);
   const phone = parsedPhone.isValid
     ? parsedPhone.e164
-    : `${countryCode}${cleanRaw.startsWith('0') && countryCode === '+58' ? cleanRaw.substring(1) : cleanRaw}`;
+    : `${countryCode}${cleanRaw}`;
   
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
@@ -162,10 +162,23 @@ export default function Checkout() {
 
       if (res.data.extracted?.reference) {
         setPaymentReference(res.data.extracted.reference);
+      }
+
+      if (res.data.extracted) {
         setOcrDetectedInfo(res.data.extracted);
-        toast.success(`¡Capture leído! Referencia bancaria detectada: ${res.data.extracted.reference}`);
-      } else {
-        toast.success("Capture cargado correctamente. Revisa o confirma la referencia abajo.");
+        const expectedBs = conversions.ves || 0;
+        if (res.data.extracted.amount && expectedBs > 0 && res.data.extracted.amount < expectedBs * 0.98) {
+          toast.error(
+            `⚠️ Monto insuficiente en el comprobante: Detectamos Bs. ${res.data.extracted.amount.toFixed(2)}, pero el total es Bs. ${expectedBs.toFixed(2)}. Verifica tu comprobante antes de confirmar.`,
+            { duration: 8000 }
+          );
+        } else if (res.data.extracted.amount && expectedBs > 0) {
+          toast.success(`¡Monto y referencia validados! Bs. ${res.data.extracted.amount.toFixed(2)} - Ref: ${res.data.extracted.reference || 'Detectada'}`);
+        } else if (res.data.extracted.reference) {
+          toast.success(`¡Capture leído! Referencia bancaria detectada: ${res.data.extracted.reference}`);
+        } else {
+          toast.success("Capture cargado correctamente. Revisa y confirma la referencia abajo.");
+        }
       }
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Error al subir el comprobante de pago");
@@ -598,6 +611,10 @@ export default function Checkout() {
       toast.error('Debes adjuntar la fotografía de tu récipe médico para continuar.');
       return;
     }
+    if (paymentMethod === 'TRANSFER' && ocrDetectedInfo?.amount && (conversions.ves || 0) > 0 && ocrDetectedInfo.amount < (conversions.ves || 0) * 0.98) {
+      toast.error(`El comprobante adjunto registra Bs. ${ocrDetectedInfo.amount.toFixed(2)}, inferior al total del pedido (Bs. ${(conversions.ves || 0).toFixed(2)}). Por favor adjunta un comprobante por el monto total.`);
+      return;
+    }
     setLoading(true);
     try {
       const res = await api.post('/orders/place', {
@@ -708,7 +725,10 @@ export default function Checkout() {
                           type="tel" 
                           placeholder="Ej: 4121234567" 
                           value={rawPhone} 
-                          onChange={(e) => setRawPhone(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').replace(/^0+/, '');
+                            setRawPhone(val);
+                          }}
                           className="flex-1 min-w-0 h-14 text-lg rounded-xl transition-all bg-white focus:border-emerald-500 focus:ring-emerald-500 font-bold"
                         />
                       </div>
@@ -794,7 +814,10 @@ export default function Checkout() {
                       type="tel" 
                       placeholder="Ej: 4120000000" 
                       value={rawPhone} 
-                      onChange={(e) => setRawPhone(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').replace(/^0+/, '');
+                        setRawPhone(val);
+                      }}
                       className="flex-1 min-w-0 h-14 text-lg rounded-xl transition-all bg-white focus:border-orange-500 focus:ring-orange-500"
                     />
                   </div>
@@ -1257,20 +1280,46 @@ export default function Checkout() {
                     )}
 
                     {paymentReceiptUrl && (
-                      <div className="mt-2 flex items-center gap-3 bg-white p-2.5 rounded-xl border border-blue-200">
-                        <img
-                          src={paymentReceiptUrl}
-                          alt="Capture cargado"
-                          className="w-14 h-14 object-cover rounded-lg border border-gray-200"
-                        />
-                        <div className="text-left text-xs">
-                          <p className="font-bold text-gray-900">Comprobante adjunto correctamente</p>
-                          <p className="text-gray-500 text-[11px]">
-                            {ocrDetectedInfo?.reference
-                              ? `Referencia detectada: ${ocrDetectedInfo.reference}`
-                              : 'Revisa y confirma la referencia abajo.'}
-                          </p>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-blue-200">
+                          <img
+                            src={paymentReceiptUrl}
+                            alt="Capture cargado"
+                            className="w-14 h-14 object-cover rounded-lg border border-gray-200"
+                          />
+                          <div className="text-left text-xs">
+                            <p className="font-bold text-gray-900">Comprobante adjunto correctamente</p>
+                            <p className="text-gray-500 text-[11px]">
+                              {ocrDetectedInfo?.reference
+                                ? `Referencia detectada: ${ocrDetectedInfo.reference}`
+                                : 'Revisa y confirma la referencia abajo.'}
+                            </p>
+                          </div>
                         </div>
+
+                        {ocrDetectedInfo?.amount && (conversions.ves || 0) > 0 && (
+                          ocrDetectedInfo.amount < (conversions.ves || 0) * 0.98 ? (
+                            <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs space-y-1 text-left">
+                              <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                                <AlertTriangle size={15} className="text-amber-600 shrink-0" />
+                                <span>Monto insuficiente detectado en comprobante</span>
+                              </div>
+                              <p className="text-amber-800 leading-relaxed">
+                                El comprobante indica <strong>Bs. {ocrDetectedInfo.amount.toFixed(2)}</strong>, pero el total de tu pedido es <strong>Bs. {(conversions.ves || 0).toFixed(2)}</strong>. Por favor verifica tu pago o adjunta el capture con el pago completo para continuar.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs space-y-1 text-left">
+                              <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+                                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                                <span>Monto verificado: Bs. {ocrDetectedInfo.amount.toFixed(2)}</span>
+                              </div>
+                              <p className="text-emerald-800">
+                                Cubre el total del pedido (Total: Bs. {(conversions.ves || 0).toFixed(2)}).
+                              </p>
+                            </div>
+                          )
+                        )}
                       </div>
                     )}
                   </div>

@@ -276,8 +276,14 @@ const adminLogin = async (req, res) => {
       return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { username },
+    const trimmedInput = (username || '').trim();
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: trimmedInput },
+          { email: trimmedInput.toLowerCase() }
+        ]
+      },
       include: { store: true }
     });
 
@@ -450,7 +456,14 @@ const sendWhatsAppOtpHandler = async (req, res) => {
     const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
-    const cleanPhone = phone.replace(/\D/g, '');
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.startsWith('580')) {
+      cleanPhone = '58' + cleanPhone.slice(3);
+    } else if (cleanPhone.startsWith('0')) {
+      cleanPhone = '58' + cleanPhone.replace(/^0+/, '');
+    } else if (!cleanPhone.startsWith('58') && cleanPhone.length === 10) {
+      cleanPhone = '58' + cleanPhone;
+    }
     const userIdentifier = `wa_${cleanPhone}@whatsapp.user`;
 
     await prisma.verificationCode.create({

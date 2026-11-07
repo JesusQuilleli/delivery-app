@@ -294,7 +294,10 @@ const placeOrder = async (req, res) => {
       return res.status(503).json({ error: 'La operación tardó demasiado. Intenta de nuevo.' });
     }
     console.error('Error al procesar pedido:', error);
-    res.status(500).json({ error: 'Error interno al procesar el pedido' });
+    const clientMsg = error.message && !error.message.includes('\n') && !error.message.toLowerCase().includes('prisma')
+      ? error.message
+      : 'Error interno al procesar el pedido. Por favor verifica los datos ingresados o el comprobante.';
+    res.status(500).json({ error: clientMsg });
   }
 };
 

@@ -36,7 +36,14 @@ function checkWhatsAppRateLimit(cleanPhone) {
  * @returns {Promise<{ success: boolean, simulated?: boolean, message: string }>}
  */
 async function sendWhatsAppOtp(phone, otpCode, storeName = 'TiendaFast') {
-  const cleanPhone = phone.replace(/\D/g, '');
+  let cleanPhone = phone.replace(/\D/g, '');
+  if (cleanPhone.startsWith('580')) {
+    cleanPhone = '58' + cleanPhone.slice(3);
+  } else if (cleanPhone.startsWith('0')) {
+    cleanPhone = '58' + cleanPhone.replace(/^0+/, '');
+  } else if (!cleanPhone.startsWith('58') && cleanPhone.length === 10) {
+    cleanPhone = '58' + cleanPhone;
+  }
 
   // 1. Validar límite de intentos
   const rateLimit = checkWhatsAppRateLimit(cleanPhone);
