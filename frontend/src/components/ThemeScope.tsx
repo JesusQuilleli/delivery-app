@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { resolveTheme } from '@/lib/themes';
+import { resolveTheme, resolveThemeHex } from '@/lib/themes';
 
 interface ThemeScopeProps {
   themeColor?: string | null;
@@ -8,8 +8,13 @@ interface ThemeScopeProps {
 }
 
 export function ThemeScope({ themeColor, children, className }: ThemeScopeProps) {
+  const oklch = resolveTheme(themeColor);
+  const hex = resolveThemeHex(themeColor);
+
   const style = {
-    '--primary': resolveTheme(themeColor)
+    '--primary': oklch,
+    '--theme-primary': hex,
+    '--color-primary': hex
   } as CSSProperties;
 
   return (

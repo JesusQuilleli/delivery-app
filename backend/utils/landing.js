@@ -9,12 +9,25 @@ const ALLOWED_SECTIONS = [
   'contact'
 ];
 
+const ALLOWED_LAYOUT_VARIANTS = [
+  'hero_split',
+  'minimal_banner',
+  'grid_showcase'
+];
+
 class LandingValidationError extends Error {
   constructor(message) {
     super(message);
     this.name = 'LandingValidationError';
     this.status = 400;
   }
+}
+
+function cleanLayoutVariant(value, current = 'hero_split') {
+  if (value === undefined) return current || 'hero_split';
+  if (!value) return 'hero_split';
+  const val = String(value).trim().toLowerCase();
+  return ALLOWED_LAYOUT_VARIANTS.includes(val) ? val : 'hero_split';
 }
 
 function cleanText(value, field, maxLength) {
@@ -131,6 +144,7 @@ function normalizeLandingConfig(value, current = {}) {
   }
 
   const next = {
+    layout_variant: cleanLayoutVariant(value.layout_variant, current.layout_variant),
     slogan: value.slogan === undefined ? (current.slogan ?? null) : cleanText(value.slogan, 'slogan', 120),
     subtitle: value.subtitle === undefined ? (current.subtitle ?? null) : cleanText(value.subtitle, 'subtitle', 240),
     badge_promo: value.badge_promo === undefined ? (current.badge_promo ?? null) : cleanText(value.badge_promo, 'badge_promo', 60),
@@ -156,6 +170,7 @@ function normalizeLandingConfig(value, current = {}) {
 
 module.exports = {
   ALLOWED_SECTIONS,
+  ALLOWED_LAYOUT_VARIANTS,
   LandingValidationError,
   normalizeLandingConfig
 };

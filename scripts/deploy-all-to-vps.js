@@ -9,6 +9,7 @@ async function deploy() {
   await runSSHCommand('docker exec delivery_api npx prisma generate');
   await runSSHCommand('docker cp /opt/delivery-app/backend/controllers/. delivery_api:/app/controllers/');
   await runSSHCommand('docker cp /opt/delivery-app/backend/services/. delivery_api:/app/services/');
+  await runSSHCommand('docker cp /opt/delivery-app/backend/utils/. delivery_api:/app/utils/');
   
   console.log('🔄 3. Reiniciando delivery_api...');
   await runSSHCommand('docker restart delivery_api');

@@ -6,6 +6,7 @@ export interface LandingChange {
 }
 
 const FIELD_LABELS: Record<string, string> = {
+  layout_variant: 'Diseño de la tienda (Layout)',
   slogan: 'Eslogan',
   subtitle: 'Subtítulo',
   badge_promo: 'Badge de promoción',
@@ -14,6 +15,12 @@ const FIELD_LABELS: Record<string, string> = {
   whatsapp_contact: 'WhatsApp de contacto',
   about_title: 'Título de "Sobre nosotros"',
   about_text: 'Texto de "Sobre nosotros"'
+};
+
+const LAYOUT_LABELS: Record<string, string> = {
+  hero_split: 'Hero Split (Moderno Gastronómico)',
+  minimal_banner: 'Banner Showcase (Marketplace Promocional)',
+  grid_showcase: 'Grid Gourmet (Vitrina Directa)'
 };
 
 const SECTION_LABELS: Record<string, string> = {
@@ -52,6 +59,10 @@ function formatArray(field: string, value: unknown): string {
 }
 
 export function formatLandingValue(field: string, value: unknown): string {
+  if (field === 'layout_variant' && typeof value === 'string') {
+    return LAYOUT_LABELS[value] || value;
+  }
+
   if (field === 'banners' || field === 'gallery_images' || field === 'about_images') {
     return formatArray(field, value);
   }

@@ -366,7 +366,7 @@ const updateOrderStatus = async (req, res) => {
       try {
         const store = await prisma.store.findUnique({
           where: { id: order.store_id },
-          select: { name: true, phone: true, currency: true }
+          select: { name: true, currency: true, bank_phone: true }
         });
 
         if (order.user && order.user.phone) {
@@ -883,7 +883,7 @@ const batchUpdateStatus = async (req, res) => {
         try {
           const store = await prisma.store.findUnique({
             where: { id: order.store_id },
-            select: { name: true, phone: true, currency: true }
+            select: { name: true, currency: true, bank_phone: true }
           });
           if (order.user && order.user.phone) {
             sendOrderDispatchedToCustomer(order, store).catch(() => {});

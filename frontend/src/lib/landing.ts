@@ -1,3 +1,5 @@
+export type LandingLayoutVariant = 'hero_split' | 'minimal_banner' | 'grid_showcase';
+
 export interface LandingBanner {
   id: string;
   image_url: string;
@@ -18,6 +20,7 @@ export interface LandingSections {
 }
 
 export interface LandingConfig {
+  layout_variant?: LandingLayoutVariant | string;
   slogan?: string | null;
   subtitle?: string | null;
   badge_promo?: string | null;
@@ -43,7 +46,32 @@ export const LANDING_SECTION_OPTIONS: { key: keyof LandingSections; label: strin
   { key: 'contact', label: 'Contacto', description: 'WhatsApp, ubicación y formulario.' }
 ];
 
+export const LANDING_LAYOUT_OPTIONS: { value: LandingLayoutVariant; label: string; description: string; badge: string; icon: string }[] = [
+  {
+    value: 'hero_split',
+    label: 'Hero Split (Moderno Gastronómico)',
+    description: 'Titular de impacto y plato estrella flotante con halo dinámico. Estilo restaurante moderno.',
+    badge: 'Popular',
+    icon: '🍔'
+  },
+  {
+    value: 'minimal_banner',
+    label: 'Banner Showcase (Marketplace Promocional)',
+    description: 'Gran banner ancho panorámico con buscador rápido y franja de ofertas destacadas en cuadrícula.',
+    badge: 'Delivery Rápido',
+    icon: '🛵'
+  },
+  {
+    value: 'grid_showcase',
+    label: 'Grid Gourmet (Vitrina Directa)',
+    description: 'Enfoque directo en combos y productos más vendidos con insignias de ahorro y banners intercalados.',
+    badge: 'Catálogo Visual',
+    icon: '✨'
+  }
+];
+
 export const DEFAULT_LANDING_CONFIG: LandingConfig = {
+  layout_variant: 'hero_split',
   slogan: '',
   subtitle: '',
   badge_promo: '',
@@ -71,6 +99,7 @@ export function normalizeLandingDraft(config?: LandingConfig | null): LandingCon
   return {
     ...DEFAULT_LANDING_CONFIG,
     ...(config || {}),
+    layout_variant: config?.layout_variant || 'hero_split',
     banners: Array.isArray(config?.banners) ? config.banners : [],
     gallery_images: Array.isArray(config?.gallery_images) ? config.gallery_images : [],
     about_images: Array.isArray(config?.about_images) ? config.about_images : [],

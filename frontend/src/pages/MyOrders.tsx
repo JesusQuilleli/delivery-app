@@ -1,3 +1,4 @@
+import { NotificationPermissionBanner } from '../components/NotificationPermissionBanner';
 import { useEffect, useState, useContext } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
@@ -146,6 +147,7 @@ export default function MyOrders() {
   return (
     <div className="min-h-screen bg-gray-50 pt-20 sm:pt-24 pb-12 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto relative">
+        <NotificationPermissionBanner role="customer" className="mb-6" />
         <button onClick={() => navigate(-1)} className="absolute -top-12 sm:top-2 left-0 text-orange-500 hover:bg-gray-100 p-2 rounded-full transition-colors z-10">
           <ArrowLeft size={24} />
         </button>
